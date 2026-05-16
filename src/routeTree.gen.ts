@@ -13,8 +13,22 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
+import { Route as AppThirdPartyRouteImport } from './routes/app.third-party'
+import { Route as AppStockRouteImport } from './routes/app.stock'
+import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppSalesRouteImport } from './routes/app.sales'
+import { Route as AppReportsRouteImport } from './routes/app.reports'
+import { Route as AppQuotationsRouteImport } from './routes/app.quotations'
+import { Route as AppPurchasesRouteImport } from './routes/app.purchases'
 import { Route as AppProductsRouteImport } from './routes/app.products'
+import { Route as AppPrintRouteImport } from './routes/app.print'
+import { Route as AppPaymentsRouteImport } from './routes/app.payments'
+import { Route as AppLookupRouteImport } from './routes/app.lookup'
+import { Route as AppLedgerRouteImport } from './routes/app.ledger'
+import { Route as AppExpensesRouteImport } from './routes/app.expenses'
+import { Route as AppContactsRouteImport } from './routes/app.contacts'
+import { Route as AppPrintQuoteIdRouteImport } from './routes/app.print.quote.$id'
+import { Route as AppPrintInvoiceIdRouteImport } from './routes/app.print.invoice.$id'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -36,9 +50,39 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRoute,
 } as any)
+const AppThirdPartyRoute = AppThirdPartyRouteImport.update({
+  id: '/third-party',
+  path: '/third-party',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppStockRoute = AppStockRouteImport.update({
+  id: '/stock',
+  path: '/stock',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppSalesRoute = AppSalesRouteImport.update({
   id: '/sales',
   path: '/sales',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppReportsRoute = AppReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppQuotationsRoute = AppQuotationsRouteImport.update({
+  id: '/quotations',
+  path: '/quotations',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPurchasesRoute = AppPurchasesRouteImport.update({
+  id: '/purchases',
+  path: '/purchases',
   getParentRoute: () => AppRoute,
 } as any)
 const AppProductsRoute = AppProductsRouteImport.update({
@@ -46,44 +90,179 @@ const AppProductsRoute = AppProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AppRoute,
 } as any)
+const AppPrintRoute = AppPrintRouteImport.update({
+  id: '/print',
+  path: '/print',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPaymentsRoute = AppPaymentsRouteImport.update({
+  id: '/payments',
+  path: '/payments',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLookupRoute = AppLookupRouteImport.update({
+  id: '/lookup',
+  path: '/lookup',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppLedgerRoute = AppLedgerRouteImport.update({
+  id: '/ledger',
+  path: '/ledger',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppExpensesRoute = AppExpensesRouteImport.update({
+  id: '/expenses',
+  path: '/expenses',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppContactsRoute = AppContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppPrintQuoteIdRoute = AppPrintQuoteIdRouteImport.update({
+  id: '/quote/$id',
+  path: '/quote/$id',
+  getParentRoute: () => AppPrintRoute,
+} as any)
+const AppPrintInvoiceIdRoute = AppPrintInvoiceIdRouteImport.update({
+  id: '/invoice/$id',
+  path: '/invoice/$id',
+  getParentRoute: () => AppPrintRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/contacts': typeof AppContactsRoute
+  '/app/expenses': typeof AppExpensesRoute
+  '/app/ledger': typeof AppLedgerRoute
+  '/app/lookup': typeof AppLookupRoute
+  '/app/payments': typeof AppPaymentsRoute
+  '/app/print': typeof AppPrintRouteWithChildren
   '/app/products': typeof AppProductsRoute
+  '/app/purchases': typeof AppPurchasesRoute
+  '/app/quotations': typeof AppQuotationsRoute
+  '/app/reports': typeof AppReportsRoute
   '/app/sales': typeof AppSalesRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/stock': typeof AppStockRoute
+  '/app/third-party': typeof AppThirdPartyRoute
   '/app/': typeof AppIndexRoute
+  '/app/print/invoice/$id': typeof AppPrintInvoiceIdRoute
+  '/app/print/quote/$id': typeof AppPrintQuoteIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/app/contacts': typeof AppContactsRoute
+  '/app/expenses': typeof AppExpensesRoute
+  '/app/ledger': typeof AppLedgerRoute
+  '/app/lookup': typeof AppLookupRoute
+  '/app/payments': typeof AppPaymentsRoute
+  '/app/print': typeof AppPrintRouteWithChildren
   '/app/products': typeof AppProductsRoute
+  '/app/purchases': typeof AppPurchasesRoute
+  '/app/quotations': typeof AppQuotationsRoute
+  '/app/reports': typeof AppReportsRoute
   '/app/sales': typeof AppSalesRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/stock': typeof AppStockRoute
+  '/app/third-party': typeof AppThirdPartyRoute
   '/app': typeof AppIndexRoute
+  '/app/print/invoice/$id': typeof AppPrintInvoiceIdRoute
+  '/app/print/quote/$id': typeof AppPrintQuoteIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/contacts': typeof AppContactsRoute
+  '/app/expenses': typeof AppExpensesRoute
+  '/app/ledger': typeof AppLedgerRoute
+  '/app/lookup': typeof AppLookupRoute
+  '/app/payments': typeof AppPaymentsRoute
+  '/app/print': typeof AppPrintRouteWithChildren
   '/app/products': typeof AppProductsRoute
+  '/app/purchases': typeof AppPurchasesRoute
+  '/app/quotations': typeof AppQuotationsRoute
+  '/app/reports': typeof AppReportsRoute
   '/app/sales': typeof AppSalesRoute
+  '/app/settings': typeof AppSettingsRoute
+  '/app/stock': typeof AppStockRoute
+  '/app/third-party': typeof AppThirdPartyRoute
   '/app/': typeof AppIndexRoute
+  '/app/print/invoice/$id': typeof AppPrintInvoiceIdRoute
+  '/app/print/quote/$id': typeof AppPrintQuoteIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/app/products' | '/app/sales' | '/app/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/app/contacts'
+    | '/app/expenses'
+    | '/app/ledger'
+    | '/app/lookup'
+    | '/app/payments'
+    | '/app/print'
+    | '/app/products'
+    | '/app/purchases'
+    | '/app/quotations'
+    | '/app/reports'
+    | '/app/sales'
+    | '/app/settings'
+    | '/app/stock'
+    | '/app/third-party'
+    | '/app/'
+    | '/app/print/invoice/$id'
+    | '/app/print/quote/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/app/products' | '/app/sales' | '/app'
+  to:
+    | '/'
+    | '/login'
+    | '/app/contacts'
+    | '/app/expenses'
+    | '/app/ledger'
+    | '/app/lookup'
+    | '/app/payments'
+    | '/app/print'
+    | '/app/products'
+    | '/app/purchases'
+    | '/app/quotations'
+    | '/app/reports'
+    | '/app/sales'
+    | '/app/settings'
+    | '/app/stock'
+    | '/app/third-party'
+    | '/app'
+    | '/app/print/invoice/$id'
+    | '/app/print/quote/$id'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/login'
+    | '/app/contacts'
+    | '/app/expenses'
+    | '/app/ledger'
+    | '/app/lookup'
+    | '/app/payments'
+    | '/app/print'
     | '/app/products'
+    | '/app/purchases'
+    | '/app/quotations'
+    | '/app/reports'
     | '/app/sales'
+    | '/app/settings'
+    | '/app/stock'
+    | '/app/third-party'
     | '/app/'
+    | '/app/print/invoice/$id'
+    | '/app/print/quote/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -122,11 +301,53 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/third-party': {
+      id: '/app/third-party'
+      path: '/third-party'
+      fullPath: '/app/third-party'
+      preLoaderRoute: typeof AppThirdPartyRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/stock': {
+      id: '/app/stock'
+      path: '/stock'
+      fullPath: '/app/stock'
+      preLoaderRoute: typeof AppStockRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/settings': {
+      id: '/app/settings'
+      path: '/settings'
+      fullPath: '/app/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/sales': {
       id: '/app/sales'
       path: '/sales'
       fullPath: '/app/sales'
       preLoaderRoute: typeof AppSalesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/reports': {
+      id: '/app/reports'
+      path: '/reports'
+      fullPath: '/app/reports'
+      preLoaderRoute: typeof AppReportsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/quotations': {
+      id: '/app/quotations'
+      path: '/quotations'
+      fullPath: '/app/quotations'
+      preLoaderRoute: typeof AppQuotationsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/purchases': {
+      id: '/app/purchases'
+      path: '/purchases'
+      fullPath: '/app/purchases'
+      preLoaderRoute: typeof AppPurchasesRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/products': {
@@ -136,18 +357,112 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/print': {
+      id: '/app/print'
+      path: '/print'
+      fullPath: '/app/print'
+      preLoaderRoute: typeof AppPrintRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/payments': {
+      id: '/app/payments'
+      path: '/payments'
+      fullPath: '/app/payments'
+      preLoaderRoute: typeof AppPaymentsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/lookup': {
+      id: '/app/lookup'
+      path: '/lookup'
+      fullPath: '/app/lookup'
+      preLoaderRoute: typeof AppLookupRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/ledger': {
+      id: '/app/ledger'
+      path: '/ledger'
+      fullPath: '/app/ledger'
+      preLoaderRoute: typeof AppLedgerRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/expenses': {
+      id: '/app/expenses'
+      path: '/expenses'
+      fullPath: '/app/expenses'
+      preLoaderRoute: typeof AppExpensesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/contacts': {
+      id: '/app/contacts'
+      path: '/contacts'
+      fullPath: '/app/contacts'
+      preLoaderRoute: typeof AppContactsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/print/quote/$id': {
+      id: '/app/print/quote/$id'
+      path: '/quote/$id'
+      fullPath: '/app/print/quote/$id'
+      preLoaderRoute: typeof AppPrintQuoteIdRouteImport
+      parentRoute: typeof AppPrintRoute
+    }
+    '/app/print/invoice/$id': {
+      id: '/app/print/invoice/$id'
+      path: '/invoice/$id'
+      fullPath: '/app/print/invoice/$id'
+      preLoaderRoute: typeof AppPrintInvoiceIdRouteImport
+      parentRoute: typeof AppPrintRoute
+    }
   }
 }
 
+interface AppPrintRouteChildren {
+  AppPrintInvoiceIdRoute: typeof AppPrintInvoiceIdRoute
+  AppPrintQuoteIdRoute: typeof AppPrintQuoteIdRoute
+}
+
+const AppPrintRouteChildren: AppPrintRouteChildren = {
+  AppPrintInvoiceIdRoute: AppPrintInvoiceIdRoute,
+  AppPrintQuoteIdRoute: AppPrintQuoteIdRoute,
+}
+
+const AppPrintRouteWithChildren = AppPrintRoute._addFileChildren(
+  AppPrintRouteChildren,
+)
+
 interface AppRouteChildren {
+  AppContactsRoute: typeof AppContactsRoute
+  AppExpensesRoute: typeof AppExpensesRoute
+  AppLedgerRoute: typeof AppLedgerRoute
+  AppLookupRoute: typeof AppLookupRoute
+  AppPaymentsRoute: typeof AppPaymentsRoute
+  AppPrintRoute: typeof AppPrintRouteWithChildren
   AppProductsRoute: typeof AppProductsRoute
+  AppPurchasesRoute: typeof AppPurchasesRoute
+  AppQuotationsRoute: typeof AppQuotationsRoute
+  AppReportsRoute: typeof AppReportsRoute
   AppSalesRoute: typeof AppSalesRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppStockRoute: typeof AppStockRoute
+  AppThirdPartyRoute: typeof AppThirdPartyRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppContactsRoute: AppContactsRoute,
+  AppExpensesRoute: AppExpensesRoute,
+  AppLedgerRoute: AppLedgerRoute,
+  AppLookupRoute: AppLookupRoute,
+  AppPaymentsRoute: AppPaymentsRoute,
+  AppPrintRoute: AppPrintRouteWithChildren,
   AppProductsRoute: AppProductsRoute,
+  AppPurchasesRoute: AppPurchasesRoute,
+  AppQuotationsRoute: AppQuotationsRoute,
+  AppReportsRoute: AppReportsRoute,
   AppSalesRoute: AppSalesRoute,
+  AppSettingsRoute: AppSettingsRoute,
+  AppStockRoute: AppStockRoute,
+  AppThirdPartyRoute: AppThirdPartyRoute,
   AppIndexRoute: AppIndexRoute,
 }
 
