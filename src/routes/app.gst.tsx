@@ -39,7 +39,7 @@ function GstPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-4">
-      <PageHeader title="GST Summary" subtitle="CGST / SGST / IGST totals from sales and purchases" />
+      <PageHeader title="GST Summary" description="CGST / SGST / IGST totals from sales and purchases" />
 
       <div className="grid gap-3 md:grid-cols-3">
         <Stat label="Output GST (payable)" value={inr(outTotal)} tone="text-rose-600" />
