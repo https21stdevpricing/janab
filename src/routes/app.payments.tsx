@@ -17,6 +17,17 @@ import { Trash2, ArrowDownLeft, ArrowUpRight, X } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 
+function daysBetween(iso: string) {
+  const d = new Date(iso); const now = new Date();
+  return Math.max(0, Math.floor((now.getTime() - d.getTime()) / 86400000));
+}
+function ageBadge(days: number) {
+  if (days <= 0) return { label: "today", tone: "muted" } as const;
+  if (days <= 30) return { label: `${days}d`, tone: "muted" } as const;
+  if (days <= 60) return { label: `${days}d`, tone: "warn" } as const;
+  return { label: `${days}d`, tone: "bad" } as const;
+}
+
 export const Route = createFileRoute("/app/payments")({
   component: PaymentsPage,
   validateSearch: (s: Record<string, unknown>) => ({
@@ -79,6 +90,12 @@ function PaymentsPage() {
     (q === "" || r.payment_no.toLowerCase().includes(q.toLowerCase()) || (r.contact_name ?? "").toLowerCase().includes(q.toLowerCase()))
   ), [rows, filter, q]);
 
+  const totals = useMemo(() => {
+    const inSum = filtered.filter(r => r.direction === "in").reduce((a, r) => a + Number(r.amount || 0), 0);
+    const outSum = filtered.filter(r => r.direction === "out").reduce((a, r) => a + Number(r.amount || 0), 0);
+    return { inSum, outSum, net: inSum - outSum };
+  }, [filtered]);
+
   // When contact changes, load open docs
   useEffect(() => {
     if (!open || !contactId) { setOpenDocs([]); return; }
@@ -88,6 +105,30 @@ function PaymentsPage() {
   // Auto-allocate amount sequentially across selected docs
   const allocatedSum = allocs.reduce((a, x) => a + (Number(x.amount) || 0), 0);
   const remaining = (amount || 0) - allocatedSum;
+
+  const totalOpen = openDocs.reduce((a: number, d: any) => a + Number(d.balance || 0), 0);
+  const overdueDocs = openDocs.filter((d: any) => daysBetween(d.date) > 30);
+  const overdueAmt = overdueDocs.reduce((a: number, d: any) => a + Number(d.balance || 0), 0);
+
+  const suggestions: { tone: "warn" | "bad" | "info"; text: string }[] = [];
+  if (amount > 0 && remaining < -0.5) suggestions.push({ tone: "bad", text: `Over-allocated by ${inr(-remaining)} — reduce a line or raise the amount.` });
+  if (amount > 0 && remaining > 0.5 && allocs.length > 0) suggestions.push({ tone: "warn", text: `${inr(remaining)} unallocated — will sit as advance on ledger.` });
+  if (amount > 0 && allocs.length === 0 && openDocs.length > 0) suggestions.push({ tone: "warn", text: `${openDocs.length} open document(s) — click to allocate, or use Auto-allocate.` });
+  if (amount > totalOpen + 0.5 && totalOpen > 0) suggestions.push({ tone: "warn", text: `Amount exceeds total outstanding (${inr(totalOpen)}).` });
+  if (overdueAmt > 0) suggestions.push({ tone: "bad", text: `${overdueDocs.length} document(s) overdue > 30 days · ${inr(overdueAmt)}.` });
+
+  const autoAllocate = () => {
+    if (!amount || openDocs.length === 0) return;
+    let left = amount;
+    const next: Alloc[] = [];
+    for (const d of openDocs) {
+      if (left <= 0) break;
+      const take = Math.min(Number(d.balance), left);
+      next.push({ doc_kind: d.doc_kind, doc_id: d.doc_id, doc_no: d.doc_no, amount: +take.toFixed(2), balance: Number(d.balance), total: Number(d.total) });
+      left -= take;
+    }
+    setAllocs(next);
+  };
 
   const toggleDoc = (d: any) => {
     if (allocs.some(a => a.doc_id === d.doc_id)) {
@@ -188,6 +229,13 @@ function PaymentsPage() {
         <div className="ml-auto text-xs text-muted-foreground">{filtered.length} entries</div>
       </div>
 
+      {/* Summary tiles */}
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        <div className="rounded-md border bg-card p-3"><div className="text-[10px] uppercase text-muted-foreground">Received</div><div className="text-base sm:text-lg font-semibold text-primary tabular-nums">{inr(totals.inSum)}</div></div>
+        <div className="rounded-md border bg-card p-3"><div className="text-[10px] uppercase text-muted-foreground">Paid</div><div className="text-base sm:text-lg font-semibold text-destructive tabular-nums">{inr(totals.outSum)}</div></div>
+        <div className="rounded-md border bg-card p-3"><div className="text-[10px] uppercase text-muted-foreground">Net</div><div className={`text-base sm:text-lg font-semibold tabular-nums ${totals.net >= 0 ? "text-primary" : "text-destructive"}`}>{inr(totals.net)}</div></div>
+      </div>
+
       {filtered.length === 0 ? <Empty>No payments match.</Empty> : (
         <div className="space-y-2">
           {filtered.map(r => (
@@ -248,17 +296,23 @@ function PaymentsPage() {
                   Allocated <span className="font-semibold">{inr(allocatedSum)}</span> / Remaining <span className={remaining < 0 ? "text-destructive font-semibold" : "font-semibold"}>{inr(remaining)}</span>
                 </div>
               </div>
+              <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
+                <span>Open total: <span className="font-semibold text-foreground">{inr(totalOpen)}</span>{overdueAmt > 0 && <span className="ml-2 text-destructive">· Overdue {inr(overdueAmt)}</span>}</span>
+                <Button type="button" size="sm" variant="outline" className="h-7" onClick={autoAllocate} disabled={!amount || openDocs.length === 0}>Auto-allocate oldest</Button>
+              </div>
               {openDocs.length === 0 ? (
                 <div className="text-xs text-muted-foreground border rounded-md p-2">No open documents.</div>
               ) : (
                 <div className="border rounded-md divide-y">
                   {openDocs.map((d: any) => {
                     const picked = allocs.find(a => a.doc_id === d.doc_id);
+                    const age = ageBadge(daysBetween(d.date));
                     return (
                       <div key={d.doc_id} className={`p-2 flex items-center gap-2 cursor-pointer ${picked ? "bg-primary/5" : ""}`} onClick={() => toggleDoc(d)}>
                         <Badge variant="outline" className="uppercase">{d.doc_kind}</Badge>
                         <span className="font-mono text-xs">{d.doc_no}</span>
                         <span className="text-xs text-muted-foreground">{fmtDate(d.date)}</span>
+                        <Badge variant={age.tone === "bad" ? "destructive" : age.tone === "warn" ? "secondary" : "outline"} className="text-[10px] py-0">{age.label}</Badge>
                         <div className="ml-auto text-xs tabular-nums">
                           Bal <span className="font-semibold">{inr(d.balance)}</span> / {inr(d.total)}
                         </div>
@@ -282,6 +336,15 @@ function PaymentsPage() {
                       {a.doc_no}: {inr(a.amount)}
                       <X className="h-3 w-3 cursor-pointer" onClick={() => setAllocs(allocs.filter(x => x.doc_id !== a.doc_id))} />
                     </Badge>
+                  ))}
+                </div>
+              )}
+              {suggestions.length > 0 && (
+                <div className="mt-2 space-y-1">
+                  {suggestions.map((s, i) => (
+                    <div key={i} className={`text-xs rounded-md border px-2 py-1 ${s.tone === "bad" ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"}`}>
+                      {s.text}
+                    </div>
                   ))}
                 </div>
               )}
