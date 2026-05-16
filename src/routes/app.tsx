@@ -10,7 +10,11 @@ import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/app")({ component: AppLayout });
 
-const nav = [
+type NavItem =
+  | { group: string }
+  | { to: string; label: string; icon: typeof LayoutDashboard; exact?: boolean };
+
+const nav: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { group: "Masters" },
   { to: "/app/products", label: "Products", icon: Package },
@@ -30,7 +34,7 @@ const nav = [
   { to: "/app/lookup", label: "Lookup", icon: Search },
   { to: "/app/print", label: "Print", icon: Printer },
   { to: "/app/settings", label: "Settings", icon: Settings },
-] as const;
+];
 
 function AppLayout() {
   const { user, loading, signOut } = useAuth();
@@ -66,7 +70,7 @@ function AppLayout() {
             return (
               <Link
                 key={item.to}
-                to={item.to}
+                to={item.to as string}
                 className={cn(
                   "flex items-center gap-2 px-2 py-1.5 rounded-md transition-colors",
                   active
