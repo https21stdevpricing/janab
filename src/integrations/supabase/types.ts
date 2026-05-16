@@ -17,6 +17,7 @@ export type Database = {
       contacts: {
         Row: {
           address: string | null
+          code: string | null
           created_at: string
           credit_limit: number | null
           email: string | null
@@ -32,6 +33,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          code?: string | null
           created_at?: string
           credit_limit?: number | null
           email?: string | null
@@ -47,6 +49,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          code?: string | null
           created_at?: string
           credit_limit?: number | null
           email?: string | null
@@ -94,6 +97,127 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          narration: string | null
+          source_id: string
+          source_kind: string
+          source_no: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          narration?: string | null
+          source_id: string
+          source_kind: string
+          source_no?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          narration?: string | null
+          source_id?: string
+          source_kind?: string
+          source_no?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      journal_lines: {
+        Row: {
+          account: string
+          credit: number
+          date: string
+          debit: number
+          entry_id: string
+          id: string
+          narration: string | null
+          party: string | null
+          ref_no: string | null
+          user_id: string
+        }
+        Insert: {
+          account: string
+          credit?: number
+          date: string
+          debit?: number
+          entry_id: string
+          id?: string
+          narration?: string | null
+          party?: string | null
+          ref_no?: string | null
+          user_id: string
+        }
+        Update: {
+          account?: string
+          credit?: number
+          date?: string
+          debit?: number
+          entry_id?: string
+          id?: string
+          narration?: string | null
+          party?: string | null
+          ref_no?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_lines_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_allocations: {
+        Row: {
+          amount: number
+          created_at: string
+          doc_id: string
+          doc_kind: string
+          doc_no: string | null
+          id: string
+          payment_id: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          doc_id: string
+          doc_kind: string
+          doc_no?: string | null
+          id?: string
+          payment_id: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          doc_id?: string
+          doc_kind?: string
+          doc_no?: string | null
+          id?: string
+          payment_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payments: {
         Row: {
@@ -145,6 +269,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "party_summary_view"
+            referencedColumns: ["contact_id"]
           },
         ]
       }
@@ -317,6 +448,13 @@ export type Database = {
             referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "purchases_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "party_summary_view"
+            referencedColumns: ["contact_id"]
+          },
         ]
       }
       quotation_items: {
@@ -424,6 +562,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "quotations_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "party_summary_view"
+            referencedColumns: ["contact_id"]
           },
         ]
       }
@@ -533,6 +678,13 @@ export type Database = {
             referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "party_summary_view"
+            referencedColumns: ["contact_id"]
+          },
         ]
       }
       settings: {
@@ -623,11 +775,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "third_party_buyer_id_fkey"
+            columns: ["buyer_id"]
+            isOneToOne: false
+            referencedRelation: "party_summary_view"
+            referencedColumns: ["contact_id"]
+          },
+          {
             foreignKeyName: "third_party_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "contacts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "third_party_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "party_summary_view"
+            referencedColumns: ["contact_id"]
           },
         ]
       }
@@ -700,6 +866,17 @@ export type Database = {
       }
     }
     Views: {
+      cash_flow_view: {
+        Row: {
+          account: string | null
+          inflow: number | null
+          month: string | null
+          net: number | null
+          outflow: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       ledger_view: {
         Row: {
           account: string | null
@@ -707,10 +884,97 @@ export type Database = {
           date: string | null
           debit: number | null
           narration: string | null
+          net: number | null
           party: string | null
-          source_id: string | null
-          source_type: string | null
+          ref_no: string | null
           user_id: string | null
+        }
+        Insert: {
+          account?: string | null
+          credit?: number | null
+          date?: string | null
+          debit?: number | null
+          narration?: string | null
+          net?: never
+          party?: string | null
+          ref_no?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account?: string | null
+          credit?: number | null
+          date?: string | null
+          debit?: number | null
+          narration?: string | null
+          net?: never
+          party?: string | null
+          ref_no?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
+      monthly_pnl_view: {
+        Row: {
+          cogs: number | null
+          expenses: number | null
+          month: string | null
+          revenue: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      outstanding_view: {
+        Row: {
+          balance: number | null
+          date: string | null
+          doc_id: string | null
+          doc_kind: string | null
+          doc_no: string | null
+          paid: number | null
+          party_id: string | null
+          party_name: string | null
+          status: string | null
+          total: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      party_summary_view: {
+        Row: {
+          code: string | null
+          contact_id: string | null
+          last_txn: string | null
+          name: string | null
+          payable: number | null
+          receivable: number | null
+          total_purchases: number | null
+          total_sales: number | null
+          type: Database["public"]["Enums"]["contact_type"] | null
+          user_id: string | null
+        }
+        Insert: {
+          code?: string | null
+          contact_id?: string | null
+          last_txn?: never
+          name?: string | null
+          payable?: never
+          receivable?: never
+          total_purchases?: never
+          total_sales?: never
+          type?: Database["public"]["Enums"]["contact_type"] | null
+          user_id?: string | null
+        }
+        Update: {
+          code?: string | null
+          contact_id?: string | null
+          last_txn?: never
+          name?: string | null
+          payable?: never
+          receivable?: never
+          total_purchases?: never
+          total_sales?: never
+          type?: Database["public"]["Enums"]["contact_type"] | null
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -755,10 +1019,20 @@ export type Database = {
       }
     }
     Functions: {
+      _co_state: { Args: { _user: string }; Returns: string }
+      _next_code: {
+        Args: { _col: string; _prefix: string; _table: string; _user: string }
+        Returns: string
+      }
       next_doc_no: {
         Args: { _col: string; _prefix: string; _table: string; _user: string }
         Returns: string
       }
+      post_journal_expense: { Args: { _id: string }; Returns: undefined }
+      post_journal_payment: { Args: { _id: string }; Returns: undefined }
+      post_journal_purchase: { Args: { _id: string }; Returns: undefined }
+      post_journal_sale: { Args: { _id: string }; Returns: undefined }
+      post_journal_tp: { Args: { _id: string }; Returns: undefined }
     }
     Enums: {
       contact_type: "buyer" | "supplier" | "both"
