@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard, Package, Users, ShoppingCart, Truck, Repeat,
-  Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Menu,
+  Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Menu, Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,6 +31,7 @@ const nav: NavItem[] = [
   { to: "/app/stock", label: "Stock Ledger", icon: Boxes },
   { to: "/app/ledger", label: "General Ledger", icon: BookOpen },
   { to: "/app/reports", label: "Reports", icon: BarChart3 },
+  { to: "/app/gst", label: "GST Summary", icon: Percent },
   { group: "Tools" },
   { to: "/app/lookup", label: "Lookup", icon: Search },
   { to: "/app/print", label: "Print", icon: Printer },
