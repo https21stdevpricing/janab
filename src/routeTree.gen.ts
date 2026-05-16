@@ -27,7 +27,9 @@ import { Route as AppLookupRouteImport } from './routes/app.lookup'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppGstRouteImport } from './routes/app.gst'
 import { Route as AppExpensesRouteImport } from './routes/app.expenses'
+import { Route as AppDeliveriesRouteImport } from './routes/app.deliveries'
 import { Route as AppContactsRouteImport } from './routes/app.contacts'
+import { Route as AppAuditRouteImport } from './routes/app.audit'
 import { Route as AppPrintQuoteIdRouteImport } from './routes/app.print.quote.$id'
 import { Route as AppPrintInvoiceIdRouteImport } from './routes/app.print.invoice.$id'
 
@@ -121,9 +123,19 @@ const AppExpensesRoute = AppExpensesRouteImport.update({
   path: '/expenses',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDeliveriesRoute = AppDeliveriesRouteImport.update({
+  id: '/deliveries',
+  path: '/deliveries',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppContactsRoute = AppContactsRouteImport.update({
   id: '/contacts',
   path: '/contacts',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAuditRoute = AppAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPrintQuoteIdRoute = AppPrintQuoteIdRouteImport.update({
@@ -141,7 +153,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/audit': typeof AppAuditRoute
   '/app/contacts': typeof AppContactsRoute
+  '/app/deliveries': typeof AppDeliveriesRoute
   '/app/expenses': typeof AppExpensesRoute
   '/app/gst': typeof AppGstRoute
   '/app/ledger': typeof AppLedgerRoute
@@ -163,7 +177,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/app/audit': typeof AppAuditRoute
   '/app/contacts': typeof AppContactsRoute
+  '/app/deliveries': typeof AppDeliveriesRoute
   '/app/expenses': typeof AppExpensesRoute
   '/app/gst': typeof AppGstRoute
   '/app/ledger': typeof AppLedgerRoute
@@ -187,7 +203,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/audit': typeof AppAuditRoute
   '/app/contacts': typeof AppContactsRoute
+  '/app/deliveries': typeof AppDeliveriesRoute
   '/app/expenses': typeof AppExpensesRoute
   '/app/gst': typeof AppGstRoute
   '/app/ledger': typeof AppLedgerRoute
@@ -212,7 +230,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/app/audit'
     | '/app/contacts'
+    | '/app/deliveries'
     | '/app/expenses'
     | '/app/gst'
     | '/app/ledger'
@@ -234,7 +254,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/app/audit'
     | '/app/contacts'
+    | '/app/deliveries'
     | '/app/expenses'
     | '/app/gst'
     | '/app/ledger'
@@ -257,7 +279,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/app/audit'
     | '/app/contacts'
+    | '/app/deliveries'
     | '/app/expenses'
     | '/app/gst'
     | '/app/ledger'
@@ -411,11 +435,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExpensesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/deliveries': {
+      id: '/app/deliveries'
+      path: '/deliveries'
+      fullPath: '/app/deliveries'
+      preLoaderRoute: typeof AppDeliveriesRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/contacts': {
       id: '/app/contacts'
       path: '/contacts'
       fullPath: '/app/contacts'
       preLoaderRoute: typeof AppContactsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/audit': {
+      id: '/app/audit'
+      path: '/audit'
+      fullPath: '/app/audit'
+      preLoaderRoute: typeof AppAuditRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/print/quote/$id': {
@@ -450,7 +488,9 @@ const AppPrintRouteWithChildren = AppPrintRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAuditRoute: typeof AppAuditRoute
   AppContactsRoute: typeof AppContactsRoute
+  AppDeliveriesRoute: typeof AppDeliveriesRoute
   AppExpensesRoute: typeof AppExpensesRoute
   AppGstRoute: typeof AppGstRoute
   AppLedgerRoute: typeof AppLedgerRoute
@@ -469,7 +509,9 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAuditRoute: AppAuditRoute,
   AppContactsRoute: AppContactsRoute,
+  AppDeliveriesRoute: AppDeliveriesRoute,
   AppExpensesRoute: AppExpensesRoute,
   AppGstRoute: AppGstRoute,
   AppLedgerRoute: AppLedgerRoute,
@@ -497,3 +539,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
