@@ -14,6 +14,8 @@ import { inr, fmt, fmtDate, todayISO } from "@/lib/format";
 import { lookupDoc, openDocsFor } from "@/lib/doc-lookup";
 import { toast } from "sonner";
 import { Trash2, ArrowDownLeft, ArrowUpRight, X } from "lucide-react";
+import { ExcelBar } from "@/components/excel-bar";
+import { exportToExcel } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/payments")({ component: PaymentsPage });
 
@@ -116,13 +118,32 @@ function PaymentsPage() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const onExport = () => {
+    exportToExcel({
+      filename: `payments-${new Date().toISOString().slice(0, 10)}`,
+      sheetName: "Payments",
+      columns: [
+        { header: "No.", key: "payment_no" },
+        { header: "Date", key: "date" },
+        { header: "Direction", key: "direction", get: (r) => r.direction === "in" ? "Receipt" : "Payment" },
+        { header: "Party", key: "contact_name" },
+        { header: "Amount", key: "amount" },
+        { header: "Mode", key: "mode" },
+        { header: "Ref Doc", key: "ref_doc" },
+        { header: "Notes", key: "notes" },
+      ],
+      rows: filtered,
+    });
+  };
+
   return (
     <div>
       <PageHeader title="Payments" description="Money in (receipts) and out — auto-allocated against invoices" actions={
-        <div className="flex gap-2">
+        <>
+          <ExcelBar onExport={onExport} />
           <Button size="sm" variant="outline" onClick={() => startNew("in")}><ArrowDownLeft className="h-4 w-4" /> Receipt</Button>
           <Button size="sm" onClick={() => startNew("out")}><ArrowUpRight className="h-4 w-4" /> Payment</Button>
-        </div>
+        </>
       } />
 
       {/* Filter bar */}
