@@ -60,7 +60,7 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
     setBuyerId(r.buyer_id ?? null); setBuyerName(r.buyer_name ?? null);
     setSupplierId(r.supplier_id ?? null); setSupplierName(r.supplier_name ?? null);
     setValidUntil(r.valid_until ?? ""); setNotes(r.notes ?? "");
-    const { data: its } = await supabase.from(cfg.itemsTable).select("*").eq(cfg.itemsFk, r.id).order("position");
+    const { data: its } = await supabase.from(cfg.itemsTable).select("*").eq(cfg.itemsFk as never, r.id).order("position");
     setItems((its ?? []).map((it: any) => ({
       product_id: it.product_id, product_name: it.product_name, unit: it.unit, qty: Number(it.qty),
       rate: Number(it.rate ?? 0), gst_pct: Number(it.gst_pct ?? 18),
@@ -85,7 +85,7 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
       const { error } = await supabase.from(cfg.table).update(header).eq("id", editing.id);
       if (error) { toast.error(error.message); return; }
       id = editing.id;
-      await supabase.from(cfg.itemsTable).delete().eq(cfg.itemsFk, id);
+      await supabase.from(cfg.itemsTable).delete().eq(cfg.itemsFk as never, id);
     } else {
       const { data: ins, error } = await supabase.from(cfg.table).insert(header).select().single();
       if (error || !ins) { toast.error(error?.message ?? "Failed"); return; }
