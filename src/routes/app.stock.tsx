@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/page-header";
 import { Empty } from "@/components/empty";
 import { Badge } from "@/components/ui/badge";
 import { fmt } from "@/lib/format";
+import { ExcelBar } from "@/components/excel-bar";
+import { exportToExcel } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/stock")({ component: StockPage });
 
@@ -13,7 +15,23 @@ function StockPage() {
   useEffect(() => { supabase.from("stock_view").select("*").order("code").then(({ data }) => setRows(data ?? [])); }, []);
   return (
     <div>
-      <PageHeader title="Stock Ledger" description="Live on-hand by product (excl. third-party)" />
+      <PageHeader title="Stock Ledger" description="Live on-hand by product (excl. third-party)" actions={
+        <ExcelBar onExport={() => exportToExcel({
+          filename: `stock-${new Date().toISOString().slice(0, 10)}`,
+          sheetName: "Stock",
+          columns: [
+            { header: "Code", key: "code" },
+            { header: "Name", key: "name" },
+            { header: "Unit", key: "unit" },
+            { header: "Opening", key: "opening_stock" },
+            { header: "Purchased", key: "purchased" },
+            { header: "Sold", key: "sold" },
+            { header: "On Hand", key: "on_hand" },
+            { header: "Reorder Level", key: "reorder_level" },
+          ],
+          rows,
+        })} />
+      } />
       {rows.length === 0 ? <Empty>No products yet.</Empty> : (
         <div className="rounded-md border bg-card overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
