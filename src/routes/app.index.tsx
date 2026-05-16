@@ -68,14 +68,14 @@ function Dashboard() {
           </>
         }
       />
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-2 sm:gap-3">
         {tiles.map((t) => (
           <Card key={t.label}>
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-1 sm:pb-2 px-3 sm:px-6 pt-3 sm:pt-6">
               <CardTitle className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{t.label}</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className={`text-2xl font-semibold tabular-nums ${t.tone}`}>
+            <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+              <div className={`text-base sm:text-2xl font-semibold tabular-nums break-words ${t.tone}`}>
                 {s ? inr(t.value ?? 0) : "—"}
               </div>
             </CardContent>
