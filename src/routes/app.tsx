@@ -8,6 +8,8 @@ import {
   Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Menu, Percent,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { History, PackageCheck } from "lucide-react";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 export const Route = createFileRoute("/app")({ component: AppLayout });
 
@@ -25,6 +27,7 @@ const nav: NavItem[] = [
   { to: "/app/purchases", label: "Purchases", icon: Truck },
   { to: "/app/third-party", label: "Third Party", icon: Repeat },
   { to: "/app/quotations", label: "Quotations", icon: FileText },
+  { to: "/app/deliveries", label: "Deliveries", icon: PackageCheck },
   { to: "/app/payments", label: "Payments", icon: Wallet },
   { to: "/app/expenses", label: "Expenses", icon: Receipt },
   { group: "Inventory & Books" },
@@ -35,6 +38,7 @@ const nav: NavItem[] = [
   { group: "Tools" },
   { to: "/app/lookup", label: "Lookup", icon: Search },
   { to: "/app/print", label: "Print", icon: Printer },
+  { to: "/app/audit", label: "Backlog / Audit", icon: History },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
@@ -120,7 +124,11 @@ function AppLayout() {
             </SheetContent>
           </Sheet>
           <div className="text-sm font-semibold tracking-tight">StoneWorld</div>
+          <div className="ml-auto"><NotificationsBell /></div>
         </header>
+        <div className="hidden md:flex sticky top-0 z-20 items-center gap-2 px-4 py-2 border-b bg-background/70 backdrop-blur">
+          <div className="ml-auto"><NotificationsBell /></div>
+        </div>
         <div className="max-w-[1400px] mx-auto p-3 md:p-6">
           <Outlet />
         </div>
