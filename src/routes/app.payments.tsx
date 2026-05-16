@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
@@ -17,13 +17,21 @@ import { Trash2, ArrowDownLeft, ArrowUpRight, X } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 
-export const Route = createFileRoute("/app/payments")({ component: PaymentsPage });
+export const Route = createFileRoute("/app/payments")({
+  component: PaymentsPage,
+  validateSearch: (s: Record<string, unknown>) => ({
+    ref: typeof s.ref === "string" ? s.ref : undefined,
+    dir: s.dir === "out" ? "out" as const : s.dir === "in" ? "in" as const : undefined,
+  }),
+});
 
 type Row = { id: string; payment_no: string; date: string; direction: "in" | "out"; contact_id: string | null; contact_name: string | null; amount: number; mode: string | null; ref_doc: string | null; notes: string | null };
 type Alloc = { doc_kind: "sale" | "purchase" | "tp"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
 
 function PaymentsPage() {
   const [rows, setRows] = useState<Row[]>([]);
+  const search = useSearch({ from: "/app/payments" });
+  const navigate = useNavigate();
   const [filter, setFilter] = useState<"all" | "in" | "out">("all");
   const [q, setQ] = useState("");
 
@@ -44,7 +52,27 @@ function PaymentsPage() {
     const { data } = await supabase.from("payments").select("*").order("date", { ascending: false }).order("created_at", { ascending: false });
     setRows((data ?? []) as Row[]);
   };
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const ch = supabase.channel("payments-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => load())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  // Autofill from ?ref=&dir= (e.g. opened from Lookup)
+  useEffect(() => {
+    if (search.ref && !open) {
+      setDirection(search.dir ?? "in");
+      setDate(todayISO()); setContactId(null); setContactName(null);
+      setAmount(0); setMode("Bank"); setNotes(""); setOpenDocs([]); setAllocs([]);
+      setRefLookup(search.ref);
+      setOpen(true);
+      setTimeout(() => { fillFromDoc(); }, 0);
+      navigate({ to: "/app/payments", search: {} as any, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.ref]);
 
   const filtered = useMemo(() => rows.filter(r =>
     (filter === "all" || r.direction === filter) &&
