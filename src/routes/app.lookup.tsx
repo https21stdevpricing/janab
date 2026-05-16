@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { Empty } from "@/components/empty";
 import { Badge } from "@/components/ui/badge";
 import { fmt, fmtDate, inr } from "@/lib/format";
 import { lookupDoc, prefixOf, type DocLookupResult } from "@/lib/doc-lookup";
-import { Search, Printer } from "lucide-react";
+import { Search, Printer, Wallet, Truck } from "lucide-react";
 import { toast } from "sonner";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
@@ -113,6 +113,11 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
   const h = doc.header;
   const no = h.invoice_no ?? h.po_no ?? h.tp_no ?? h.quote_no ?? h.payment_no;
   const printable = doc.kind === "sale" ? "invoice" : doc.kind === "quote" ? "quote" : null;
+  const navigate = useNavigate();
+  const payable = doc.kind === "sale" || doc.kind === "purchase" || doc.kind === "tp";
+  const payDir = doc.kind === "purchase" ? "out" : "in";
+  const goPay = () => navigate({ to: "/app/payments", search: { ref: no, dir: payDir } as any });
+  const goDelivery = () => navigate({ to: "/app/deliveries" });
   const [journal, setJournal] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [partyDocs, setPartyDocs] = useState<any[]>([]);
@@ -191,6 +196,12 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
           <div className="mt-2 flex flex-col items-end gap-1">
             {printable && (
               <Button asChild size="sm" variant="outline"><Link to={"/app/print/" + printable + "/$id" as any} params={{ id: h.id } as any}><Printer className="h-3 w-3" /> Print</Link></Button>
+            )}
+            {payable && doc.outstanding && doc.outstanding.balance > 0 && (
+              <Button size="sm" onClick={goPay}><Wallet className="h-3 w-3" /> {payDir === "in" ? "Receive" : "Pay"} {inr(doc.outstanding.balance)}</Button>
+            )}
+            {doc.kind === "sale" && (
+              <Button size="sm" variant="outline" onClick={goDelivery}><Truck className="h-3 w-3" /> Delivery</Button>
             )}
             <ExcelBar onExport={exportDoc} exportLabel="Excel" />
           </div>
