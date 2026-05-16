@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,6 @@ import { fmt, fmtDate, inr } from "@/lib/format";
 import { lookupDoc, prefixOf, type DocLookupResult } from "@/lib/doc-lookup";
 import { Search, Printer } from "lucide-react";
 import { toast } from "sonner";
-import { useEffect, useState as useState2 } from "react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 
@@ -114,9 +113,9 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
   const h = doc.header;
   const no = h.invoice_no ?? h.po_no ?? h.tp_no ?? h.quote_no ?? h.payment_no;
   const printable = doc.kind === "sale" ? "invoice" : doc.kind === "quote" ? "quote" : null;
-  const [journal, setJournal] = useState2<any[]>([]);
-  const [payments, setPayments] = useState2<any[]>([]);
-  const [partyDocs, setPartyDocs] = useState2<any[]>([]);
+  const [journal, setJournal] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [partyDocs, setPartyDocs] = useState<any[]>([]);
 
   useEffect(() => {
     (async () => {
