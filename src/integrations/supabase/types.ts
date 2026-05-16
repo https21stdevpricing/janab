@@ -877,6 +877,21 @@ export type Database = {
         }
         Relationships: []
       }
+      gst_summary_view: {
+        Row: {
+          input_cgst: number | null
+          input_igst: number | null
+          input_sgst: number | null
+          input_total_legacy: number | null
+          month: string | null
+          output_cgst: number | null
+          output_igst: number | null
+          output_sgst: number | null
+          output_total_legacy: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       ledger_view: {
         Row: {
           account: string | null
