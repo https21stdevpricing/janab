@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppSalesRouteImport } from './routes/app.sales'
 import { Route as AppProductsRouteImport } from './routes/app.products'
+import { Route as AppContactsRouteImport } from './routes/app.contacts'
 
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
@@ -46,11 +47,17 @@ const AppProductsRoute = AppProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AppRoute,
 } as any)
+const AppContactsRoute = AppContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/contacts': typeof AppContactsRoute
   '/app/products': typeof AppProductsRoute
   '/app/sales': typeof AppSalesRoute
   '/app/': typeof AppIndexRoute
@@ -58,6 +65,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/app/contacts': typeof AppContactsRoute
   '/app/products': typeof AppProductsRoute
   '/app/sales': typeof AppSalesRoute
   '/app': typeof AppIndexRoute
@@ -67,20 +75,29 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/contacts': typeof AppContactsRoute
   '/app/products': typeof AppProductsRoute
   '/app/sales': typeof AppSalesRoute
   '/app/': typeof AppIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/login' | '/app/products' | '/app/sales' | '/app/'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/login'
+    | '/app/contacts'
+    | '/app/products'
+    | '/app/sales'
+    | '/app/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/app/products' | '/app/sales' | '/app'
+  to: '/' | '/login' | '/app/contacts' | '/app/products' | '/app/sales' | '/app'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/login'
+    | '/app/contacts'
     | '/app/products'
     | '/app/sales'
     | '/app/'
@@ -136,16 +153,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppProductsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/contacts': {
+      id: '/app/contacts'
+      path: '/contacts'
+      fullPath: '/app/contacts'
+      preLoaderRoute: typeof AppContactsRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
 interface AppRouteChildren {
+  AppContactsRoute: typeof AppContactsRoute
   AppProductsRoute: typeof AppProductsRoute
   AppSalesRoute: typeof AppSalesRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppContactsRoute: AppContactsRoute,
   AppProductsRoute: AppProductsRoute,
   AppSalesRoute: AppSalesRoute,
   AppIndexRoute: AppIndexRoute,
@@ -161,3 +187,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
