@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          action: string
+          at: string
+          diff: Json | null
+          entity: string
+          entity_id: string | null
+          id: string
+          ref_no: string | null
+          summary: string | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          at?: string
+          diff?: Json | null
+          entity: string
+          entity_id?: string | null
+          id?: string
+          ref_no?: string | null
+          summary?: string | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          at?: string
+          diff?: Json | null
+          entity?: string
+          entity_id?: string | null
+          id?: string
+          ref_no?: string | null
+          summary?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           address: string | null
@@ -64,6 +100,113 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      deliveries: {
+        Row: {
+          buyer_id: string | null
+          buyer_name: string | null
+          created_at: string
+          date: string
+          delivered_at: string | null
+          delivery_no: string
+          dispatched_at: string | null
+          driver_name: string | null
+          driver_phone: string | null
+          id: string
+          invoice_no: string | null
+          lr_no: string | null
+          notes: string | null
+          sale_id: string | null
+          ship_address: string | null
+          status: string
+          transporter: string | null
+          user_id: string
+          vehicle_no: string | null
+        }
+        Insert: {
+          buyer_id?: string | null
+          buyer_name?: string | null
+          created_at?: string
+          date?: string
+          delivered_at?: string | null
+          delivery_no: string
+          dispatched_at?: string | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          id?: string
+          invoice_no?: string | null
+          lr_no?: string | null
+          notes?: string | null
+          sale_id?: string | null
+          ship_address?: string | null
+          status?: string
+          transporter?: string | null
+          user_id: string
+          vehicle_no?: string | null
+        }
+        Update: {
+          buyer_id?: string | null
+          buyer_name?: string | null
+          created_at?: string
+          date?: string
+          delivered_at?: string | null
+          delivery_no?: string
+          dispatched_at?: string | null
+          driver_name?: string | null
+          driver_phone?: string | null
+          id?: string
+          invoice_no?: string | null
+          lr_no?: string | null
+          notes?: string | null
+          sale_id?: string | null
+          ship_address?: string | null
+          status?: string
+          transporter?: string | null
+          user_id?: string
+          vehicle_no?: string | null
+        }
+        Relationships: []
+      }
+      delivery_items: {
+        Row: {
+          delivery_id: string
+          id: string
+          position: number | null
+          product_id: string | null
+          product_name: string | null
+          qty_delivered: number
+          qty_ordered: number
+          unit: string | null
+        }
+        Insert: {
+          delivery_id: string
+          id?: string
+          position?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          qty_delivered?: number
+          qty_ordered?: number
+          unit?: string | null
+        }
+        Update: {
+          delivery_id?: string
+          id?: string
+          position?: number | null
+          product_id?: string | null
+          product_name?: string | null
+          qty_delivered?: number
+          qty_ordered?: number
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_items_delivery_id_fkey"
+            columns: ["delivery_id"]
+            isOneToOne: false
+            referencedRelation: "deliveries"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       expenses: {
         Row: {
@@ -177,6 +320,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      notifications: {
+        Row: {
+          at: string
+          body: string | null
+          id: string
+          kind: string
+          link: string | null
+          read: boolean
+          severity: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          at?: string
+          body?: string | null
+          id?: string
+          kind: string
+          link?: string | null
+          read?: boolean
+          severity?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          at?: string
+          body?: string | null
+          id?: string
+          kind?: string
+          link?: string | null
+          read?: boolean
+          severity?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       payment_allocations: {
         Row: {
@@ -1042,6 +1221,17 @@ export type Database = {
       next_doc_no: {
         Args: { _col: string; _prefix: string; _table: string; _user: string }
         Returns: string
+      }
+      notify: {
+        Args: {
+          _body: string
+          _kind: string
+          _link: string
+          _severity: string
+          _title: string
+          _user: string
+        }
+        Returns: undefined
       }
       post_journal_expense: { Args: { _id: string }; Returns: undefined }
       post_journal_payment: { Args: { _id: string }; Returns: undefined }
