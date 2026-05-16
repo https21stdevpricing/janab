@@ -1,82 +1,56 @@
-# StoneWorld Operations Workbook v10 — Final Rebuild
+# Plan: Full automation + Indian accounting + smart lookup
 
-Goal: deliver one clean `.xlsx` that opens with **zero repair warnings, zero formula errors, zero circular references**, with full automation (live lookups, auto-status, auto-totals) and a minimal, consistent visual style.
+## 1. Database: auto IDs, allocations, journal engine
 
-## What you'll get
+**New migration** adds:
 
-A single file: **StoneWorld_Operations_v10.xlsx** (plus a parallel `.xlsm` instructions block so you can save it macro-enabled in one click).
+- **Auto codes on insert** via triggers:
+  - `products.code` → `P-0001` if blank
+  - `contacts.code` (new col) → `B-0001` (buyer) / `S-0001` (supplier) / `BS-0001` (both)
+  - Sales/Purchases/TP/Quote/Payment numbers auto-fill on insert if blank (calls `next_doc_no`)
+- **payment_allocations** table: links a payment to one or more source docs (INV/PO/TP) with allocated amount → drives outstanding properly.
+- **journal_entries / journal_lines** tables: every sale, purchase, TP, payment, expense writes balanced DR/CR lines per Indian GAAP chart of accounts:
+  - Sales: DR Debtors, CR Sales, CR Output CGST/SGST/IGST
+  - Purchase: DR Purchases, DR Input CGST/SGST/IGST, CR Creditors
+  - TP: DR Debtors (sale value+GST), CR TP Revenue, CR Output GST; DR TP COGS, DR Input GST, CR Creditors — profit margin auto-flows to P&L
+  - Payment-in: DR Bank/Cash, CR Debtors (allocated)
+  - Payment-out: DR Creditors, CR Bank/Cash
+  - Expense: DR Expense:Category, CR Cash/Bank
+- **Triggers** auto-post journals on insert/update/delete (idempotent: delete old lines for that doc first).
+- **Views**:
+  - `outstanding_view` — per doc: total, paid (sum allocations), balance, status (paid/partial/unpaid/overdue)
+  - `party_summary_view` — per contact: total business, receivable, payable, last txn date
+  - `monthly_pnl_view`, `cash_flow_view` — month-wise aggregates
+  - Rebuild `ledger_view` from `journal_lines` (single source of truth)
 
-### Sheet structure (18 sheets, grouped)
+## 2. Frontend automation
 
-**Setup**
-1. `Start Here` — 1-page guide: where to enter data, where to read results.
-2. `Settings` — company info, GST %, FY start/end, low-stock threshold, credit-limit default.
+- **Auto-fill on ID entry**: typing `INV-0001` in Payment, Invoice editor, or Lookup auto-fetches buyer/items/totals/outstanding via a shared `useDocLookup(id)` hook.
+- **Lookup page**: searches across sales, purchases, TP, quotes, payments, **contacts (by name/phone/GSTIN)**, **products (by name/code/HSN)**. Tabbed result with full detail + linked payments + outstanding.
+- **Payments page**: 
+  - Outstanding panel lists open INV/PO/TP with balance.
+  - Allocate amount across one or more docs; status auto-updates.
+  - Auto-suggest contact from selected doc.
+- **Sales/Purchase/TP forms**: contact picker auto-fills GSTIN/state → recomputes CGST/SGST vs IGST live.
+- **Third-party flow**: clearer UI showing supplier cost, buyer price, margin (₹ + %) per line and totals.
 
-**Masters**
-3. `Products` — code, name, unit, HSN, purchase rate, sale rate, opening stock, reorder level.
-4. `Contacts` — buyers + suppliers in one list with a Type column, GSTIN, address, credit limit.
+## 3. Accounting reports (Indian GAAP-flavored)
 
-**Transactions**
-5. `Sales` — header + line items in one flat table (Invoice No, Date, Buyer, Product, Qty, Rate, GST%, Line Total auto).
-6. `Purchases` — same shape as Sales.
-7. `Payments In` — receipts against invoices.
-8. `Payments Out` — payments against purchases.
-9. `Expenses` — date, category, amount, notes.
-10. `Deliveries` — invoice no, dispatch date, vehicle, status.
+- **P&L**: Revenue (Sales + TP Sales) → Less: COGS (Purchases + TP Purchases) = Gross Profit → Less: Indirect Expenses (by category) = Net Profit. Monthly columns toggle.
+- **Balance Sheet**: Assets (Cash, Bank, Debtors, Stock-on-hand valued at purchase rate, Input GST) | Liabilities (Creditors, Output GST payable, Net GST liability) + Equity (Retained earnings).
+- **Cash Flow** (new): Operating (collections − payments − expenses), monthly.
+- **GST Summary** (new): Output GST, Input GST, Net payable, by month.
+- **Party ledger drill-down**: click contact → full statement with running balance + total business.
+- **Filters everywhere**: date range, party, product, doc type, status; column visibility toggles; CSV export.
 
-**Auto-derived (read-only formulas)**
-11. `Stock Ledger` — per-product on-hand = opening + purchased − sold; flags low stock.
-12. `Buyer Ledger` — per-contact billed − received = outstanding; flags over-credit-limit.
-13. `Supplier Ledger` — per-contact billed − paid.
-14. `Accounting` — live P&L + GST payable + cash position for the FY in Settings.
-15. `Owner Alerts` — single list of every problem (low stock, overdue, mismatch).
+## 4. UI polish
 
-**Print / Lookup**
-16. `Invoice Print` — type Invoice No in B6 → full GST invoice auto-fills.
-17. `Quotation` — same idea, draft quotes that don't touch stock.
-18. `VBA Guide` — exact code blocks + which module to paste each into, with one-line description per macro.
+- Tighter sidebar, refined teal/grey tokens, better card density, sticky table headers, mobile sheet-based filters, improved print templates (A4, GST-compliant invoice format with HSN/SAC, place of supply, amount in words).
 
-## How automation works
+## Tech notes
+- Single new migration creates allocations + journal tables + triggers + views; backfills journals for existing rows.
+- New `src/lib/doc-lookup.ts` shared fetcher.
+- New routes: `app.cash-flow.tsx`, `app.gst.tsx`; party-ledger drawer in `app.contacts.tsx`.
+- No new dependencies.
 
-- **Line items auto-fetch**: in `Sales`/`Purchases`, picking a Product code auto-fills name, unit, HSN, default rate, GST% via `INDEX/MATCH` (no `VLOOKUP`, no dynamic arrays).
-- **Live totals**: line total, GST split (CGST/SGST/IGST based on buyer state vs company state), invoice total — all formula-driven.
-- **Live status**: Invoice "Paid / Partial / Unpaid" via `SUMIFS` against Payments In; Delivery status via `Deliveries`.
-- **Live stock**: every Sales/Purchase row updates `Stock Ledger` instantly.
-- **Owner Alerts**: one consolidated `IFERROR/AGGREGATE` list — overdue invoices, low stock, over-limit buyers, header-vs-line mismatches.
-- **Print sheets**: type one ID → invoice/quotation renders with up to 20 line items.
-
-## Error-prevention rules applied
-
-- No `UNIQUE`, `FILTER`, `SORT`, `LET`, `LAMBDA`, `XLOOKUP` (mobile/older Excel safe).
-- No circular references (validated by recalculating every formula and scanning all cells).
-- All blank-safe: `IFERROR(...,"")` and `IF(key="","",...)` everywhere.
-- Data validation drop-downs for Product, Buyer, Supplier, GST%, Status — no typos.
-- Frozen panes + table styles + consistent number formats (₹#,##0.00; dates dd-mmm-yyyy).
-
-## Visual style (minimal)
-
-- White background, single accent (slate-blue), thin gray borders only on data tables.
-- One font (Calibri 11), bold headers, no fills except header row + KPI tiles.
-- Same column widths and header style across every sheet.
-
-## VBA Guide (optional, only if you save as .xlsm)
-
-Each macro block is labeled with: **what it does**, **which sheet/module to paste into**, **how to trigger**.
-1. `Workbook_Open` → ThisWorkbook → forces full recalc on open.
-2. `Worksheet_Change` (Sales/Purchases) → live recalc on edit.
-3. `PrintInvoice` / `PrintQuotation` → standard module → prompts for ID, prints.
-4. `BackupNow` → standard module → saves a timestamped copy next to the file.
-
-## Build & QA process
-
-1. Generate workbook via `openpyxl` with all formulas.
-2. Recalculate via LibreOffice; assert **0 errors across all cells**.
-3. Open in LibreOffice headless → confirm no "repaired records" entry.
-4. Spot-check: add a sample Sale + Payment → confirm Stock Ledger, Buyer Ledger, Accounting, Owner Alerts all update.
-5. Deliver `StoneWorld_Operations_v10.xlsx` to `/mnt/documents/` as a `<presentation-artifact>`.
-
-## Confirm before I build
-
-- Keep **18 sheets** as listed above? Anything to add/remove?
-- Currency **₹ INR** and **GST (CGST/SGST/IGST)** — correct for your business?
-- Any specific column you used in v6/v7 that you want preserved by name? (If yes, list them — otherwise I use the standard columns above.)
+After you approve I'll run the migration first, then ship the code in one pass.
