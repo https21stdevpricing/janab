@@ -11,6 +11,8 @@ import { Empty } from "@/components/empty";
 import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
+import { ExcelBar } from "@/components/excel-bar";
+import { exportToExcel, importFromExcel, pick, num } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/products")({ component: ProductsPage });
 
@@ -55,12 +57,57 @@ function ProductsPage() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const onExport = () => {
+    exportToExcel({
+      filename: `products-${new Date().toISOString().slice(0, 10)}`,
+      sheetName: "Products",
+      columns: [
+        { header: "Code", key: "code" },
+        { header: "Name", key: "name" },
+        { header: "Unit", key: "unit" },
+        { header: "HSN", key: "hsn" },
+        { header: "Purchase Rate", key: "purchase_rate" },
+        { header: "Sale Rate", key: "sale_rate" },
+        { header: "Opening Stock", key: "opening_stock" },
+        { header: "Reorder Level", key: "reorder_level" },
+      ],
+      rows,
+    });
+  };
+
+  const onImport = async (file: File) => {
+    try {
+      const data = await importFromExcel(file);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const payload = data
+        .map((r) => ({
+          user_id: user.id,
+          code: pick(r, "Code", "code") || "",
+          name: pick(r, "Name", "name") || "",
+          unit: pick(r, "Unit", "unit") || "sqft",
+          hsn: pick(r, "HSN", "hsn") || null,
+          purchase_rate: num(pick(r, "Purchase Rate", "purchase_rate", "Purchase")),
+          sale_rate: num(pick(r, "Sale Rate", "sale_rate", "Sale")),
+          opening_stock: num(pick(r, "Opening Stock", "opening_stock", "Stock")),
+          reorder_level: num(pick(r, "Reorder Level", "reorder_level", "Reorder")),
+        }))
+        .filter((r) => r.name);
+      if (payload.length === 0) { toast.error("No rows with a Name column"); return; }
+      const { error } = await supabase.from("products").insert(payload);
+      if (error) toast.error(error.message);
+      else { toast.success(`Imported ${payload.length} products`); load(); }
+    } catch (e: any) { toast.error(e.message ?? "Import failed"); }
+  };
+
   return (
     <div>
       <PageHeader
         title="Products"
         description="Stones / slabs / SKUs you trade in"
         actions={
+          <>
+          <ExcelBar onExport={onExport} onImport={onImport} />
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild><Button size="sm" onClick={startNew}><Plus className="h-4 w-4" /> New Product</Button></DialogTrigger>
             <DialogContent>
@@ -78,6 +125,7 @@ function ProductsPage() {
               <DialogFooter><Button onClick={save}>Save</Button></DialogFooter>
             </DialogContent>
           </Dialog>
+          </>
         }
       />
       {rows.length === 0 ? (

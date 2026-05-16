@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { inr } from "@/lib/format";
+import { ExcelBar } from "@/components/excel-bar";
+import { exportToExcel } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/gst")({ component: GstPage });
 
@@ -37,9 +39,28 @@ function GstPage() {
   const inTotal = totals.ic + totals.is + totals.ii;
   const net = outTotal - inTotal;
 
+  const onExport = () => exportToExcel({
+    filename: `gst-summary-${new Date().toISOString().slice(0, 10)}`,
+    sheetName: "GST",
+    columns: [
+      { header: "Month", key: "month" },
+      { header: "Output CGST", key: "output_cgst" },
+      { header: "Output SGST", key: "output_sgst" },
+      { header: "Output IGST", key: "output_igst" },
+      { header: "Input CGST", key: "input_cgst" },
+      { header: "Input SGST", key: "input_sgst" },
+      { header: "Input IGST", key: "input_igst" },
+    ],
+    rows,
+  });
+
   return (
     <div className="p-4 md:p-6 space-y-4">
-      <PageHeader title="GST Summary" description="CGST / SGST / IGST totals from sales and purchases" />
+      <PageHeader
+        title="GST Summary"
+        description="CGST / SGST / IGST totals from sales and purchases"
+        actions={<ExcelBar onExport={onExport} />}
+      />
 
       <div className="grid gap-3 md:grid-cols-3">
         <Stat label="Output GST (payable)" value={inr(outTotal)} tone="text-rose-600" />

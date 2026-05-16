@@ -12,6 +12,8 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { inr } from "@/lib/format";
+import { ExcelBar } from "@/components/excel-bar";
+import { exportToExcel, importFromExcel, pick, num } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/contacts")({ component: ContactsPage });
 
@@ -58,9 +60,62 @@ function ContactsPage() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const onExport = () => {
+    exportToExcel({
+      filename: `contacts-${new Date().toISOString().slice(0, 10)}`,
+      sheetName: "Contacts",
+      columns: [
+        { header: "Code", key: "id", get: (r: any) => r.code ?? "" },
+        { header: "Type", key: "type" },
+        { header: "Name", key: "name" },
+        { header: "State", key: "state" },
+        { header: "GSTIN", key: "gstin" },
+        { header: "Phone", key: "phone" },
+        { header: "Email", key: "email" },
+        { header: "Address", key: "address" },
+        { header: "Opening Balance", key: "opening_balance" },
+        { header: "Credit Limit", key: "credit_limit" },
+        { header: "Net Balance", key: "name", get: (r) => balances[r.name] ?? 0 },
+      ],
+      rows,
+    });
+  };
+
+  const onImport = async (file: File) => {
+    try {
+      const data = await importFromExcel(file);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const payload = data
+        .map((r) => {
+          let type = String(pick(r, "Type", "type") ?? "buyer").toLowerCase();
+          if (!["buyer", "supplier", "both"].includes(type)) type = "buyer";
+          return {
+            user_id: user.id,
+            type: type as Row["type"],
+            name: pick(r, "Name", "name") || "",
+            state: pick(r, "State", "state") || "Rajasthan",
+            gstin: pick(r, "GSTIN", "gstin") || null,
+            phone: String(pick(r, "Phone", "phone") ?? "") || null,
+            email: pick(r, "Email", "email") || null,
+            address: pick(r, "Address", "address") || null,
+            opening_balance: num(pick(r, "Opening Balance", "opening_balance")),
+            credit_limit: num(pick(r, "Credit Limit", "credit_limit")),
+          };
+        })
+        .filter((r) => r.name);
+      if (payload.length === 0) { toast.error("No rows with a Name"); return; }
+      const { error } = await supabase.from("contacts").insert(payload);
+      if (error) toast.error(error.message);
+      else { toast.success(`Imported ${payload.length} contacts`); load(); }
+    } catch (e: any) { toast.error(e.message ?? "Import failed"); }
+  };
+
   return (
     <div>
       <PageHeader title="Contacts" description="Buyers, suppliers, and both" actions={
+        <>
+        <ExcelBar onExport={onExport} onImport={onImport} />
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild><Button size="sm" onClick={() => { setEdit(null); setForm(empty); setOpen(true); }}><Plus className="h-4 w-4" /> New</Button></DialogTrigger>
           <DialogContent className="max-w-lg">
@@ -85,6 +140,7 @@ function ContactsPage() {
             <DialogFooter><Button onClick={save}>Save</Button></DialogFooter>
           </DialogContent>
         </Dialog>
+        </>
       } />
       {rows.length === 0 ? <Empty>No contacts yet.</Empty> : (
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">

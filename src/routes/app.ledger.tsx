@@ -5,6 +5,8 @@ import { PageHeader } from "@/components/page-header";
 import { Empty } from "@/components/empty";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { fmt, fmtDate } from "@/lib/format";
+import { ExcelBar } from "@/components/excel-bar";
+import { exportToExcel } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/ledger")({ component: LedgerPage });
 
@@ -17,9 +19,26 @@ function LedgerPage() {
   const filtered = useMemo(() => account === "__all__" ? rows : rows.filter(r => r.account === account), [rows, account]);
 
   let running = 0;
+  const onExport = () => exportToExcel({
+    filename: `ledger-${account === "__all__" ? "all" : account.replace(/\s+/g, "_")}-${new Date().toISOString().slice(0, 10)}`,
+    sheetName: "Ledger",
+    columns: [
+      { header: "Date", key: "date" },
+      { header: "Account", key: "account" },
+      { header: "Party", key: "party" },
+      { header: "Ref", key: "ref_no" },
+      { header: "Narration", key: "narration" },
+      { header: "Debit", key: "debit" },
+      { header: "Credit", key: "credit" },
+    ],
+    rows: filtered,
+  });
+
   return (
     <div>
       <PageHeader title="General Ledger" description="Every double-entry posting from your books" actions={
+        <>
+        <ExcelBar onExport={onExport} />
         <Select value={account} onValueChange={setAccount}>
           <SelectTrigger className="w-[220px]"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -27,6 +46,7 @@ function LedgerPage() {
             {accounts.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}
           </SelectContent>
         </Select>
+        </>
       } />
       {filtered.length === 0 ? <Empty>No postings yet.</Empty> : (
         <div className="rounded-md border bg-card overflow-x-auto">

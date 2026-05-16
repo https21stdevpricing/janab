@@ -13,6 +13,8 @@ import { fmt, fmtDate, todayISO } from "@/lib/format";
 import { nextDocNo } from "@/lib/auto-number";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Printer } from "lucide-react";
+import { ExcelBar } from "@/components/excel-bar";
+import { exportToExcel } from "@/lib/excel";
 
 export type TxnConfig = {
   title: string;
@@ -113,10 +115,58 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const onExport = async () => {
+    const { data: its } = await supabase.from(cfg.itemsTable).select("*");
+    const byDoc: Record<string, any[]> = {};
+    for (const it of its ?? []) {
+      const k = (it as any)[cfg.itemsFk] as string;
+      (byDoc[k] ??= []).push(it);
+    }
+    const exportRows = rows.map((r) => {
+      const list = byDoc[r.id] ?? [];
+      let sub = 0, gst = 0;
+      for (const it of list) {
+        const rate = Number(it.sale_rate ?? it.rate ?? 0);
+        const base = Number(it.qty ?? 0) * rate;
+        sub += base;
+        gst += base * Number(it.gst_pct ?? 0) / 100;
+      }
+      return {
+        no: r[cfg.noField], date: r.date,
+        party: cfg.partyRole === "tp"
+          ? `${r.supplier_name ?? ""} -> ${r.buyer_name ?? ""}`
+          : (r.buyer_name ?? r.supplier_name ?? ""),
+        items: list.length,
+        subtotal: +sub.toFixed(2),
+        gst: +gst.toFixed(2),
+        total: +(sub + gst).toFixed(2),
+        notes: r.notes ?? "",
+      };
+    });
+    exportToExcel({
+      filename: `${cfg.table}-${new Date().toISOString().slice(0, 10)}`,
+      sheetName: cfg.title,
+      columns: [
+        { header: "No.", key: "no" },
+        { header: "Date", key: "date" },
+        { header: "Party", key: "party" },
+        { header: "Items", key: "items" },
+        { header: "Subtotal", key: "subtotal" },
+        { header: "GST", key: "gst" },
+        { header: "Total", key: "total" },
+        { header: "Notes", key: "notes" },
+      ],
+      rows: exportRows,
+    });
+  };
+
   return (
     <div>
       <PageHeader title={cfg.title} description={cfg.description} actions={
-        <Button size="sm" onClick={startNew}><Plus className="h-4 w-4" /> New</Button>
+        <>
+          <ExcelBar onExport={onExport} />
+          <Button size="sm" onClick={startNew}><Plus className="h-4 w-4" /> New</Button>
+        </>
       } />
 
       {rows.length === 0 ? <Empty>No entries yet.</Empty> : (
