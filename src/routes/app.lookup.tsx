@@ -31,11 +31,11 @@ function LookupPage() {
     ];
     const match = map.find(m => id.startsWith(m.prefix + "-"));
     if (!match) { toast.error("Unknown ID. Use INV-, PO-, TP-, QUO-, RI-, PY-"); return; }
-    const { data: h } = await supabase.from(match.table).select("*").eq(match.col, id).maybeSingle();
+    const { data: h } = await supabase.from(match.table as never).select("*").eq(match.col as never, id).maybeSingle() as { data: any };
     if (!h) { toast.error("Not found"); return; }
     let items: any[] = [];
     if (match.itemsTable) {
-      const { data: its } = await supabase.from(match.itemsTable).select("*").eq(match.fk, h.id).order("position");
+      const { data: its } = await supabase.from(match.itemsTable as never).select("*").eq(match.fk as never, h.id).order("position");
       items = its ?? [];
     }
     setFound({ kind: match.kind, header: h, items });
