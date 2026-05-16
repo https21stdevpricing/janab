@@ -25,6 +25,7 @@ import { Route as AppPrintRouteImport } from './routes/app.print'
 import { Route as AppPaymentsRouteImport } from './routes/app.payments'
 import { Route as AppLookupRouteImport } from './routes/app.lookup'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
+import { Route as AppGstRouteImport } from './routes/app.gst'
 import { Route as AppExpensesRouteImport } from './routes/app.expenses'
 import { Route as AppContactsRouteImport } from './routes/app.contacts'
 import { Route as AppPrintQuoteIdRouteImport } from './routes/app.print.quote.$id'
@@ -110,6 +111,11 @@ const AppLedgerRoute = AppLedgerRouteImport.update({
   path: '/ledger',
   getParentRoute: () => AppRoute,
 } as any)
+const AppGstRoute = AppGstRouteImport.update({
+  id: '/gst',
+  path: '/gst',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppExpensesRoute = AppExpensesRouteImport.update({
   id: '/expenses',
   path: '/expenses',
@@ -137,6 +143,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/app/contacts': typeof AppContactsRoute
   '/app/expenses': typeof AppExpensesRoute
+  '/app/gst': typeof AppGstRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/payments': typeof AppPaymentsRoute
@@ -158,6 +165,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/app/contacts': typeof AppContactsRoute
   '/app/expenses': typeof AppExpensesRoute
+  '/app/gst': typeof AppGstRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/payments': typeof AppPaymentsRoute
@@ -181,6 +189,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/app/contacts': typeof AppContactsRoute
   '/app/expenses': typeof AppExpensesRoute
+  '/app/gst': typeof AppGstRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/payments': typeof AppPaymentsRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/contacts'
     | '/app/expenses'
+    | '/app/gst'
     | '/app/ledger'
     | '/app/lookup'
     | '/app/payments'
@@ -226,6 +236,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/contacts'
     | '/app/expenses'
+    | '/app/gst'
     | '/app/ledger'
     | '/app/lookup'
     | '/app/payments'
@@ -248,6 +259,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/contacts'
     | '/app/expenses'
+    | '/app/gst'
     | '/app/ledger'
     | '/app/lookup'
     | '/app/payments'
@@ -385,6 +397,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLedgerRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/gst': {
+      id: '/app/gst'
+      path: '/gst'
+      fullPath: '/app/gst'
+      preLoaderRoute: typeof AppGstRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/expenses': {
       id: '/app/expenses'
       path: '/expenses'
@@ -433,6 +452,7 @@ const AppPrintRouteWithChildren = AppPrintRoute._addFileChildren(
 interface AppRouteChildren {
   AppContactsRoute: typeof AppContactsRoute
   AppExpensesRoute: typeof AppExpensesRoute
+  AppGstRoute: typeof AppGstRoute
   AppLedgerRoute: typeof AppLedgerRoute
   AppLookupRoute: typeof AppLookupRoute
   AppPaymentsRoute: typeof AppPaymentsRoute
@@ -451,6 +471,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppContactsRoute: AppContactsRoute,
   AppExpensesRoute: AppExpensesRoute,
+  AppGstRoute: AppGstRoute,
   AppLedgerRoute: AppLedgerRoute,
   AppLookupRoute: AppLookupRoute,
   AppPaymentsRoute: AppPaymentsRoute,
@@ -476,3 +497,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
