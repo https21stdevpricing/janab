@@ -51,6 +51,8 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
   };
   useEffect(() => { load(); }, [cfg.table]);
 
+  useShortcut("n", () => { if (!open) startNew(); }, !open);
+
   const startNew = async () => {
     setEditing(null); setPreview(null);
     setDate(todayISO()); setBuyerId(null); setBuyerName(null); setSupplierId(null); setSupplierName(null);
