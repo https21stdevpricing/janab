@@ -241,7 +241,7 @@ function ProductsPage() {
                 const low = oh <= Number(r.reorder_level ?? 0);
                 const cost = oh * Number(r.purchase_rate ?? 0);
                 return (
-                <TableRow key={r.id}>
+                <TableRow key={r.id} className="cursor-pointer hover:bg-muted/40" onClick={() => startEdit(r)}>
                   <TableCell className="font-mono text-xs">{r.code}</TableCell>
                   <TableCell className="font-medium">{r.name}</TableCell>
                   <TableCell>{r.unit}</TableCell>
@@ -254,7 +254,7 @@ function ProductsPage() {
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{inr(cost)}</TableCell>
                   </>}
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="icon" onClick={() => startEdit(r)}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => del(r.id)}><Trash2 className="h-4 w-4" /></Button>
                   </TableCell>
