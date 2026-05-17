@@ -254,9 +254,19 @@ function PriceListsPage() {
   };
 
   const totals = useMemo(() => {
-    let cost = 0, list = 0, mrp = 0, gst = 0;
-    for (const it of items) { cost += it.cost_rate; list += it.list_rate; mrp += it.mrp; gst += it.list_rate * (it.gst_pct / 100); }
-    return { cost, list, mrp, gst, count: items.length };
+    let cost = 0, list = 0, mrp = 0, gst = 0, incl = 0, errs = 0;
+    for (const it of items) {
+      const qty = Math.max(1, n(it.min_qty));
+      const lineEx = n(it.list_rate) * qty;
+      const lineGst = lineEx * (n(it.gst_pct) / 100);
+      cost += n(it.cost_rate) * qty;
+      list += lineEx;
+      mrp += n(it.mrp) * qty;
+      gst += lineGst;
+      incl += lineEx + lineGst;
+      if (Object.keys(rowErrors(it)).length) errs++;
+    }
+    return { cost, list, mrp, gst, incl, count: items.length, errs };
   }, [items]);
 
   const onExcel = () => {
