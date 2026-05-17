@@ -76,6 +76,37 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
     if (!user) return;
     if (items.length === 0) { toast.error("Add at least one line item"); return; }
 
+    // Checkpoint: prevent overselling on Sales (sale_items with product_id reduce stock)
+    if (cfg.table === "sales") {
+      const ids = items.map(i => i.product_id).filter(Boolean) as string[];
+      if (ids.length) {
+        const { data: stk } = await supabase
+          .from("stock_view" as never).select("product_id,on_hand")
+          .in("product_id" as never, ids) as any;
+        // when editing, current line qty is already counted in stock_view as sold — add it back
+        const prevQty: Record<string, number> = {};
+        if (editing) {
+          const { data: prev } = await supabase.from(cfg.itemsTable)
+            .select("product_id,qty").eq(cfg.itemsFk as never, editing.id);
+          for (const r of (prev ?? []) as any[]) if (r.product_id) prevQty[r.product_id] = (prevQty[r.product_id] ?? 0) + Number(r.qty ?? 0);
+        }
+        const onHand: Record<string, number> = {};
+        for (const r of (stk ?? []) as any[]) onHand[r.product_id] = Number(r.on_hand ?? 0) + (prevQty[r.product_id] ?? 0);
+        const want: Record<string, { qty: number; name: string }> = {};
+        for (const it of items) {
+          if (!it.product_id) continue;
+          want[it.product_id] = { qty: (want[it.product_id]?.qty ?? 0) + Number(it.qty ?? 0), name: it.product_name ?? "" };
+        }
+        for (const [pid, w] of Object.entries(want)) {
+          const avail = onHand[pid] ?? 0;
+          if (w.qty > avail + 0.0001) {
+            toast.error(`Insufficient stock for ${w.name || "item"}: need ${w.qty}, available ${avail.toFixed(2)}`);
+            return;
+          }
+        }
+      }
+    }
+
     const header: any = { user_id: user.id, [cfg.noField]: docNo, date, notes };
     if (cfg.partyRole === "buyer") { header.buyer_id = buyerId; header.buyer_name = buyerName; }
     if (cfg.partyRole === "supplier") { header.supplier_id = supplierId; header.supplier_name = supplierName; }
