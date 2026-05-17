@@ -9,8 +9,10 @@ import {
   Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Menu, Percent, UserCheck, UserCog, LineChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { History, PackageCheck } from "lucide-react";
+import { History, PackageCheck, FileSpreadsheet, Keyboard } from "lucide-react";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { ShortcutsProvider, useShortcutsHelp } from "@/lib/shortcuts";
+import { Kbd } from "@/components/kbd";
 
 export const Route = createFileRoute("/app")({ component: AppLayout });
 
@@ -32,6 +34,7 @@ const nav: NavItem[] = [
   { to: "/app/quotations", label: "Quotations", icon: FileText },
   { to: "/app/deliveries", label: "Deliveries", icon: PackageCheck },
   { to: "/app/payments", label: "Payments", icon: Wallet },
+  { to: "/app/bills", label: "Bills (AR/AP)", icon: FileSpreadsheet },
   { to: "/app/expenses", label: "Expenses", icon: Receipt },
   { group: "Inventory & Books" },
   { to: "/app/stock", label: "Stock Ledger", icon: Boxes },
@@ -117,6 +120,7 @@ function AppLayout() {
   );
 
   return (
+    <ShortcutsProvider>
     <div className="min-h-screen flex bg-muted/20">
       <aside className="hidden md:flex w-60 shrink-0 bg-sidebar border-r border-sidebar-border flex-col">
         <NavBody />
@@ -136,13 +140,14 @@ function AppLayout() {
         </header>
         <div className="hidden md:flex sticky top-0 z-20 items-center gap-2 px-4 py-2 border-b bg-background/70 backdrop-blur">
           <GlobalSearch />
-          <div className="ml-auto"><NotificationsBell /></div>
+          <div className="ml-auto flex items-center gap-1"><HelpButton /><NotificationsBell /></div>
         </div>
         <div className="max-w-[1400px] mx-auto p-3 md:p-6">
           <Outlet />
         </div>
       </main>
     </div>
+    </ShortcutsProvider>
   );
 }
 
@@ -159,13 +164,24 @@ function GlobalSearch() {
       <div className="relative flex-1">
         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <Input
+          data-global-search="1"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && submit()}
-          placeholder="Search invoices, POs, buyers, suppliers, payments…"
+          placeholder="Search invoices, POs, buyers, suppliers, payments…   ( / )"
           className="pl-7 h-8 text-sm"
         />
       </div>
     </div>
+  );
+}
+
+function HelpButton() {
+  const { open } = useShortcutsHelp();
+  return (
+    <Button variant="ghost" size="icon" onClick={open} title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">
+      <Keyboard className="h-5 w-5" />
+      <Kbd className="ml-0 hidden">?</Kbd>
+    </Button>
   );
 }
