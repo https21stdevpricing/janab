@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { fmt, fmtDate, inr } from "@/lib/format";
 import { Printer } from "lucide-react";
 import swLogo from "@/assets/sw-logo.png";
+import { exportStoneWorldDocument } from "@/lib/pdf-theme";
+import { lookupDocById } from "@/lib/doc-lookup";
 
 export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }) {
   const [doc, setDoc] = useState<any>(null);
@@ -42,10 +44,15 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const title = kind === "invoice" ? "Tax Invoice" : "Quotation";
   const address = [company?.address, company?.state].filter(Boolean).join(", ");
   const partyAddress = [buyer?.address, buyer?.state].filter(Boolean).join(", ");
+  const downloadPdf = async () => {
+    const result = await lookupDocById(kind === "invoice" ? "sale" : "quote", id);
+    if (result) exportStoneWorldDocument(result, company);
+  };
 
   return (
     <div>
       <div className="flex justify-end gap-2 mb-3 print:hidden">
+        <Button variant="outline" size="sm" onClick={downloadPdf}><Printer className="h-4 w-4" /> Download Branded PDF</Button>
         <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print / Save PDF</Button>
       </div>
 
