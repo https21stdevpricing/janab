@@ -538,32 +538,38 @@ function PriceListsPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead>Code</TableHead><TableHead>Product</TableHead><TableHead>Unit</TableHead>
-                        <TableHead className="text-right">Cost</TableHead>
+                        <TableHead className="text-right text-muted-foreground" title="Internal — not printed">Cost</TableHead>
                         <TableHead className="text-right">MRP</TableHead>
-                        <TableHead className="text-right">Your Price</TableHead>
+                        <TableHead className="text-right">Customer Rate</TableHead>
                         <TableHead className="text-right">Disc %</TableHead>
-                        <TableHead className="text-right">Margin %</TableHead>
+                        <TableHead className="text-right text-muted-foreground" title="Internal — not printed">Margin %</TableHead>
                         <TableHead className="text-right">GST %</TableHead>
                         <TableHead className="text-right">Min Qty</TableHead>
+                        <TableHead className="text-right">Incl. GST</TableHead>
                         <TableHead></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {items.map((it, idx) => (
-                        <TableRow key={idx}>
+                      {items.map((it, idx) => {
+                        const errs = rowErrors(it);
+                        const incl = lineIncl(it);
+                        const cls = (k: string) => `h-7 text-right tabular-nums ml-auto ${errs[k] ? "border-destructive ring-1 ring-destructive/50" : ""}`;
+                        return (
+                        <TableRow key={idx} className={Object.keys(errs).length ? "bg-destructive/5" : ""}>
                           <TableCell className="font-mono text-xs">{it.product_code}</TableCell>
                           <TableCell className="font-medium">{it.product_name}</TableCell>
                           <TableCell className="text-xs">{it.unit}</TableCell>
                           <TableCell className="text-right tabular-nums text-xs text-muted-foreground">{fmt(it.cost_rate)}</TableCell>
-                          <TableCell className="text-right"><Input type="number" className="h-7 text-right tabular-nums w-24 ml-auto" value={it.mrp} onChange={(e) => updateItem(idx, { mrp: +e.target.value })} /></TableCell>
-                          <TableCell className="text-right"><Input type="number" className="h-7 text-right tabular-nums w-24 ml-auto font-semibold" value={it.list_rate} onChange={(e) => updateItem(idx, { list_rate: +e.target.value })} /></TableCell>
+                          <TableCell className="text-right"><Input type="number" min={0} step="0.01" className={`${cls("mrp")} w-24`} value={it.mrp} onChange={(e) => updateItem(idx, { mrp: Math.max(0, +e.target.value) })} /></TableCell>
+                          <TableCell className="text-right"><Input type="number" min={0} step="0.01" title={errs.list_rate} className={`${cls("list_rate")} w-24 font-semibold`} value={it.list_rate} onChange={(e) => updateItem(idx, { list_rate: Math.max(0, +e.target.value) })} /></TableCell>
                           <TableCell className={`text-right tabular-nums text-xs ${it.discount_pct < 0 ? "text-destructive" : ""}`}>{fmt(it.discount_pct)}</TableCell>
                           <TableCell className={`text-right tabular-nums text-xs ${it.margin_pct < 0 ? "text-destructive" : it.margin_pct > 0 ? "text-primary" : ""}`}>{fmt(it.margin_pct)}</TableCell>
-                          <TableCell className="text-right"><Input type="number" className="h-7 text-right tabular-nums w-16 ml-auto" value={it.gst_pct} onChange={(e) => updateItem(idx, { gst_pct: +e.target.value })} /></TableCell>
-                          <TableCell className="text-right"><Input type="number" className="h-7 text-right tabular-nums w-16 ml-auto" value={it.min_qty} onChange={(e) => updateItem(idx, { min_qty: +e.target.value })} /></TableCell>
+                          <TableCell className="text-right"><Input type="number" min={0} max={50} step="0.5" title={errs.gst_pct} className={`${cls("gst_pct")} w-16`} value={it.gst_pct} onChange={(e) => updateItem(idx, { gst_pct: Math.min(50, Math.max(0, +e.target.value)) })} /></TableCell>
+                          <TableCell className="text-right"><Input type="number" min={1} step="1" title={errs.min_qty} className={`${cls("min_qty")} w-16`} value={it.min_qty} onChange={(e) => updateItem(idx, { min_qty: Math.max(1, +e.target.value || 1) })} /></TableCell>
+                          <TableCell className="text-right tabular-nums text-xs font-semibold text-primary">{inr(incl)}</TableCell>
                           <TableCell className="text-right"><Button size="icon" variant="ghost" onClick={() => removeItem(idx)}><Trash2 className="h-4 w-4" /></Button></TableCell>
                         </TableRow>
-                      ))}
+                      );})}
                     </TableBody>
                   </Table>
                 </div>
