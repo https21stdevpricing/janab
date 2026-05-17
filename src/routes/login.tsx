@@ -28,7 +28,7 @@ function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) toast.error(error.message);
-    else navigate({ to: "/app" });
+    else window.location.assign("/app");
   };
 
   const signUp = async (e: React.FormEvent) => {
@@ -42,8 +42,7 @@ function LoginPage() {
     setBusy(false);
     if (error) toast.error(error.message);
     else {
-      toast.success("Account created — signing you in…");
-      navigate({ to: "/app" });
+      toast.success("Account created. Please check your email if verification is required.");
     }
   };
 
