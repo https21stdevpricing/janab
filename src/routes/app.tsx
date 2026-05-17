@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard, Package, Users, ShoppingCart, Truck, Repeat,
-  Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Menu, Percent,
+  Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Menu, Percent, UserCheck, UserCog, LineChart,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { History, PackageCheck } from "lucide-react";
@@ -22,6 +22,8 @@ const nav: NavItem[] = [
   { group: "Masters" },
   { to: "/app/products", label: "Products", icon: Package },
   { to: "/app/contacts", label: "Contacts", icon: Users },
+  { to: "/app/buyers", label: "Buyers", icon: UserCheck },
+  { to: "/app/suppliers", label: "Suppliers", icon: UserCog },
   { group: "Transactions" },
   { to: "/app/sales", label: "Sales", icon: ShoppingCart },
   { to: "/app/purchases", label: "Purchases", icon: Truck },
@@ -34,6 +36,7 @@ const nav: NavItem[] = [
   { to: "/app/stock", label: "Stock Ledger", icon: Boxes },
   { to: "/app/ledger", label: "General Ledger", icon: BookOpen },
   { to: "/app/reports", label: "Reports", icon: BarChart3 },
+  { to: "/app/analytics", label: "Analytics", icon: LineChart },
   { to: "/app/gst", label: "GST Summary", icon: Percent },
   { group: "Tools" },
   { to: "/app/lookup", label: "Lookup", icon: Search },
