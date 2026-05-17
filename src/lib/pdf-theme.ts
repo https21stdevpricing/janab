@@ -264,3 +264,58 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   drawStoneWorldFooter(doc, company, M);
   doc.save(`${String(no || result.kind).replace(/\s+/g, "_")}.pdf`);
 }
+
+export function exportStoneWorldPayment(row: { payment_no: string; date: string; direction: "in" | "out"; contact_name?: string | null; amount: number; mode?: string | null; ref_doc?: string | null; notes?: string | null }, allocations: Array<{ doc_kind: string; doc_no: string; amount: number }>, company: PdfCompany | null | undefined) {
+  const doc = newStoneWorldPdf();
+  const W = doc.internal.pageSize.getWidth();
+  const { margin: M, y } = drawStoneWorldHeader(doc, company, {
+    title: row.direction === "in" ? "Receipt" : "Payment",
+    subtitle: row.mode || "Payment Entry",
+    reference: row.payment_no,
+    date: row.date,
+  });
+  const panelW = (W - M * 2 - 14) / 2;
+  drawKeyValuePanel(doc, M, y, panelW, row.direction === "in" ? "Received From" : "Paid To", [
+    ["Party", row.contact_name || "-"],
+    ["Mode", row.mode || "-"],
+    ["Reference", row.ref_doc || "Advance / ledger entry"],
+  ], 102);
+  drawKeyValuePanel(doc, M + panelW + 14, y, panelW, "Payment Details", [
+    ["No", row.payment_no],
+    ["Date", fmtDate(row.date)],
+    ["Type", row.direction === "in" ? "Money received" : "Money paid"],
+    ["Amount", pdfMoney(row.amount)],
+  ], 102);
+
+  const startY = y + 124;
+  stoneWorldTable(doc, {
+    startY,
+    margin: { left: M, right: M, bottom: 66 },
+    head: [["#", "Document Type", "Document No", "Allocated Amount"]],
+    body: allocations.length ? allocations.map((a, i) => [String(i + 1), a.doc_kind.toUpperCase(), a.doc_no, pdfMoney(a.amount)]) : [["1", "ADVANCE", "Ledger balance", pdfMoney(row.amount)]],
+    columnStyles: {
+      0: { halign: "center", cellWidth: 28, textColor: swPdf.muted },
+      1: { cellWidth: 130, fontStyle: "bold", textColor: swPdf.tealDark },
+      2: { cellWidth: "auto", font: "courier" },
+      3: { halign: "right", cellWidth: 140, fontStyle: "bold", textColor: swPdf.ink },
+    },
+  });
+
+  const finalY = (doc as any).lastAutoTable?.finalY ?? startY + 80;
+  let blockY = ensurePdfSpace(doc, finalY + 18, 124, M, 66);
+  doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...swPdf.tealDark);
+  doc.text("NOTES", M, blockY + 14);
+  doc.setFont("helvetica", "normal").setFontSize(8.8).setTextColor(...swPdf.muted);
+  doc.text(doc.splitTextToSize(row.notes || "This document records the payment entry and allocation shown above.", W - M * 2 - 252).slice(0, 7), M, blockY + 32);
+  drawTotalsBlock(doc, W - M - 232, blockY, 232, [
+    ["Allocated", pdfMoney(allocations.reduce((sum, a) => sum + Number(a.amount || 0), 0))],
+  ], "Payment Amount", pdfMoney(row.amount));
+
+  blockY = ensurePdfSpace(doc, blockY + 106, 46, M, 66);
+  doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
+  doc.line(M, blockY + 18, M + 172, blockY + 18);
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
+  doc.text(`For ${company?.company_name || "StoneWorld Traders"} - Authorised Signatory`, M, blockY + 33);
+  drawStoneWorldFooter(doc, company, M);
+  doc.save(`${row.payment_no.replace(/\s+/g, "_")}.pdf`);
+}
