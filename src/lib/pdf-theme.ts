@@ -2,6 +2,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { fmt, fmtDate, todayISO } from "@/lib/format";
 import swLogo from "@/assets/sw-logo.png";
+import type { DocLookupResult } from "@/lib/doc-lookup";
 
 export type PdfRgb = [number, number, number];
 
@@ -185,4 +186,81 @@ export function defaultTerms(documentName = "document") {
 
 export function issuedOn() {
   return fmtDate(todayISO());
+}
+
+export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCompany | null | undefined) {
+  const doc = newStoneWorldPdf();
+  const W = doc.internal.pageSize.getWidth();
+  const { margin: M, y } = drawStoneWorldHeader(doc, company, {
+    title: result.kind === "sale" ? "Tax Invoice" : result.kind === "quote" ? "Quotation" : result.kind === "purchase" ? "Purchase Bill" : "Third Party Bill",
+    subtitle: result.kind.toUpperCase(),
+    reference: result.header.invoice_no ?? result.header.quote_no ?? result.header.po_no ?? result.header.tp_no,
+    date: result.header.date,
+    validUntil: result.header.valid_until,
+  });
+  const no = result.header.invoice_no ?? result.header.quote_no ?? result.header.po_no ?? result.header.tp_no;
+  const panelW = (W - M * 2 - 14) / 2;
+  drawKeyValuePanel(doc, M, y, panelW, result.kind === "purchase" ? "Supplier" : "Customer", [
+    ["Name", result.header.buyer_name ?? result.header.supplier_name ?? result.party?.name],
+    ["Phone", result.party?.phone],
+    ["GSTIN", result.party?.gstin],
+    ["Address", result.party?.address],
+  ], 102);
+  drawKeyValuePanel(doc, M + panelW + 14, y, panelW, "Document Details", [
+    ["No", no],
+    ["Date", fmtDate(result.header.date)],
+    ["State", result.party?.state],
+    ["Status", result.outstanding?.status],
+  ], 102);
+
+  stoneWorldTable(doc, {
+    startY: y + 122,
+    margin: { left: M, right: M, top: 58, bottom: 66 },
+    head: [["#", "Product", "Unit", "Qty", "Rate", "GST", "Taxable", "Total"]],
+    body: result.items.map((it, i) => {
+      const rate = Number(it.sale_rate ?? it.rate ?? 0);
+      const qty = Number(it.qty ?? 0);
+      const taxable = qty * rate;
+      return [String(i + 1), it.product_name ?? "-", it.unit ?? "-", fmt(qty), pdfMoney(rate), pdfPct(it.gst_pct), pdfMoney(taxable), pdfMoney(taxable * (1 + Number(it.gst_pct ?? 0) / 100))];
+    }),
+    columnStyles: {
+      0: { halign: "center", cellWidth: 22, textColor: swPdf.muted },
+      1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 180 },
+      2: { halign: "center", cellWidth: 44, textColor: swPdf.muted },
+      3: { halign: "right", cellWidth: 50 },
+      4: { halign: "right", cellWidth: 68, fontStyle: "bold" },
+      5: { halign: "right", cellWidth: 42, textColor: swPdf.muted },
+      6: { halign: "right", cellWidth: 74 },
+      7: { halign: "right", cellWidth: 78, fontStyle: "bold", textColor: swPdf.tealDark },
+    },
+    didDrawPage: (data: any) => {
+      if (data.pageNumber > 1) {
+        doc.setFillColor(...swPdf.teal); doc.rect(0, 0, W, 5, "F");
+        doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.ink);
+        doc.text(`${no} - continued`, M, 34);
+      }
+    },
+  });
+
+  const finalY = (doc as any).lastAutoTable?.finalY ?? y + 260;
+  let blockY = ensurePdfSpace(doc, finalY + 18, 132, M, 66);
+  const totalsW = 232;
+  doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...swPdf.tealDark);
+  doc.text("NOTES & TERMS", M, blockY + 14);
+  doc.setFont("helvetica", "normal").setFontSize(8.8).setTextColor(...swPdf.muted);
+  const notes = result.header.notes ? `${result.header.notes}\n${defaultTerms(result.kind === "quote" ? "quotation" : "document")}` : defaultTerms(result.kind === "quote" ? "quotation" : "document");
+  doc.text(doc.splitTextToSize(notes, W - M * 2 - totalsW - 18).slice(0, 8), M, blockY + 32);
+  drawTotalsBlock(doc, W - M - totalsW, blockY, totalsW, [
+    ["Subtotal", pdfMoney(result.totals.subtotal)],
+    ["GST", pdfMoney(result.totals.gst)],
+    ...(result.outstanding ? [["Paid", pdfMoney(result.outstanding.paid)] as [string, string]] : []),
+  ], result.outstanding?.balance && result.outstanding.balance > 0 ? "Balance" : "Total", result.outstanding?.balance && result.outstanding.balance > 0 ? pdfMoney(result.outstanding.balance) : pdfMoney(result.totals.total));
+
+  blockY = ensurePdfSpace(doc, blockY + 122, 46, M, 66);
+  doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
+  doc.line(M, blockY + 18, M + 172, blockY + 18);
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
+  doc.text(`For ${company?.company_name || "StoneWorld Traders"} - Authorised Signatory`, M, blockY + 33);
+  drawStoneWorldFooter(doc, company, M);
+  doc.save(`${String(no || result.kind).replace(/\s+/g, "_")}.pdf`);
 }
