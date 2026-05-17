@@ -108,10 +108,10 @@ export function ensurePdfSpace(doc: jsPDF, y: number, needed: number, margin = 3
   return margin;
 }
 
-export function drawKeyValuePanel(doc: jsPDF, x: number, y: number, w: number, title: string, rows: Array<[string, string | null | undefined]>) {
+export function drawKeyValuePanel(doc: jsPDF, x: number, y: number, w: number, title: string, rows: Array<[string, string | null | undefined]>, height = 92) {
   doc.setFillColor(...swPdf.soft);
   doc.setDrawColor(...swPdf.faint).setLineWidth(0.7);
-  doc.roundedRect(x, y, w, 92, 5, 5, "FD");
+  doc.roundedRect(x, y, w, height, 5, 5, "FD");
   doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...swPdf.tealDark);
   doc.text(title.toUpperCase(), x + 14, y + 18);
   let cy = y + 36;
@@ -122,8 +122,9 @@ export function drawKeyValuePanel(doc: jsPDF, x: number, y: number, w: number, t
     const lines = doc.splitTextToSize(String(value), w - 92).slice(0, 2);
     doc.text(lines, x + 74, cy);
     cy += Math.max(13, lines.length * 10);
-    if (cy > y + 82) break;
+    if (cy > y + height - 12) break;
   }
+  return y + height;
 }
 
 export function drawTotalsBlock(doc: jsPDF, x: number, y: number, w: number, rows: Array<[string, string]>, totalLabel: string, totalValue: string) {
