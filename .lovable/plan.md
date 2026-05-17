@@ -1,56 +1,68 @@
-# Plan: Full automation + Indian accounting + smart lookup
+# Build plan — Buyers, Suppliers, Analytics, GST fix, Smart Lookup
 
-## 1. Database: auto IDs, allocations, journal engine
+This is a multi-turn build. I'll ship in 3 focused turns so each lands cleanly without breaking the app.
 
-**New migration** adds:
+## Turn 1 — Data layer + GST fix (foundation)
 
-- **Auto codes on insert** via triggers:
-  - `products.code` → `P-0001` if blank
-  - `contacts.code` (new col) → `B-0001` (buyer) / `S-0001` (supplier) / `BS-0001` (both)
-  - Sales/Purchases/TP/Quote/Payment numbers auto-fill on insert if blank (calls `next_doc_no`)
-- **payment_allocations** table: links a payment to one or more source docs (INV/PO/TP) with allocated amount → drives outstanding properly.
-- **journal_entries / journal_lines** tables: every sale, purchase, TP, payment, expense writes balanced DR/CR lines per Indian GAAP chart of accounts:
-  - Sales: DR Debtors, CR Sales, CR Output CGST/SGST/IGST
-  - Purchase: DR Purchases, DR Input CGST/SGST/IGST, CR Creditors
-  - TP: DR Debtors (sale value+GST), CR TP Revenue, CR Output GST; DR TP COGS, DR Input GST, CR Creditors — profit margin auto-flows to P&L
-  - Payment-in: DR Bank/Cash, CR Debtors (allocated)
-  - Payment-out: DR Creditors, CR Bank/Cash
-  - Expense: DR Expense:Category, CR Cash/Bank
-- **Triggers** auto-post journals on insert/update/delete (idempotent: delete old lines for that doc first).
-- **Views**:
-  - `outstanding_view` — per doc: total, paid (sum allocations), balance, status (paid/partial/unpaid/overdue)
-  - `party_summary_view` — per contact: total business, receivable, payable, last txn date
-  - `monthly_pnl_view`, `cash_flow_view` — month-wise aggregates
-  - Rebuild `ledger_view` from `journal_lines` (single source of truth)
+**Fix GST Summary (root cause found)**
+- `gst_summary_view` filters `account LIKE 'GST %'`, but the actual journal accounts are `Output CGST/SGST/IGST` and `Input CGST/SGST/IGST` (no `GST ` prefix). That's why no rows show.
+- Rewrite the view to match real account names.
 
-## 2. Frontend automation
+**New views to power buyers/suppliers/analytics**
+- `party_aging_view` — buckets per party (0-30, 31-60, 61-90, 90+ days) for receivables and payables
+- `monthly_party_view` — sales/purchases/payments per party per month (for "best buyer/supplier of month")
+- `monthly_product_view` — qty + revenue per product per month (for "best products")
+- `dashboard_top_view` — convenience view used by the dashboard tiles
 
-- **Auto-fill on ID entry**: typing `INV-0001` in Payment, Invoice editor, or Lookup auto-fetches buyer/items/totals/outstanding via a shared `useDocLookup(id)` hook.
-- **Lookup page**: searches across sales, purchases, TP, quotes, payments, **contacts (by name/phone/GSTIN)**, **products (by name/code/HSN)**. Tabbed result with full detail + linked payments + outstanding.
-- **Payments page**: 
-  - Outstanding panel lists open INV/PO/TP with balance.
-  - Allocate amount across one or more docs; status auto-updates.
-  - Auto-suggest contact from selected doc.
-- **Sales/Purchase/TP forms**: contact picker auto-fills GSTIN/state → recomputes CGST/SGST vs IGST live.
-- **Third-party flow**: clearer UI showing supplier cost, buyer price, margin (₹ + %) per line and totals.
+**Indexes** on hot columns (sales.buyer_id, purchases.supplier_id, payments.contact_id, journal_lines.date, journal_lines.account) for speed.
 
-## 3. Accounting reports (Indian GAAP-flavored)
+## Turn 2 — Buyers / Suppliers / Analytics pages
 
-- **P&L**: Revenue (Sales + TP Sales) → Less: COGS (Purchases + TP Purchases) = Gross Profit → Less: Indirect Expenses (by category) = Net Profit. Monthly columns toggle.
-- **Balance Sheet**: Assets (Cash, Bank, Debtors, Stock-on-hand valued at purchase rate, Input GST) | Liabilities (Creditors, Output GST payable, Net GST liability) + Equity (Retained earnings).
-- **Cash Flow** (new): Operating (collections − payments − expenses), monthly.
-- **GST Summary** (new): Output GST, Input GST, Net payable, by month.
-- **Party ledger drill-down**: click contact → full statement with running balance + total business.
-- **Filters everywhere**: date range, party, product, doc type, status; column visibility toggles; CSV export.
+**`/app/buyers`** — dedicated buyers page
+- Sortable, searchable Excel-style table of all buyers (+ "both" contacts)
+- Columns: Code, Name, State, GSTIN, Phone, Total Sales, Receivable, Last Txn, Aging badge
+- Row click → drawer with invoices, payments, deliveries, ledger, aging breakdown
+- Quick actions: **Receive Payment** (deep-links to /app/payments with party+dir=in), **New Sale**, **Open Deliveries**, **Statement (Excel)**
 
-## 4. UI polish
+**`/app/suppliers`** — mirror of buyers for supplier-side
+- Columns: Code, Name, State, GSTIN, Phone, Total Purchases, Payable, Last Txn, Aging
+- Row drawer: POs, TPs (as supplier), payments out, ledger
+- Quick actions: **Pay Supplier**, **New Purchase**, **Statement**
 
-- Tighter sidebar, refined teal/grey tokens, better card density, sticky table headers, mobile sheet-based filters, improved print templates (A4, GST-compliant invoice format with HSN/SAC, place of supply, amount in words).
+**`/app/analytics`** — bird's-eye monthly/yearly view
+- Period toggle: This month / Last month / FY / Custom
+- Top tiles: Revenue, Purchases, Cash earned, Cash spent, Best month, Margin %
+- Best products / Best buyers / Best suppliers leaderboards (top 5 each, with sparkline-ish bars)
+- Realtime: subscribe to `sales/purchases/payments` Postgres changes → refresh
 
-## Tech notes
-- Single new migration creates allocations + journal tables + triggers + views; backfills journals for existing rows.
-- New `src/lib/doc-lookup.ts` shared fetcher.
-- New routes: `app.cash-flow.tsx`, `app.gst.tsx`; party-ledger drawer in `app.contacts.tsx`.
-- No new dependencies.
+**Nav updates** in `src/routes/app.tsx`: add Buyers, Suppliers, Analytics under "Masters" / "Books".
 
-After you approve I'll run the migration first, then ship the code in one pass.
+## Turn 3 — Smart Lookup + Excel auto-import + speed
+
+**Smart Lookup hits**
+- Each contact hit now shows: receivable / payable / open-doc count + state + GSTIN inline
+- Each product hit shows: on-hand stock, low-stock badge if below reorder
+- Each doc hit shows: balance + paid badge
+
+**Auto Excel import**
+- Generic header normalizer in `src/lib/excel.ts`: lowercases, strips spaces/underscores/punct, supports aliases per field (e.g. "Mobile" → phone, "GST No" → gstin, "Party" → name, "₹/Amount/Total" → amount).
+- Per-entity column auto-mapping with smart defaults; unknown columns saved into `notes` JSON.
+- Date parsing: ISO / dd-mm-yyyy / Excel serial all accepted.
+- Row-level validation report (errors per row) instead of fail-fast.
+
+**Performance pass**
+- React Query for `/app/buyers`, `/app/suppliers`, `/app/analytics`, dashboard tiles — cached, instant on revisit.
+- Realtime subscriptions auto-invalidate the relevant queries (no full reloads).
+- Skeleton loaders so screens never look blank.
+- Memoize heavy tables, virtualize only if a list exceeds 200 rows (otherwise plain table is faster on mobile).
+
+---
+
+### Technical notes
+
+- All migrations use `CREATE OR REPLACE VIEW` with `security_invoker=on`. RLS on base tables already scopes to `auth.uid()`.
+- Deep-link contract reused from earlier turn: `/app/payments?ref=<doc>&dir=in|out` plus a new `?party=<id>&dir=...` for "Pay party" from buyers/suppliers pages.
+- No business-logic changes to existing sales/purchases/payments code — only views + new pages + smarter lookup/import.
+- Mobile-first: tables get sticky first column + horizontal scroll; cards collapse to two-line summary on `<sm`.
+
+Reply **continue** and I'll start with Turn 1 (GST fix + new views) so the rest builds on solid data.

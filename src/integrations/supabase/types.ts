@@ -1107,11 +1107,34 @@ export type Database = {
         }
         Relationships: []
       }
+      monthly_party_view: {
+        Row: {
+          amount: number | null
+          docs: number | null
+          month: string | null
+          party_id: string | null
+          party_name: string | null
+          role: string | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
       monthly_pnl_view: {
         Row: {
           cogs: number | null
           expenses: number | null
           month: string | null
+          revenue: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      monthly_product_view: {
+        Row: {
+          month: string | null
+          product_id: string | null
+          product_name: string | null
+          qty_sold: number | null
           revenue: number | null
           user_id: string | null
         }
@@ -1129,6 +1152,22 @@ export type Database = {
           party_name: string | null
           status: string | null
           total: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      party_aging_view: {
+        Row: {
+          b_0_30: number | null
+          b_31_60: number | null
+          b_61_90: number | null
+          b_90p: number | null
+          last_doc_date: string | null
+          open_docs: number | null
+          party_id: string | null
+          party_name: string | null
+          side: string | null
+          total_balance: number | null
           user_id: string | null
         }
         Relationships: []
