@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Kbd } from "@/components/kbd";
@@ -23,11 +23,13 @@ function isTypingTarget(t: EventTarget | null) {
 export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
-  const [local, setLocal] = useState<Record<string, () => void>>({});
+  // Use a ref so registering page-level shortcuts does not re-render the tree.
+  const localRef = useRef<Record<string, () => void>>({});
 
   const register = useCallback((key: string, handler: () => void) => {
-    setLocal(prev => ({ ...prev, [key.toLowerCase()]: handler }));
-    return () => setLocal(prev => { const n = { ...prev }; delete n[key.toLowerCase()]; return n; });
+    const k = key.toLowerCase();
+    localRef.current[k] = handler;
+    return () => { if (localRef.current[k] === handler) delete localRef.current[k]; };
   }, []);
 
   useEffect(() => {
@@ -48,7 +50,8 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
       }
       const k = e.key.toLowerCase();
       // Page-registered shortcut wins
-      if (local[k]) { e.preventDefault(); local[k](); return; }
+      const local = localRef.current[k];
+      if (local) { e.preventDefault(); local(); return; }
       // Global navigation
       const map: Record<string, string> = {
         h: "/app", s: "/app/sales", u: "/app/purchases", t: "/app/third-party",
@@ -62,7 +65,7 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [navigate, local, open]);
+  }, [navigate, open]);
 
   const value = useMemo(() => ({ open, setOpen, register }), [open, register]);
 
