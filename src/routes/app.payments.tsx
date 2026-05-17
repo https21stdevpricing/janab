@@ -345,22 +345,25 @@ function PaymentsPage() {
             </DialogTitle>
           </DialogHeader>
           {viewRow && (
-            <div className="space-y-3 text-sm">
-              <div className="grid grid-cols-2 gap-2">
-                <div><div className="text-[10px] uppercase text-muted-foreground">Date</div><div>{fmtDate(viewRow.date)}</div></div>
-                <div><div className="text-[10px] uppercase text-muted-foreground">Mode</div><div>{viewRow.mode ?? "—"}</div></div>
-                <div className="col-span-2"><div className="text-[10px] uppercase text-muted-foreground">{viewRow.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewRow.contact_name ?? "—"}</div></div>
-                <div className="col-span-2"><div className="text-[10px] uppercase text-muted-foreground">Amount</div><div className={`text-xl font-semibold tabular-nums ${viewRow.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(viewRow.amount)}</div></div>
-                {viewRow.notes && <div className="col-span-2"><div className="text-[10px] uppercase text-muted-foreground">Notes</div><div>{viewRow.notes}</div></div>}
+            <div className="space-y-4 text-sm">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewRow.date)}</div></div>
+                <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewRow.mode ?? "—"}</div></div>
+                <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewRow.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewRow.contact_name ?? "—"}</div></div>
+                <div className="col-span-2 rounded-md border bg-muted/30 p-3">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Amount</div>
+                  <div className={`text-2xl font-semibold tabular-nums ${viewRow.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(viewRow.amount)}</div>
+                </div>
+                {viewRow.notes && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Notes</div><div>{viewRow.notes}</div></div>}
               </div>
               <div>
-                <div className="text-[10px] uppercase text-muted-foreground mb-1">Applied to</div>
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Applied to</div>
                 {viewAllocs.length === 0 ? (
                   <div className="text-xs text-muted-foreground border rounded-md p-2">Sitting as advance on ledger (no document allocations).</div>
                 ) : (
                   <div className="border rounded-md divide-y">
                     {viewAllocs.map((a, i) => (
-                      <div key={i} className="p-2 flex items-center gap-2 text-sm">
+                      <div key={i} className="p-2.5 flex items-center gap-2 text-sm">
                         <Badge variant="outline" className="uppercase text-[10px]">{a.doc_kind}</Badge>
                         <Link to="/app/lookup" search={{ q: a.doc_no } as any}
                           className="font-mono text-xs text-primary hover:underline"
@@ -373,10 +376,16 @@ function PaymentsPage() {
               </div>
             </div>
           )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { if (viewRow) { del(viewRow.id); setViewRow(null); } }}><Trash2 className="h-4 w-4" /> Delete</Button>
-            <Button onClick={() => setViewRow(null)}>Close</Button>
-          </DialogFooter>
+          <div className="mt-2 flex flex-col gap-2 pt-3 border-t">
+            <Button
+              variant="outline"
+              className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+              onClick={() => { if (viewRow) { del(viewRow.id); setViewRow(null); } }}
+            >
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+            <Button className="w-full" onClick={() => setViewRow(null)}>Close</Button>
+          </div>
         </DialogContent>
       </Dialog>
 
