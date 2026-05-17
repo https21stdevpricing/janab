@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Empty } from "@/components/empty";
 import { ContactPicker } from "@/components/contact-picker";
 import { LineItemsEditor, type Item } from "@/components/line-items";
-import { fmt, fmtDate, todayISO } from "@/lib/format";
+import { fmt, fmtDate, inr, todayISO } from "@/lib/format";
 import { nextDocNo } from "@/lib/auto-number";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Printer, CheckCircle2 } from "lucide-react";
@@ -32,6 +32,7 @@ export type TxnConfig = {
 
 export function TxnPage({ cfg }: { cfg: TxnConfig }) {
   const [rows, setRows] = useState<any[]>([]);
+  const [itemAgg, setItemAgg] = useState<Record<string, { base: number; gst: number; cost: number; qty: number; lines: number }>>({});
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [preview, setPreview] = useState<any | null>(null);
@@ -48,8 +49,31 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
   const load = async () => {
     const { data } = await supabase.from(cfg.table).select("*").order("date", { ascending: false }).order("created_at", { ascending: false });
     setRows(data ?? []);
+    const { data: its } = await supabase.from(cfg.itemsTable).select("*");
+    const agg: Record<string, { base: number; gst: number; cost: number; qty: number; lines: number }> = {};
+    for (const it of (its ?? []) as any[]) {
+      const k = it[cfg.itemsFk] as string;
+      const rate = Number(it.sale_rate ?? it.rate ?? 0);
+      const qty = Number(it.qty ?? 0);
+      const base = qty * rate;
+      const gst = base * Number(it.gst_pct ?? 0) / 100;
+      const cost = qty * Number(it.purchase_rate ?? 0);
+      const a = agg[k] ??= { base: 0, gst: 0, cost: 0, qty: 0, lines: 0 };
+      a.base += base; a.gst += gst; a.cost += cost; a.qty += qty; a.lines += 1;
+    }
+    setItemAgg(agg);
   };
   useEffect(() => { load(); }, [cfg.table]);
+
+  const totals = useMemo(() => {
+    let value = 0, gst = 0, qty = 0, margin = 0;
+    for (const r of rows) {
+      const a = itemAgg[r.id]; if (!a) continue;
+      value += a.base + a.gst; gst += a.gst; qty += a.qty;
+      if (cfg.partyRole === "tp") margin += a.base - a.cost;
+    }
+    return { value, gst, qty, margin, count: rows.length };
+  }, [rows, itemAgg, cfg.partyRole]);
 
   useShortcut("n", () => { if (!open) startNew(); }, !open);
 
@@ -209,6 +233,17 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
         </>
       } />
 
+      {rows.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+          <TotalTile label={`${cfg.title} count`} value={String(totals.count)} />
+          <TotalTile label="Total value (incl. GST)" value={inr(totals.value)} tone={cfg.partyRole === "supplier" ? "bad" : "good"} />
+          <TotalTile label="GST component" value={inr(totals.gst)} />
+          {cfg.partyRole === "tp"
+            ? <TotalTile label="Total margin" value={inr(totals.margin)} tone="good" />
+            : <TotalTile label="Total qty" value={fmt(totals.qty)} />}
+        </div>
+      )}
+
       {rows.length === 0 ? <Empty>No entries yet.</Empty> : (
         <div className="space-y-2">
           {rows.map(r => (
@@ -288,6 +323,15 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
 }
 
 export { fmt };
+
+function TotalTile({ label, value, tone }: { label: string; value: string; tone?: "good" | "bad" }) {
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
+      <div className={`text-base font-semibold tabular-nums ${tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : ""}`}>{value}</div>
+    </div>
+  );
+}
 
 function PreviewBlock({ cfg, header, items }: { cfg: TxnConfig; header: any; items: Item[] }) {
   const totals = items.reduce((a, it) => {

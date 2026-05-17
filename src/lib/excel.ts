@@ -46,6 +46,30 @@ export async function importFromExcel(file: File): Promise<Record<string, any>[]
   return XLSX.utils.sheet_to_json(ws, { defval: null }) as Record<string, any>[];
 }
 
+// Multi-sheet workbook export. Each sheet gets auto-width columns.
+export function exportWorkbook(opts: {
+  filename: string;
+  sheets: { name: string; rows: Record<string, any>[]; columns?: string[] }[];
+}) {
+  const wb = XLSX.utils.book_new();
+  for (const sh of opts.sheets) {
+    const cols = sh.columns ?? (sh.rows[0] ? Object.keys(sh.rows[0]) : ["(empty)"]);
+    const rows = sh.rows.length ? sh.rows : [Object.fromEntries(cols.map(c => [c, ""]))];
+    const ws = XLSX.utils.json_to_sheet(rows, { header: cols });
+    const widths = cols.map(c => {
+      let max = c.length;
+      for (const r of rows) {
+        const s = r[c] == null ? "" : String(r[c]);
+        if (s.length > max) max = s.length;
+      }
+      return { wch: Math.min(Math.max(max + 2, 8), 40) };
+    });
+    (ws as any)["!cols"] = widths;
+    XLSX.utils.book_append_sheet(wb, ws, sh.name.slice(0, 31));
+  }
+  XLSX.writeFile(wb, `${opts.filename}.xlsx`);
+}
+
 // Pick a value from a row by trying several possible header names (case-insensitive).
 export function pick(row: Record<string, any>, ...names: string[]): any {
   const keys = Object.keys(row);
