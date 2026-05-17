@@ -628,65 +628,65 @@ function exportPdf(active: PriceList, items: Item[], totals: { cost: number; lis
   const M = 36;
   const co = settings ?? { company_name: "Stone World", address: "", phone: "", email: "", gstin: "", state: "" };
 
-  // ===== HEADER =====
-  // Teal accent stripe
-  doc.setFillColor(...BRAND_TEAL);
-  doc.rect(0, 0, W, 6, "F");
-  // Dark header band
-  doc.setFillColor(...BRAND_DARK);
-  doc.rect(0, 6, W, 78, "F");
-
+  // ===== HEADER (white, seamless) =====
   // Logo (left)
-  try { doc.addImage(swLogo, "PNG", M, 18, 56, 56); } catch {}
+  try { doc.addImage(swLogo, "PNG", M, 36, 48, 48); } catch {}
 
   // Company info (next to logo)
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold").setFontSize(20);
-  doc.text(co.company_name || "Stone World", M + 70, 40);
-  doc.setFont("helvetica", "normal").setFontSize(8.5);
-  doc.setTextColor(200, 230, 232);
+  doc.setFont("helvetica", "bold").setFontSize(18).setTextColor(...BRAND_DARK);
+  doc.text(co.company_name || "Stone World", M + 62, 56);
+  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(110, 116, 130);
   const coLine = [co.address, co.state].filter(Boolean).join(", ");
-  if (coLine) doc.text(coLine, M + 70, 55);
-  const coLine2 = [co.phone && `Ph: ${co.phone}`, co.email, co.gstin && `GSTIN: ${co.gstin}`].filter(Boolean).join("   |   ");
-  if (coLine2) doc.text(coLine2, M + 70, 68);
+  if (coLine) doc.text(coLine, M + 62, 70);
+  const coLine2 = [co.phone && `Ph: ${co.phone}`, co.email, co.gstin && `GSTIN: ${co.gstin}`].filter(Boolean).join("   ·   ");
+  if (coLine2) doc.text(coLine2, M + 62, 82);
 
-  // Title pill on right
-  doc.setFillColor(...BRAND_TEAL);
-  doc.roundedRect(W - M - 150, 24, 150, 44, 4, 4, "F");
-  doc.setTextColor(255, 255, 255);
-  doc.setFont("helvetica", "bold").setFontSize(14);
-  doc.text("PRICE LIST", W - M - 75, 44, { align: "center" });
-  doc.setFont("helvetica", "normal").setFontSize(8);
-  doc.text(active.category || "All categories", W - M - 75, 58, { align: "center" });
+  // Title (right, text only)
+  doc.setFont("helvetica", "bold").setFontSize(22).setTextColor(...BRAND_DARK);
+  doc.text("PRICE LIST", W - M, 56, { align: "right" });
+  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...BRAND_TEAL);
+  doc.text(active.category || "All categories", W - M, 72, { align: "right" });
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(140, 146, 160);
+  doc.text(`Ref: ${active.name}`, W - M, 84, { align: "right" });
 
-  // ===== CUSTOMER + META BOX =====
-  let y = 100;
-  doc.setFillColor(...BRAND_SOFT);
-  doc.setDrawColor(...BRAND_TEAL);
-  doc.setLineWidth(0.8);
-  doc.roundedRect(M, y, W - M * 2, 72, 4, 4, "FD");
+  // Hairline divider
+  doc.setDrawColor(225, 228, 235); doc.setLineWidth(0.5);
+  doc.line(M, 100, W - M, 100);
 
-  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...BRAND_TEAL);
-  doc.text("PREPARED FOR", M + 12, y + 16);
+  // ===== CUSTOMER + META (no box, seamless rows) =====
+  let y = 116;
+  doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...BRAND_TEAL);
+  doc.text("PREPARED FOR", M, y);
   doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(...BRAND_DARK);
-  doc.text(active.buyer_name || "Walk-in Customer", M + 12, y + 34);
-  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(60, 60, 60);
-  if (active.buyer_address) doc.text(doc.splitTextToSize(active.buyer_address, (W - M * 2) / 2 - 24), M + 12, y + 50);
-  if (active.buyer_phone) doc.text(`Phone: ${active.buyer_phone}`, M + 12, y + 64);
+  doc.text(active.buyer_name || "Walk-in Customer", M, y + 16);
+  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(90, 96, 110);
+  let cy = y + 30;
+  if (active.buyer_address) {
+    const addr = doc.splitTextToSize(active.buyer_address, (W - M * 2) / 2 - 12);
+    doc.text(addr, M, cy); cy += addr.length * 11;
+  }
+  if (active.buyer_phone) { doc.text(`Phone: ${active.buyer_phone}`, M, cy); cy += 11; }
 
   // Right column
-  const rx = W - M - 12;
-  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...BRAND_TEAL);
-  doc.text("LIST DETAILS", rx, y + 16, { align: "right" });
+  const rx = W - M;
+  doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...BRAND_TEAL);
+  doc.text("LIST DETAILS", rx, y, { align: "right" });
   doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...BRAND_DARK);
-  doc.text(`Reference: ${active.name}`, rx, y + 32, { align: "right" });
-  doc.text(`Effective: ${fmtDate(active.effective_from)}`, rx, y + 46, { align: "right" });
-  doc.text(active.valid_until ? `Valid until: ${fmtDate(active.valid_until)}` : `Date: ${fmtDate(todayISO())}`, rx, y + 60, { align: "right" });
+  doc.text(`Effective: ${fmtDate(active.effective_from)}`, rx, y + 18, { align: "right" });
+  doc.text(active.valid_until ? `Valid until: ${fmtDate(active.valid_until)}` : `Issued: ${fmtDate(todayISO())}`, rx, y + 32, { align: "right" });
+  if (active.buyer_phone || active.buyer_address) {
+    // keep right column compact
+  }
 
-  // ===== ITEMS TABLE =====
+  const metaBottom = Math.max(cy, y + 44);
+  // Hairline divider before table
+  doc.setDrawColor(225, 228, 235); doc.setLineWidth(0.5);
+  doc.line(M, metaBottom + 4, W - M, metaBottom + 4);
+
+  // ===== ITEMS TABLE (white, hairline rules) =====
   autoTable(doc, {
-    startY: y + 86,
-    margin: { left: M, right: M, bottom: 96 },
+    startY: metaBottom + 16,
+    margin: { left: M, right: M, bottom: 60 },
     head: [["#", "Code", "Product", "HSN", "Unit", "Rate", "GST %", "Min Qty", "Amount (Incl. GST)"]],
     body: items.map((it, i) => [
       String(i + 1),
@@ -699,72 +699,71 @@ function exportPdf(active: PriceList, items: Item[], totals: { cost: number; lis
       fmt(it.min_qty, 0),
       `Rs. ${fmt(lineIncl(it))}`,
     ]),
-    styles: { font: "helvetica", fontSize: 9, cellPadding: 5, textColor: [30, 30, 30], lineColor: [230, 230, 230], lineWidth: 0.3, overflow: "linebreak", valign: "middle" },
-    headStyles: { fillColor: BRAND_DARK, textColor: 255, fontStyle: "bold", fontSize: 9, halign: "left" },
-    alternateRowStyles: { fillColor: [248, 252, 252] },
+    theme: "plain",
+    styles: { font: "helvetica", fontSize: 9, cellPadding: { top: 7, right: 6, bottom: 7, left: 6 }, textColor: [30, 33, 42], lineColor: [232, 234, 240], lineWidth: 0, overflow: "linebreak", valign: "middle" },
+    headStyles: { fillColor: [255, 255, 255], textColor: [110, 116, 130], fontStyle: "bold", fontSize: 8, halign: "left", cellPadding: { top: 4, right: 6, bottom: 8, left: 6 }, lineColor: BRAND_DARK, lineWidth: { bottom: 0.8 } as any },
+    bodyStyles: { lineWidth: { bottom: 0.3 } as any, lineColor: [232, 234, 240] },
     columnStyles: {
-      0: { halign: "right", cellWidth: 22, textColor: [120, 120, 120] },
+      0: { halign: "right", cellWidth: 22, textColor: [160, 165, 178] },
       1: { cellWidth: 56, font: "courier", fontSize: 8 },
       2: { cellWidth: "auto", fontStyle: "bold" },
-      3: { cellWidth: 46, font: "courier", fontSize: 8, halign: "center" },
+      3: { cellWidth: 46, font: "courier", fontSize: 8, halign: "center", textColor: [110, 116, 130] },
       4: { cellWidth: 36, halign: "center" },
-      5: { halign: "right", cellWidth: 64, fontStyle: "bold", textColor: BRAND_TEAL },
-      6: { halign: "right", cellWidth: 40 },
-      7: { halign: "right", cellWidth: 42 },
-      8: { halign: "right", cellWidth: 78, fontStyle: "bold" },
+      5: { halign: "right", cellWidth: 64, fontStyle: "bold", textColor: BRAND_DARK },
+      6: { halign: "right", cellWidth: 40, textColor: [110, 116, 130] },
+      7: { halign: "right", cellWidth: 42, textColor: [110, 116, 130] },
+      8: { halign: "right", cellWidth: 78, fontStyle: "bold", textColor: BRAND_TEAL },
     },
     didDrawPage: () => {
-      // Footer band - drawn per page
-      doc.setFillColor(...BRAND_DARK);
-      doc.rect(0, H - 28, W, 28, "F");
-      doc.setFillColor(...BRAND_TEAL);
-      doc.rect(0, H - 32, W, 4, "F");
-      doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(200, 230, 232);
-      doc.text(co.company_name || "Stone World", M, H - 11);
+      // Minimal white footer with hairline rule
+      doc.setDrawColor(225, 228, 235); doc.setLineWidth(0.5);
+      doc.line(M, H - 30, W - M, H - 30);
+      doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(140, 146, 160);
+      doc.text(co.company_name || "Stone World", M, H - 18);
       const pageStr = `Page ${doc.getCurrentPageInfo().pageNumber}`;
-      doc.text(pageStr, W - M, H - 11, { align: "right" });
+      doc.text(pageStr, W - M, H - 18, { align: "right" });
     },
   });
 
-  // ===== TOTALS + TERMS on last page =====
-  const finalY = (doc as any).lastAutoTable?.finalY ?? (y + 200);
-  const remaining = H - 100 - finalY;
-  let blockY = finalY + 16;
-  if (remaining < 130) { doc.addPage(); blockY = 40; }
+  // ===== TOTALS + TERMS (seamless, no boxes) =====
+  const finalY = (doc as any).lastAutoTable?.finalY ?? (metaBottom + 200);
+  const remaining = H - 70 - finalY;
+  let blockY = finalY + 18;
+  if (remaining < 150) { doc.addPage(); blockY = 60; }
 
-  // Totals box (right)
+  // Totals (right, label/value rows)
   const tw = 220;
-  doc.setDrawColor(...BRAND_TEAL); doc.setLineWidth(0.8);
-  doc.setFillColor(255, 255, 255);
-  doc.roundedRect(W - M - tw, blockY, tw, 86, 4, 4, "FD");
-  doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...BRAND_TEAL);
-  doc.text("SUMMARY", W - M - tw + 12, blockY + 16);
-  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(60, 60, 60);
-  doc.text(`Items listed`, W - M - tw + 12, blockY + 34);
-  doc.text(String(totals.count), W - M - 12, blockY + 34, { align: "right" });
-  doc.text(`Sub-total (excl. GST)`, W - M - tw + 12, blockY + 50);
-  doc.text(inr(totals.list), W - M - 12, blockY + 50, { align: "right" });
-  doc.text(`Est. GST`, W - M - tw + 12, blockY + 64);
-  doc.text(inr(totals.gst), W - M - 12, blockY + 64, { align: "right" });
-  doc.setDrawColor(...BRAND_TEAL); doc.line(W - M - tw + 12, blockY + 70, W - M - 12, blockY + 70);
-  doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(...BRAND_DARK);
-  doc.text(`Grand Total (Incl. GST)`, W - M - tw + 12, blockY + 82);
-  doc.text(inr(totals.incl), W - M - 12, blockY + 82, { align: "right" });
+  const tx = W - M - tw;
+  const rowY = (i: number) => blockY + 14 + i * 16;
+  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(110, 116, 130);
+  doc.text(`Items listed`, tx, rowY(0));
+  doc.text(`Sub-total (excl. GST)`, tx, rowY(1));
+  doc.text(`GST (estimated)`, tx, rowY(2));
+  doc.setTextColor(...BRAND_DARK).setFont("helvetica", "normal");
+  doc.text(String(totals.count), W - M, rowY(0), { align: "right" });
+  doc.text(inr(totals.list), W - M, rowY(1), { align: "right" });
+  doc.text(inr(totals.gst), W - M, rowY(2), { align: "right" });
+  // Grand total — dark accent rule
+  doc.setDrawColor(...BRAND_DARK); doc.setLineWidth(0.8);
+  doc.line(tx, rowY(3) - 4, W - M, rowY(3) - 4);
+  doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(...BRAND_DARK);
+  doc.text(`Grand Total (Incl. GST)`, tx, rowY(3) + 8);
+  doc.setTextColor(...BRAND_TEAL);
+  doc.text(inr(totals.incl), W - M, rowY(3) + 8, { align: "right" });
 
   // Terms block (left)
-  const termsW = W - M * 2 - tw - 16;
-  doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...BRAND_TEAL);
-  doc.text("TERMS & CONDITIONS", M, blockY + 12);
-  doc.setDrawColor(...BRAND_TEAL); doc.line(M, blockY + 16, M + 110, blockY + 16);
-  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(60, 60, 60);
+  const termsW = W - M * 2 - tw - 24;
+  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...BRAND_TEAL);
+  doc.text("TERMS & CONDITIONS", M, blockY + 14);
+  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(90, 96, 110);
   const termsTxt = active.terms || "Prices are subject to availability and may change without prior notice. Quoted rates are exclusive of transport and installation unless specified. Payment terms as agreed. E&OE.";
   const lines = doc.splitTextToSize(termsTxt, termsW);
   doc.text(lines, M, blockY + 30);
 
   // Signature line
-  doc.setDrawColor(180); doc.setLineWidth(0.4);
+  doc.setDrawColor(210, 213, 222); doc.setLineWidth(0.4);
   doc.line(M, H - 60, M + 160, H - 60);
-  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(120);
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(140, 146, 160);
   doc.text(`For ${co.company_name || "Stone World"} — Authorised Signatory`, M, H - 48);
 
   const fname = `PriceList_${(active.buyer_name || "Customer").replace(/\s+/g, "_")}_${(active.category || "list").replace(/\s+/g, "_")}_${active.effective_from}.pdf`;
