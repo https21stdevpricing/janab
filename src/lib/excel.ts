@@ -53,12 +53,17 @@ export function exportWorkbook(opts: {
 }) {
   const wb = XLSX.utils.book_new();
   for (const sh of opts.sheets) {
-    const cols = sh.columns ?? (sh.rows[0] ? Object.keys(sh.rows[0]) : ["(empty)"]);
-    const rows = sh.rows.length ? sh.rows : [Object.fromEntries(cols.map(c => [c, ""]))];
-    const ws = XLSX.utils.json_to_sheet(rows, { header: cols });
+    const cols = sh.columns ?? (sh.rows[0] ? Object.keys(sh.rows[0]) : ["info"]);
+    const rows = sh.rows.length ? sh.rows : [];
+    // For empty tables, write a header-only sheet with a single "info" note row,
+    // so we never bury real data in placeholder cells.
+    const writable = rows.length
+      ? rows
+      : [{ [cols[0]]: "(no records — table is empty)" }];
+    const ws = XLSX.utils.json_to_sheet(writable, { header: cols });
     const widths = cols.map(c => {
       let max = c.length;
-      for (const r of rows) {
+      for (const r of writable) {
         const s = r[c] == null ? "" : String(r[c]);
         if (s.length > max) max = s.length;
       }
