@@ -464,6 +464,7 @@ export type Database = {
           created_at: string
           hsn: string | null
           id: string
+          kind: string
           name: string
           notes: string | null
           opening_stock: number | null
@@ -478,6 +479,7 @@ export type Database = {
           created_at?: string
           hsn?: string | null
           id?: string
+          kind?: string
           name: string
           notes?: string | null
           opening_stock?: number | null
@@ -492,6 +494,7 @@ export type Database = {
           created_at?: string
           hsn?: string | null
           id?: string
+          kind?: string
           name?: string
           notes?: string | null
           opening_stock?: number | null
