@@ -146,6 +146,7 @@ export function drawTotalsBlock(doc: jsPDF, x: number, y: number, w: number, row
 
 export function stoneWorldTable(doc: jsPDF, options: Parameters<typeof autoTable>[1]) {
   const margin = typeof options.margin === "object" ? options.margin : {};
+  const { margin: _margin, styles, headStyles, alternateRowStyles, bodyStyles, ...rest } = options;
   return autoTable(doc, {
     theme: "grid",
     margin: { left: 34, right: 34, bottom: 58, ...margin },
@@ -159,7 +160,7 @@ export function stoneWorldTable(doc: jsPDF, options: Parameters<typeof autoTable
       overflow: "linebreak",
       valign: "middle",
       minCellHeight: 22,
-      ...(options.styles ?? {}),
+      ...(styles ?? {}),
     },
     headStyles: {
       fillColor: swPdf.soft,
@@ -169,11 +170,11 @@ export function stoneWorldTable(doc: jsPDF, options: Parameters<typeof autoTable
       lineColor: swPdf.rule,
       lineWidth: 0.45,
       cellPadding: { top: 7, right: 6, bottom: 7, left: 6 },
-      ...(options.headStyles ?? {}),
+      ...(headStyles ?? {}),
     },
-    alternateRowStyles: { fillColor: [252, 254, 255], ...(options.alternateRowStyles ?? {}) },
-    bodyStyles: { lineColor: swPdf.faint, lineWidth: 0.3, ...(options.bodyStyles ?? {}) },
-    ...options,
+    alternateRowStyles: { fillColor: [252, 254, 255], ...(alternateRowStyles ?? {}) },
+    bodyStyles: { lineColor: swPdf.faint, lineWidth: 0.3, ...(bodyStyles ?? {}) },
+    ...rest,
   });
 }
 
