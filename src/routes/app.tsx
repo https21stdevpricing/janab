@@ -38,7 +38,7 @@ const nav: NavItem[] = [
   { to: "/app/bills", label: "Bills (AR/AP)", icon: FileSpreadsheet },
   { to: "/app/expenses", label: "Expenses", icon: Receipt },
   { group: "Inventory & Books" },
-  { to: "/app/stock", label: "Stock Ledger", icon: Boxes },
+  { to: "/app/stock", label: "Stock Movements", icon: Boxes },
   { to: "/app/ledger", label: "General Ledger", icon: BookOpen },
   { to: "/app/reports", label: "Reports", icon: BarChart3 },
   { to: "/app/analytics", label: "Analytics", icon: LineChart },
