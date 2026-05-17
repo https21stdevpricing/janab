@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { fmtDate, fmt } from "@/lib/format";
 import { toast } from "sonner";
-import { Truck, ChevronRight, Search } from "lucide-react";
+import { Truck, ChevronRight, Search, Pencil, MapPin, Phone, FileText } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 
@@ -33,6 +33,7 @@ function DeliveriesPage() {
   const [edit, setEdit] = useState<Delivery | null>(null);
   const [items, setItems] = useState<DItem[]>([]);
   const [findInv, setFindInv] = useState("");
+  const [previewMode, setPreviewMode] = useState(true);
 
   const load = async () => {
     const { data } = await supabase.from("deliveries" as never).select("*").order("date", { ascending: false }).order("created_at" as never, { ascending: false }) as any;
@@ -55,6 +56,7 @@ function DeliveriesPage() {
 
   const openEdit = async (d: Delivery) => {
     setEdit(d);
+    setPreviewMode(true);
     const { data } = await supabase.from("delivery_items" as never).select("*").eq("delivery_id" as never, d.id).order("position") as any;
     setItems((data ?? []) as DItem[]);
   };
@@ -70,7 +72,10 @@ function DeliveriesPage() {
     for (const it of items) {
       await supabase.from("delivery_items" as never).update({ qty_delivered: it.qty_delivered } as never).eq("id" as never, it.id);
     }
-    toast.success("Delivery saved"); setEdit(null); load();
+    toast.success("Delivery saved"); setPreviewMode(true); load();
+    // refresh local edit row from db
+    const { data: fresh } = await supabase.from("deliveries" as never).select("*").eq("id" as never, edit.id).maybeSingle() as any;
+    if (fresh) setEdit(fresh as Delivery);
   };
 
   const findByInvoice = async () => {
@@ -141,8 +146,53 @@ function DeliveriesPage() {
 
       <Dialog open={!!edit} onOpenChange={(o) => !o && setEdit(null)}>
         <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{edit?.delivery_no} {edit?.invoice_no ? `· ${edit.invoice_no}` : ""}</DialogTitle></DialogHeader>
-          {edit && (
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Truck className="h-4 w-4" />
+              {edit?.delivery_no} {edit?.invoice_no ? `· ${edit.invoice_no}` : ""}
+              {edit && <Badge variant={badgeFor(edit.status) as any} className="capitalize ml-2">{edit.status}</Badge>}
+            </DialogTitle>
+          </DialogHeader>
+          {edit && previewMode && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div className="col-span-2 rounded-md border bg-muted/30 p-3">
+                  <div className="text-[10px] uppercase text-muted-foreground">Buyer</div>
+                  <div className="font-medium">{edit.buyer_name ?? "—"}</div>
+                  {edit.ship_address && <div className="text-xs text-muted-foreground flex items-start gap-1 mt-1"><MapPin className="h-3 w-3 mt-0.5" /> {edit.ship_address}</div>}
+                </div>
+                <div><div className="text-[10px] uppercase text-muted-foreground">Date</div><div>{fmtDate(edit.date)}</div></div>
+                <div><div className="text-[10px] uppercase text-muted-foreground">Vehicle</div><div>{edit.vehicle_no || "—"}</div></div>
+                <div><div className="text-[10px] uppercase text-muted-foreground">Driver</div><div>{edit.driver_name || "—"}</div></div>
+                <div><div className="text-[10px] uppercase text-muted-foreground">Phone</div><div className="flex items-center gap-1">{edit.driver_phone ? <><Phone className="h-3 w-3" />{edit.driver_phone}</> : "—"}</div></div>
+                <div><div className="text-[10px] uppercase text-muted-foreground">Transporter</div><div>{edit.transporter || "—"}</div></div>
+                <div><div className="text-[10px] uppercase text-muted-foreground">LR no</div><div>{edit.lr_no || "—"}</div></div>
+                {edit.notes && <div className="col-span-2"><div className="text-[10px] uppercase text-muted-foreground">Notes</div><div className="flex items-start gap-1"><FileText className="h-3 w-3 mt-0.5" />{edit.notes}</div></div>}
+              </div>
+              <div>
+                <div className="text-[10px] uppercase text-muted-foreground mb-1">Items</div>
+                {items.length === 0 ? <div className="text-xs text-muted-foreground border rounded-md p-2">No items yet.</div> : (
+                  <div className="border rounded-md overflow-x-auto">
+                    <table className="w-full text-sm min-w-[420px]">
+                      <thead className="bg-muted/50 text-xs uppercase tracking-wide">
+                        <tr><th className="text-left p-2">Product</th><th className="text-right p-2">Ordered</th><th className="text-right p-2">Delivered</th></tr>
+                      </thead>
+                      <tbody>
+                        {items.map(it => (
+                          <tr key={it.id} className="border-t">
+                            <td className="p-2">{it.product_name}</td>
+                            <td className="p-2 text-right tabular-nums">{fmt(it.qty_ordered)} {it.unit}</td>
+                            <td className="p-2 text-right tabular-nums">{fmt(it.qty_delivered)} {it.unit}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {edit && !previewMode && (
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2"><Label className="text-xs">Buyer</Label>
@@ -195,7 +245,19 @@ function DeliveriesPage() {
               </div>
             </div>
           )}
-          <DialogFooter><Button onClick={save}>Save delivery</Button></DialogFooter>
+          <DialogFooter>
+            {previewMode ? (
+              <>
+                <Button variant="outline" onClick={() => setEdit(null)}>Close</Button>
+                <Button onClick={() => setPreviewMode(false)}><Pencil className="h-4 w-4" /> Edit</Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={() => setPreviewMode(true)}>Cancel</Button>
+                <Button onClick={save}>Save delivery</Button>
+              </>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
