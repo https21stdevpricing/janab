@@ -14,7 +14,10 @@ import { toast } from "sonner";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 
-export const Route = createFileRoute("/app/lookup")({ component: LookupPage });
+export const Route = createFileRoute("/app/lookup")({
+  component: LookupPage,
+  validateSearch: (s: Record<string, unknown>) => ({ q: typeof s.q === "string" ? s.q : undefined }),
+});
 
 type SearchHit =
   | { kind: "contact"; row: any }
@@ -22,7 +25,8 @@ type SearchHit =
   | { kind: "doc"; row: any; docKind: string; no: string; date: string; party: string };
 
 function LookupPage() {
-  const [q, setQ] = useState("");
+  const search = (Route.useSearch?.() ?? {}) as { q?: string };
+  const [q, setQ] = useState(search.q ?? "");
   const [doc, setDoc] = useState<DocLookupResult | null>(null);
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [busy, setBusy] = useState(false);
@@ -59,6 +63,8 @@ function LookupPage() {
     if (out.length === 0) toast.error("Nothing found");
     setBusy(false);
   };
+
+  useEffect(() => { if (search.q) { setQ(search.q); setTimeout(() => run(), 0); } /* eslint-disable-next-line */ }, [search.q]);
 
   const pickHit = async (h: SearchHit) => {
     if (h.kind === "doc") { setQ(h.no); const r = await lookupDoc(h.no); if (r) setDoc(r); }
