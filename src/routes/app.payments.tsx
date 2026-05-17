@@ -13,9 +13,10 @@ import { Badge } from "@/components/ui/badge";
 import { inr, fmt, fmtDate, todayISO } from "@/lib/format";
 import { lookupDoc, openDocsFor } from "@/lib/doc-lookup";
 import { toast } from "sonner";
-import { Trash2, ArrowDownLeft, ArrowUpRight, X } from "lucide-react";
+import { Trash2, ArrowDownLeft, ArrowUpRight, X, Eye } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 function daysBetween(iso: string) {
   const d = new Date(iso); const now = new Date();
@@ -46,6 +47,12 @@ function PaymentsPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<"all" | "in" | "out">("all");
   const [q, setQ] = useState("");
+  // View (detail preview) state
+  const [viewRow, setViewRow] = useState<Row | null>(null);
+  const [viewAllocs, setViewAllocs] = useState<Array<{ doc_kind: string; doc_no: string; amount: number }>>([]);
+  // Aggregate receivable / payable totals
+  const [totalRecv, setTotalRecv] = useState(0);
+  const [totalPay, setTotalPay] = useState(0);
 
   // Form state
   const [open, setOpen] = useState(false);
@@ -63,6 +70,13 @@ function PaymentsPage() {
   const load = async () => {
     const { data } = await supabase.from("payments").select("*").order("date", { ascending: false }).order("created_at", { ascending: false });
     setRows((data ?? []) as Row[]);
+    const { data: ag } = await supabase.from("party_aging_view" as never).select("side,total_balance") as any;
+    let r = 0, p = 0;
+    for (const x of (ag ?? []) as any[]) {
+      if (x.side === "receivable") r += Number(x.total_balance || 0);
+      else p += Number(x.total_balance || 0);
+    }
+    setTotalRecv(r); setTotalPay(p);
   };
   useEffect(() => {
     load();
@@ -209,6 +223,14 @@ function PaymentsPage() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const openView = async (r: Row) => {
+    setViewRow(r);
+    const { data } = await supabase.from("payment_allocations" as never)
+      .select("doc_kind,doc_no,amount").eq("payment_id" as never, r.id) as any;
+    setViewAllocs((data ?? []) as any);
+  };
+
+
   const onExport = () => {
     exportToExcel({
       filename: `payments-${new Date().toISOString().slice(0, 10)}`,
@@ -237,19 +259,30 @@ function PaymentsPage() {
         </>
       } />
 
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <Input className="max-w-xs" placeholder="Search no / party…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <Select value={filter} onValueChange={(v) => setFilter(v as any)}>
-          <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All</SelectItem>
-            <SelectItem value="in">Receipts</SelectItem>
-            <SelectItem value="out">Payments</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="ml-auto text-xs text-muted-foreground">{filtered.length} entries</div>
+      {/* Bills outstanding summary */}
+      <div className="grid grid-cols-2 gap-2 mb-3">
+        <div className="rounded-md border bg-card p-3">
+          <div className="text-[10px] uppercase text-muted-foreground">Bills receivable (from buyers)</div>
+          <div className="text-base sm:text-lg font-semibold text-primary tabular-nums">{inr(totalRecv)}</div>
+        </div>
+        <div className="rounded-md border bg-card p-3">
+          <div className="text-[10px] uppercase text-muted-foreground">Bills payable (to suppliers)</div>
+          <div className="text-base sm:text-lg font-semibold text-destructive tabular-nums">{inr(totalPay)}</div>
+        </div>
       </div>
+
+      {/* Tabs + search */}
+      <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <TabsList>
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="in">Receipts ↙</TabsTrigger>
+            <TabsTrigger value="out">Payments ↗</TabsTrigger>
+          </TabsList>
+          <Input className="max-w-xs" placeholder="Search no / party…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="ml-auto text-xs text-muted-foreground">{filtered.length} entries</div>
+        </div>
+      </Tabs>
 
       {/* Summary tiles */}
       <div className="grid grid-cols-3 gap-2 mb-3">
@@ -261,7 +294,7 @@ function PaymentsPage() {
       {filtered.length === 0 ? <Empty>No payments match.</Empty> : (
         <div className="space-y-2">
           {filtered.map(r => (
-            <div key={r.id} className="rounded-md border bg-card p-3 flex items-center gap-3">
+            <div key={r.id} className="rounded-md border bg-card p-3 flex items-center gap-3 cursor-pointer hover:bg-muted/40" onClick={() => openView(r)}>
               <Badge variant={r.direction === "in" ? "default" : "secondary"}>{r.direction === "in" ? "IN" : "OUT"}</Badge>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -273,11 +306,54 @@ function PaymentsPage() {
                 {r.notes && <div className="text-xs text-muted-foreground truncate">{r.notes}</div>}
               </div>
               <div className={`text-base font-semibold tabular-nums ${r.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(r.amount)}</div>
-              <Button variant="ghost" size="icon" onClick={() => del(r.id)}><Trash2 className="h-4 w-4" /></Button>
+              <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); del(r.id); }}><Trash2 className="h-4 w-4" /></Button>
             </div>
           ))}
         </div>
       )}
+
+      {/* Detail / preview dialog */}
+      <Dialog open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-4 w-4" />
+              {viewRow?.direction === "in" ? "Receipt" : "Payment"} · {viewRow?.payment_no}
+            </DialogTitle>
+          </DialogHeader>
+          {viewRow && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-2">
+                <div><div className="text-[10px] uppercase text-muted-foreground">Date</div><div>{fmtDate(viewRow.date)}</div></div>
+                <div><div className="text-[10px] uppercase text-muted-foreground">Mode</div><div>{viewRow.mode ?? "—"}</div></div>
+                <div className="col-span-2"><div className="text-[10px] uppercase text-muted-foreground">{viewRow.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewRow.contact_name ?? "—"}</div></div>
+                <div className="col-span-2"><div className="text-[10px] uppercase text-muted-foreground">Amount</div><div className={`text-xl font-semibold tabular-nums ${viewRow.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(viewRow.amount)}</div></div>
+                {viewRow.notes && <div className="col-span-2"><div className="text-[10px] uppercase text-muted-foreground">Notes</div><div>{viewRow.notes}</div></div>}
+              </div>
+              <div>
+                <div className="text-[10px] uppercase text-muted-foreground mb-1">Applied to</div>
+                {viewAllocs.length === 0 ? (
+                  <div className="text-xs text-muted-foreground border rounded-md p-2">Sitting as advance on ledger (no document allocations).</div>
+                ) : (
+                  <div className="border rounded-md divide-y">
+                    {viewAllocs.map((a, i) => (
+                      <div key={i} className="p-2 flex items-center gap-2 text-sm">
+                        <Badge variant="outline" className="uppercase text-[10px]">{a.doc_kind}</Badge>
+                        <span className="font-mono text-xs">{a.doc_no}</span>
+                        <span className="ml-auto tabular-nums font-semibold">{inr(a.amount)}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { if (viewRow) { del(viewRow.id); setViewRow(null); } }}><Trash2 className="h-4 w-4" /> Delete</Button>
+            <Button onClick={() => setViewRow(null)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
