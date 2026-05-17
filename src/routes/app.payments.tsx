@@ -357,7 +357,7 @@ function PaymentsPage() {
             </div>
           )}
           <DialogFooter>
-            <Button variant="outline" onClick={editFromView}><Pencil className="h-4 w-4" /> Edit</Button>
+            <Button variant="outline" onClick={() => { if (viewRow) { del(viewRow.id); setViewRow(null); } }}><Trash2 className="h-4 w-4" /> Delete</Button>
             <Button onClick={() => setViewRow(null)}>Close</Button>
           </DialogFooter>
         </DialogContent>
