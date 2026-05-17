@@ -325,10 +325,10 @@ function PriceListsPage() {
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
         <Tile label="Lists" value={String(lists.length)} />
-        <Tile label="Items" value={String(totals.count)} />
-        <Tile label="List total" value={inr(totals.list)} tone="good" />
+        <Tile label={totals.errs ? `Items (${totals.errs} need fix)` : "Items"} value={String(totals.count)} tone={totals.errs ? "bad" : undefined} />
+        <Tile label="Rate × Min Qty" value={inr(totals.list)} tone="good" />
         <Tile label="GST (est.)" value={inr(totals.gst)} />
-        <Tile label="Inclusive" value={inr(totals.list + totals.gst)} tone="good" />
+        <Tile label="Inclusive" value={inr(totals.incl)} tone="good" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-3">
