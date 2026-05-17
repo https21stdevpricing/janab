@@ -148,8 +148,16 @@ function ContactsPage() {
         <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
           {rows.map(r => {
             const bal = balances[r.name] ?? 0;
+            const openEdit = () => { setEdit(r); setForm({ type: r.type, name: r.name, gstin: r.gstin, state: r.state, phone: r.phone, email: r.email, address: r.address, opening_balance: r.opening_balance, credit_limit: r.credit_limit }); setOpen(true); };
             return (
-              <div key={r.id} className="rounded-md border bg-card p-3">
+              <div
+                key={r.id}
+                role="button"
+                tabIndex={0}
+                onClick={openEdit}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEdit(); } }}
+                className="rounded-md border bg-card p-3 cursor-pointer hover:bg-muted/30 transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
+              >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="font-medium truncate">{r.name}</div>
@@ -158,13 +166,13 @@ function ContactsPage() {
                   <Badge variant="secondary" className="capitalize">{r.type}</Badge>
                 </div>
                 <div className="text-xs text-muted-foreground mt-2 truncate">{r.phone} {r.email ? `· ${r.email}` : ""}</div>
-                <div className="flex items-center justify-between mt-3">
+                <div className="flex items-center justify-between mt-3" onClick={(e) => e.stopPropagation()}>
                   <div className="text-xs">
                     <div className="text-muted-foreground">Net balance</div>
                     <div className={`font-semibold tabular-nums ${bal > 0 ? "text-primary" : bal < 0 ? "text-destructive" : ""}`}>{inr(bal)}</div>
                   </div>
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => { setEdit(r); setForm({ type: r.type, name: r.name, gstin: r.gstin, state: r.state, phone: r.phone, email: r.email, address: r.address, opening_balance: r.opening_balance, credit_limit: r.credit_limit }); setOpen(true); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="ghost" size="icon" onClick={openEdit}><Pencil className="h-4 w-4" /></Button>
                     <Button variant="ghost" size="icon" onClick={() => del(r.id)}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 </div>
