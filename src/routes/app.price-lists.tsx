@@ -268,97 +268,16 @@ function PriceListsPage() {
   const onPdf = () => {
     if (!active) return;
     if (!items.length) { toast.error("Add items first"); return; }
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const W = doc.internal.pageSize.getWidth();
-    const M = 36;
-    const co = settings ?? { company_name: "Your Company", address: "", phone: "", email: "", gstin: "", state: "" };
+    void exportPdf(active, items, totals, settings);
+  };
 
-    // Brand band
-    doc.setFillColor(20, 24, 39);
-    doc.rect(0, 0, W, 70, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold").setFontSize(18);
-    doc.text(co.company_name || "Your Company", M, 32);
-    doc.setFont("helvetica", "normal").setFontSize(9);
-    const coLine = [co.address, co.state].filter(Boolean).join(", ");
-    if (coLine) doc.text(coLine, M, 48);
-    const coLine2 = [co.phone && `Ph: ${co.phone}`, co.email, co.gstin && `GSTIN: ${co.gstin}`].filter(Boolean).join("  ·  ");
-    if (coLine2) doc.text(coLine2, M, 62);
-
-    // Title strip
-    doc.setFillColor(244, 244, 247);
-    doc.rect(0, 70, W, 36, "F");
-    doc.setTextColor(20, 24, 39);
-    doc.setFont("helvetica", "bold").setFontSize(13);
-    doc.text("PRICE LIST", M, 93);
-    doc.setFont("helvetica", "normal").setFontSize(10);
-    doc.text(`Category: ${active.category ?? "—"}`, M + 110, 93);
-    const meta = `${active.name}  ·  w.e.f. ${fmtDate(active.effective_from)}${active.valid_until ? `  ·  valid till ${fmtDate(active.valid_until)}` : ""}`;
-    doc.text(meta, W - M, 93, { align: "right" });
-
-    // Customer box
-    let y = 120;
-    doc.setDrawColor(220);
-    doc.roundedRect(M, y, W - M * 2, 60, 4, 4);
-    doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(120);
-    doc.text("PREPARED FOR", M + 10, y + 14);
-    doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(20);
-    doc.text(active.buyer_name || "Walk-in customer", M + 10, y + 32);
-    doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(60);
-    const cust = [active.buyer_address, active.buyer_phone && `Ph: ${active.buyer_phone}`].filter(Boolean).join("  ·  ");
-    if (cust) doc.text(cust, M + 10, y + 48);
-    doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(120);
-    doc.text(`Date: ${fmtDate(todayISO())}`, W - M - 10, y + 14, { align: "right" });
-    doc.text(`Items: ${items.length}`, W - M - 10, y + 30, { align: "right" });
-    doc.text(`Currency: ${active.currency}`, W - M - 10, y + 46, { align: "right" });
-
-    // Items table
-    autoTable(doc, {
-      startY: y + 76,
-      margin: { left: M, right: M },
-      head: [["#", "Code", "Product", "HSN", "Unit", "MRP", "Your Price", "Disc %", "GST %", "Min Qty"]],
-      body: items.map((it, i) => [
-        i + 1, it.product_code ?? "", it.product_name, it.hsn ?? "", it.unit ?? "",
-        n(it.mrp) ? fmt(it.mrp) : "—",
-        inr(it.list_rate),
-        n(it.discount_pct) ? `${fmt(it.discount_pct)}%` : "—",
-        `${fmt(it.gst_pct)}%`,
-        fmt(it.min_qty, 0),
-      ]),
-      styles: { font: "helvetica", fontSize: 9, cellPadding: 5, textColor: 30 },
-      headStyles: { fillColor: [20, 24, 39], textColor: 255, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [249, 250, 251] },
-      columnStyles: {
-        0: { halign: "right", cellWidth: 22 },
-        1: { cellWidth: 55, font: "courier", fontSize: 8 },
-        3: { cellWidth: 50, font: "courier", fontSize: 8 },
-        4: { cellWidth: 40 },
-        5: { halign: "right", cellWidth: 50 },
-        6: { halign: "right", cellWidth: 65, fontStyle: "bold" },
-        7: { halign: "right", cellWidth: 45 },
-        8: { halign: "right", cellWidth: 40 },
-        9: { halign: "right", cellWidth: 45 },
-      },
-    });
-
-    // Footer summary + terms on every page
-    const pageCount = (doc as any).getNumberOfPages();
-    for (let p = 1; p <= pageCount; p++) {
-      doc.setPage(p);
-      const H = doc.internal.pageSize.getHeight();
-      doc.setDrawColor(230); doc.line(M, H - 70, W - M, H - 70);
-      doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(110);
-      const terms = active.terms || "Prices subject to change. E&OE.";
-      doc.text(doc.splitTextToSize(`Terms: ${terms}`, W - M * 2), M, H - 56);
-      doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(20);
-      doc.text(`Total list value (excl. GST): ${inr(totals.list)}   ·   Est. GST: ${inr(totals.gst)}   ·   Inclusive: ${inr(totals.list + totals.gst)}`, M, H - 30);
-      doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(140);
-      doc.text(`Page ${p} of ${pageCount}`, W - M, H - 14, { align: "right" });
-      doc.text(co.company_name || "", M, H - 14);
-    }
-
-    const fname = `PriceList_${(active.buyer_name || "Customer").replace(/\s+/g, "_")}_${(active.category || "").replace(/\s+/g, "_")}_${active.effective_from}.pdf`;
-    doc.save(fname);
+  const downloadListPdf = async (pl: PriceList) => {
+    const { data } = await supabase.from("price_list_items").select("*").eq("price_list_id", pl.id).order("position");
+    const rows = (data ?? []) as Item[];
+    if (!rows.length) { toast.error("This list has no items yet"); return; }
+    let cost = 0, list = 0, mrp = 0, gst = 0;
+    for (const it of rows) { cost += it.cost_rate; list += it.list_rate; mrp += it.mrp; gst += it.list_rate * (it.gst_pct / 100); }
+    exportPdf(pl, rows, { cost, list, mrp, gst, count: rows.length }, settings);
   };
 
   return (
@@ -385,15 +304,24 @@ function PriceListsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-3">
         <div className="rounded-md border bg-card p-2 space-y-1">
-          <div className="text-[10px] uppercase text-muted-foreground px-2 py-1">My price lists</div>
+          <div className="flex items-center justify-between px-2 py-1">
+            <div className="text-[10px] uppercase text-muted-foreground">My price lists</div>
+            {activeId && <button onClick={() => setActiveId(null)} className="text-[10px] text-muted-foreground hover:text-foreground underline">Collapse</button>}
+          </div>
           {lists.length === 0 && <div className="text-xs text-muted-foreground px-2 py-3">No price lists yet</div>}
           {lists.map((pl) => (
-            <button key={pl.id} onClick={() => setActiveId(pl.id)}
-              className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-muted ${activeId === pl.id ? "bg-muted font-medium" : ""}`}>
-              <div className="flex items-center gap-1.5"><Tag className="h-3.5 w-3.5" /> {pl.name}</div>
-              <div className="text-[10px] text-muted-foreground truncate">{pl.buyer_name || "—"} · {pl.category || "no cat"}</div>
-              <div className="text-[10px] text-muted-foreground">w.e.f. {fmtDate(pl.effective_from)}</div>
-            </button>
+            <div key={pl.id} className={`group rounded text-sm hover:bg-muted ${activeId === pl.id ? "bg-muted" : ""}`}>
+              <button onClick={() => setActiveId(activeId === pl.id ? null : pl.id)} className="w-full text-left px-2 py-1.5">
+                <div className={`flex items-center gap-1.5 ${activeId === pl.id ? "font-medium" : ""}`}><Tag className="h-3.5 w-3.5" /> {pl.name}</div>
+                <div className="text-[10px] text-muted-foreground truncate">{pl.buyer_name || "—"} · {pl.category || "no cat"}</div>
+                <div className="text-[10px] text-muted-foreground">w.e.f. {fmtDate(pl.effective_from)}</div>
+              </button>
+              <div className="px-2 pb-1.5">
+                <Button size="sm" variant="outline" className="h-6 w-full text-[11px]" onClick={(e) => { e.stopPropagation(); downloadListPdf(pl); }}>
+                  <Download className="h-3 w-3" /> PDF
+                </Button>
+              </div>
+            </div>
           ))}
         </div>
 
