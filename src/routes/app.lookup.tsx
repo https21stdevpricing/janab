@@ -13,7 +13,7 @@ import { Search, Printer, Wallet, Truck, X } from "lucide-react";
 import { toast } from "sonner";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/app/lookup")({
   component: LookupPage,
@@ -182,11 +182,11 @@ function LookupPage() {
       </div>
 
       <Dialog open={!!doc} onOpenChange={(o) => !o && setDoc(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0">
-          <DialogHeader className="px-4 py-3 border-b flex-row items-center justify-between">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+          <div className="px-4 py-3 border-b flex items-center justify-between">
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Document preview</DialogTitle>
             <button className="rounded-md p-1 hover:bg-muted" onClick={() => setDoc(null)} aria-label="Close"><X className="h-4 w-4" /></button>
-          </DialogHeader>
+          </div>
           {doc && <DocDetail doc={doc} />}
         </DialogContent>
       </Dialog>
@@ -246,7 +246,7 @@ function LookupPage() {
   );
 }
 
-function DocDetail({ doc }: { doc: DocLookupResult }) {
+export function DocDetail({ doc }: { doc: DocLookupResult }) {
   const h = doc.header;
   const no = h.invoice_no ?? h.po_no ?? h.tp_no ?? h.quote_no ?? h.payment_no;
   const printable = doc.kind === "sale" ? "invoice" : doc.kind === "quote" ? "quote" : null;
