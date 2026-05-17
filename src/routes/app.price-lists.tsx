@@ -615,7 +615,7 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "go
   );
 }
 
-function exportPdf(active: PriceList, items: Item[], totals: { cost: number; list: number; mrp: number; gst: number; count: number }, settings: Settings | null) {
+function exportPdf(active: PriceList, items: Item[], totals: { cost: number; list: number; mrp: number; gst: number; incl: number; count: number }, settings: Settings | null) {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
