@@ -244,7 +244,7 @@ function PaymentsPage() {
     setViewRow(r);
     const [{ data }, { data: st }] = await Promise.all([
       supabase.from("payment_allocations" as never)
-      .select("doc_kind,doc_no,amount").eq("payment_id" as never, r.id) as any;
+        .select("doc_kind,doc_no,amount").eq("payment_id" as never, r.id) as any,
       supabase.from("settings").select("company_name,address,phone,email,gstin,state").maybeSingle(),
     ]);
     setViewAllocs((data ?? []) as any);
