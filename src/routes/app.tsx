@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard, Package, Users, ShoppingCart, Truck, Repeat,
@@ -134,12 +135,37 @@ function AppLayout() {
           <div className="ml-auto"><NotificationsBell /></div>
         </header>
         <div className="hidden md:flex sticky top-0 z-20 items-center gap-2 px-4 py-2 border-b bg-background/70 backdrop-blur">
+          <GlobalSearch />
           <div className="ml-auto"><NotificationsBell /></div>
         </div>
         <div className="max-w-[1400px] mx-auto p-3 md:p-6">
           <Outlet />
         </div>
       </main>
+    </div>
+  );
+}
+
+function GlobalSearch() {
+  const [q, setQ] = useState("");
+  const navigate = useNavigate();
+  const submit = () => {
+    const v = q.trim();
+    if (!v) return;
+    navigate({ to: "/app/lookup", search: { q: v } as any });
+  };
+  return (
+    <div className="flex items-center gap-1 w-full max-w-md">
+      <div className="relative flex-1">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+        <Input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && submit()}
+          placeholder="Search invoices, POs, buyers, suppliers, payments…"
+          className="pl-7 h-8 text-sm"
+        />
+      </div>
     </div>
   );
 }
