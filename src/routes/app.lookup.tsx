@@ -174,6 +174,7 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
   const payable = doc.kind === "sale" || doc.kind === "purchase" || doc.kind === "tp";
   const payDir = doc.kind === "purchase" ? "out" : "in";
   const goPay = () => navigate({ to: "/app/payments", search: { ref: no, dir: payDir } as any });
+  const goPaySupplier = () => navigate({ to: "/app/payments", search: { ref: no, dir: "out" } as any });
   const goDelivery = () => navigate({ to: "/app/deliveries" });
   const [journal, setJournal] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
@@ -186,12 +187,14 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
         .eq("ref_no", no).order("date");
       setJournal(jl ?? []);
       const { data: al } = await supabase.from("payment_allocations" as never)
-        .select("amount,doc_no,payment_id").eq("doc_id" as never, h.id) as any;
+        .select("amount,doc_no,payment_id,doc_kind").eq("doc_id" as never, h.id) as any;
       if (al && al.length) {
         const ids = al.map((a: any) => a.payment_id);
         const { data: pys } = await supabase.from("payments").select("*").in("id", ids);
         setPayments((pys ?? []).map((p: any) => ({
-          ...p, allocated: al.find((a: any) => a.payment_id === p.id)?.amount,
+          ...p,
+          allocated: al.find((a: any) => a.payment_id === p.id)?.amount,
+          alloc_side: al.find((a: any) => a.payment_id === p.id)?.doc_kind,
         })));
       } else setPayments([]);
       if (doc.party) {
