@@ -31,7 +31,7 @@ export function PartyPage({ role }: { role: PartyRole }) {
   const [picked, setPicked] = useState<Contact | null>(null);
 
   const wantSide = role === "buyer" ? "receivable" : "payable";
-  const wantTypes = role === "buyer" ? ["buyer", "both"] : ["supplier", "both"];
+  const wantTypes: ("buyer" | "supplier" | "both")[] = role === "buyer" ? ["buyer", "both"] : ["supplier", "both"];
 
   const load = async () => {
     const [{ data: cs }, { data: ps }, { data: ag }] = await Promise.all([
