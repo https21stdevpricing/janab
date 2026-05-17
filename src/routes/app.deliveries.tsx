@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { fmtDate, fmt } from "@/lib/format";
 import { toast } from "sonner";
 import { Truck, ChevronRight, Search, Pencil, MapPin, Phone, FileText } from "lucide-react";
@@ -252,19 +252,19 @@ function DeliveriesPage() {
               </div>
             </div>
           )}
-          <DialogFooter>
+          <div className="mt-2 pt-3 border-t flex flex-col gap-2">
             {previewMode ? (
               <>
-                <Button variant="outline" onClick={() => setEdit(null)}>Close</Button>
-                <Button onClick={() => setPreviewMode(false)}><Pencil className="h-4 w-4" /> Edit</Button>
+                <Button className="w-full" onClick={() => setPreviewMode(false)}><Pencil className="h-4 w-4" /> Edit</Button>
+                <Button className="w-full" variant="outline" onClick={() => setEdit(null)}>Close</Button>
               </>
             ) : (
               <>
-                <Button variant="outline" onClick={() => setPreviewMode(true)}>Cancel</Button>
-                <Button onClick={save}>Save delivery</Button>
+                <Button className="w-full" onClick={save}>Save delivery</Button>
+                <Button className="w-full" variant="outline" onClick={() => setPreviewMode(true)}>Cancel</Button>
               </>
             )}
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
