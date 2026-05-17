@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppThirdPartyRouteImport } from './routes/app.third-party'
+import { Route as AppSuppliersRouteImport } from './routes/app.suppliers'
 import { Route as AppStockRouteImport } from './routes/app.stock'
 import { Route as AppSettingsRouteImport } from './routes/app.settings'
 import { Route as AppSalesRouteImport } from './routes/app.sales'
@@ -29,7 +30,9 @@ import { Route as AppGstRouteImport } from './routes/app.gst'
 import { Route as AppExpensesRouteImport } from './routes/app.expenses'
 import { Route as AppDeliveriesRouteImport } from './routes/app.deliveries'
 import { Route as AppContactsRouteImport } from './routes/app.contacts'
+import { Route as AppBuyersRouteImport } from './routes/app.buyers'
 import { Route as AppAuditRouteImport } from './routes/app.audit'
+import { Route as AppAnalyticsRouteImport } from './routes/app.analytics'
 import { Route as AppPrintQuoteIdRouteImport } from './routes/app.print.quote.$id'
 import { Route as AppPrintInvoiceIdRouteImport } from './routes/app.print.invoice.$id'
 
@@ -56,6 +59,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const AppThirdPartyRoute = AppThirdPartyRouteImport.update({
   id: '/third-party',
   path: '/third-party',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSuppliersRoute = AppSuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
   getParentRoute: () => AppRoute,
 } as any)
 const AppStockRoute = AppStockRouteImport.update({
@@ -133,9 +141,19 @@ const AppContactsRoute = AppContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBuyersRoute = AppBuyersRouteImport.update({
+  id: '/buyers',
+  path: '/buyers',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAuditRoute = AppAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
   getParentRoute: () => AppRoute,
 } as any)
 const AppPrintQuoteIdRoute = AppPrintQuoteIdRouteImport.update({
@@ -153,7 +171,9 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/analytics': typeof AppAnalyticsRoute
   '/app/audit': typeof AppAuditRoute
+  '/app/buyers': typeof AppBuyersRoute
   '/app/contacts': typeof AppContactsRoute
   '/app/deliveries': typeof AppDeliveriesRoute
   '/app/expenses': typeof AppExpensesRoute
@@ -169,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/app/sales': typeof AppSalesRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/stock': typeof AppStockRoute
+  '/app/suppliers': typeof AppSuppliersRoute
   '/app/third-party': typeof AppThirdPartyRoute
   '/app/': typeof AppIndexRoute
   '/app/print/invoice/$id': typeof AppPrintInvoiceIdRoute
@@ -177,7 +198,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/app/analytics': typeof AppAnalyticsRoute
   '/app/audit': typeof AppAuditRoute
+  '/app/buyers': typeof AppBuyersRoute
   '/app/contacts': typeof AppContactsRoute
   '/app/deliveries': typeof AppDeliveriesRoute
   '/app/expenses': typeof AppExpensesRoute
@@ -193,6 +216,7 @@ export interface FileRoutesByTo {
   '/app/sales': typeof AppSalesRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/stock': typeof AppStockRoute
+  '/app/suppliers': typeof AppSuppliersRoute
   '/app/third-party': typeof AppThirdPartyRoute
   '/app': typeof AppIndexRoute
   '/app/print/invoice/$id': typeof AppPrintInvoiceIdRoute
@@ -203,7 +227,9 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/app/analytics': typeof AppAnalyticsRoute
   '/app/audit': typeof AppAuditRoute
+  '/app/buyers': typeof AppBuyersRoute
   '/app/contacts': typeof AppContactsRoute
   '/app/deliveries': typeof AppDeliveriesRoute
   '/app/expenses': typeof AppExpensesRoute
@@ -219,6 +245,7 @@ export interface FileRoutesById {
   '/app/sales': typeof AppSalesRoute
   '/app/settings': typeof AppSettingsRoute
   '/app/stock': typeof AppStockRoute
+  '/app/suppliers': typeof AppSuppliersRoute
   '/app/third-party': typeof AppThirdPartyRoute
   '/app/': typeof AppIndexRoute
   '/app/print/invoice/$id': typeof AppPrintInvoiceIdRoute
@@ -230,7 +257,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/app/analytics'
     | '/app/audit'
+    | '/app/buyers'
     | '/app/contacts'
     | '/app/deliveries'
     | '/app/expenses'
@@ -246,6 +275,7 @@ export interface FileRouteTypes {
     | '/app/sales'
     | '/app/settings'
     | '/app/stock'
+    | '/app/suppliers'
     | '/app/third-party'
     | '/app/'
     | '/app/print/invoice/$id'
@@ -254,7 +284,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/app/analytics'
     | '/app/audit'
+    | '/app/buyers'
     | '/app/contacts'
     | '/app/deliveries'
     | '/app/expenses'
@@ -270,6 +302,7 @@ export interface FileRouteTypes {
     | '/app/sales'
     | '/app/settings'
     | '/app/stock'
+    | '/app/suppliers'
     | '/app/third-party'
     | '/app'
     | '/app/print/invoice/$id'
@@ -279,7 +312,9 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/login'
+    | '/app/analytics'
     | '/app/audit'
+    | '/app/buyers'
     | '/app/contacts'
     | '/app/deliveries'
     | '/app/expenses'
@@ -295,6 +330,7 @@ export interface FileRouteTypes {
     | '/app/sales'
     | '/app/settings'
     | '/app/stock'
+    | '/app/suppliers'
     | '/app/third-party'
     | '/app/'
     | '/app/print/invoice/$id'
@@ -342,6 +378,13 @@ declare module '@tanstack/react-router' {
       path: '/third-party'
       fullPath: '/app/third-party'
       preLoaderRoute: typeof AppThirdPartyRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/suppliers': {
+      id: '/app/suppliers'
+      path: '/suppliers'
+      fullPath: '/app/suppliers'
+      preLoaderRoute: typeof AppSuppliersRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/stock': {
@@ -449,11 +492,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppContactsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/buyers': {
+      id: '/app/buyers'
+      path: '/buyers'
+      fullPath: '/app/buyers'
+      preLoaderRoute: typeof AppBuyersRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/audit': {
       id: '/app/audit'
       path: '/audit'
       fullPath: '/app/audit'
       preLoaderRoute: typeof AppAuditRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/app/analytics': {
+      id: '/app/analytics'
+      path: '/analytics'
+      fullPath: '/app/analytics'
+      preLoaderRoute: typeof AppAnalyticsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/print/quote/$id': {
@@ -488,7 +545,9 @@ const AppPrintRouteWithChildren = AppPrintRoute._addFileChildren(
 )
 
 interface AppRouteChildren {
+  AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAuditRoute: typeof AppAuditRoute
+  AppBuyersRoute: typeof AppBuyersRoute
   AppContactsRoute: typeof AppContactsRoute
   AppDeliveriesRoute: typeof AppDeliveriesRoute
   AppExpensesRoute: typeof AppExpensesRoute
@@ -504,12 +563,15 @@ interface AppRouteChildren {
   AppSalesRoute: typeof AppSalesRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppStockRoute: typeof AppStockRoute
+  AppSuppliersRoute: typeof AppSuppliersRoute
   AppThirdPartyRoute: typeof AppThirdPartyRoute
   AppIndexRoute: typeof AppIndexRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppAnalyticsRoute: AppAnalyticsRoute,
   AppAuditRoute: AppAuditRoute,
+  AppBuyersRoute: AppBuyersRoute,
   AppContactsRoute: AppContactsRoute,
   AppDeliveriesRoute: AppDeliveriesRoute,
   AppExpensesRoute: AppExpensesRoute,
@@ -525,6 +587,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSalesRoute: AppSalesRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppStockRoute: AppStockRoute,
+  AppSuppliersRoute: AppSuppliersRoute,
   AppThirdPartyRoute: AppThirdPartyRoute,
   AppIndexRoute: AppIndexRoute,
 }
