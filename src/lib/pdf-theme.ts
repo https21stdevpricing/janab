@@ -145,9 +145,10 @@ export function drawTotalsBlock(doc: jsPDF, x: number, y: number, w: number, row
 }
 
 export function stoneWorldTable(doc: jsPDF, options: Parameters<typeof autoTable>[1]) {
+  const margin = typeof options.margin === "object" ? options.margin : {};
   return autoTable(doc, {
     theme: "grid",
-    margin: { left: 34, right: 34, bottom: 58, ...(options.margin ?? {}) },
+    margin: { left: 34, right: 34, bottom: 58, ...margin },
     styles: {
       font: "helvetica",
       fontSize: 8.8,
