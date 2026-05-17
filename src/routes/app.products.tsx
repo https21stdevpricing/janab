@@ -12,7 +12,7 @@ import { fmt } from "@/lib/format";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
-import { exportToExcel, importFromExcel, pick, num } from "@/lib/excel";
+import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/products")({ component: ProductsPage });
 
@@ -83,14 +83,14 @@ function ProductsPage() {
       const payload = data
         .map((r) => ({
           user_id: user.id,
-          code: pick(r, "Code", "code") || "",
-          name: pick(r, "Name", "name") || "",
-          unit: pick(r, "Unit", "unit") || "sqft",
-          hsn: pick(r, "HSN", "hsn") || null,
-          purchase_rate: num(pick(r, "Purchase Rate", "purchase_rate", "Purchase")),
-          sale_rate: num(pick(r, "Sale Rate", "sale_rate", "Sale")),
-          opening_stock: num(pick(r, "Opening Stock", "opening_stock", "Stock")),
-          reorder_level: num(pick(r, "Reorder Level", "reorder_level", "Reorder")),
+          code: smartPick(r, ["Code", "SKU", "Item Code", "Product Code"]) || "",
+          name: smartPick(r, ["Name", "Product Name", "Item", "Description"]) || "",
+          unit: smartPick(r, ["Unit", "UOM", "Units"]) || "sqft",
+          hsn: smartPick(r, ["HSN", "HSN Code", "HSN/SAC"]) || null,
+          purchase_rate: num(smartPick(r, ["Purchase Rate", "Purchase", "Cost", "Buying Price", "Cost Price"])),
+          sale_rate: num(smartPick(r, ["Sale Rate", "Sale", "Selling Price", "Price", "MRP"])),
+          opening_stock: num(smartPick(r, ["Opening Stock", "Stock", "Qty", "Quantity"])),
+          reorder_level: num(smartPick(r, ["Reorder Level", "Reorder", "Min Stock", "Min Qty"])),
         }))
         .filter((r) => r.name);
       if (payload.length === 0) { toast.error("No rows with a Name column"); return; }
