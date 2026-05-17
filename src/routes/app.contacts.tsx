@@ -13,7 +13,7 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { inr } from "@/lib/format";
 import { ExcelBar } from "@/components/excel-bar";
-import { exportToExcel, importFromExcel, pick, num } from "@/lib/excel";
+import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/contacts")({ component: ContactsPage });
 
@@ -88,19 +88,21 @@ function ContactsPage() {
       if (!user) return;
       const payload = data
         .map((r) => {
-          let type = String(pick(r, "Type", "type") ?? "buyer").toLowerCase();
+          let type = String(smartPick(r, ["Type", "Category", "Party Type"]) ?? "buyer").toLowerCase();
           if (!["buyer", "supplier", "both"].includes(type)) type = "buyer";
+          if (type === "customer" || type === "client") type = "buyer";
+          if (type === "vendor") type = "supplier";
           return {
             user_id: user.id,
             type: type as Row["type"],
-            name: pick(r, "Name", "name") || "",
-            state: pick(r, "State", "state") || "Rajasthan",
-            gstin: pick(r, "GSTIN", "gstin") || null,
-            phone: String(pick(r, "Phone", "phone") ?? "") || null,
-            email: pick(r, "Email", "email") || null,
-            address: pick(r, "Address", "address") || null,
-            opening_balance: num(pick(r, "Opening Balance", "opening_balance")),
-            credit_limit: num(pick(r, "Credit Limit", "credit_limit")),
+            name: smartPick(r, ["Name", "Party Name", "Contact Name", "Company"]) || "",
+            state: smartPick(r, ["State", "Region"]) || "Rajasthan",
+            gstin: smartPick(r, ["GSTIN", "GST No", "GST Number", "GST"]) || null,
+            phone: String(smartPick(r, ["Phone", "Mobile", "Contact", "Phone No"]) ?? "") || null,
+            email: smartPick(r, ["Email", "Email Id", "E-mail"]) || null,
+            address: smartPick(r, ["Address", "Billing Address", "Location"]) || null,
+            opening_balance: num(smartPick(r, ["Opening Balance", "Opening", "Balance"])),
+            credit_limit: num(smartPick(r, ["Credit Limit", "Limit"])),
           };
         })
         .filter((r) => r.name);
