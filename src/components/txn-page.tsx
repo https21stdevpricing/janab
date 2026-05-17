@@ -12,7 +12,7 @@ import { LineItemsEditor, type Item } from "@/components/line-items";
 import { fmt, fmtDate, todayISO } from "@/lib/format";
 import { nextDocNo } from "@/lib/auto-number";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Printer } from "lucide-react";
+import { Plus, Pencil, Trash2, Printer, CheckCircle2 } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 
@@ -32,6 +32,7 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
   const [rows, setRows] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
+  const [preview, setPreview] = useState<any | null>(null);
   const [docNo, setDocNo] = useState("");
   const [date, setDate] = useState(todayISO());
   const [buyerId, setBuyerId] = useState<string | null>(null);
@@ -49,7 +50,7 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
   useEffect(() => { load(); }, [cfg.table]);
 
   const startNew = async () => {
-    setEditing(null);
+    setEditing(null); setPreview(null);
     setDate(todayISO()); setBuyerId(null); setBuyerName(null); setSupplierId(null); setSupplierName(null);
     setValidUntil(""); setNotes(""); setItems([cfg.partyRole === "tp" ? { qty: 1, rate: 0, gst_pct: 18, purchase_rate: 0, sale_rate: 0 } : { qty: 1, rate: 0, gst_pct: 18 }]);
     setDocNo(await nextDocNo(cfg.table, cfg.noField, cfg.prefix));
@@ -57,7 +58,7 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
   };
 
   const startEdit = async (r: any) => {
-    setEditing(r);
+    setEditing(r); setPreview(null);
     setDocNo(r[cfg.noField]); setDate(r.date);
     setBuyerId(r.buyer_id ?? null); setBuyerName(r.buyer_name ?? null);
     setSupplierId(r.supplier_id ?? null); setSupplierName(r.supplier_name ?? null);
@@ -137,7 +138,11 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
     const { error: e2 } = await supabase.from(cfg.itemsTable).insert(itemRows);
     if (e2) { toast.error(e2.message); return; }
     toast.success("Saved");
-    setOpen(false); load();
+    // Switch dialog to preview mode (no immediate edit)
+    const { data: saved } = await supabase.from(cfg.table).select("*").eq("id", id).maybeSingle();
+    setPreview({ ...(saved ?? { id }), __items: items.slice() });
+    setEditing(saved ?? { id });
+    load();
   };
 
   const del = async (id: string) => {
@@ -231,7 +236,14 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>{editing ? `Edit ${cfg.title.slice(0, -1) || cfg.title}` : `New ${cfg.title}`}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {preview ? <><CheckCircle2 className="h-5 w-5 text-emerald-600" /> Saved — Preview</> : (editing ? `Edit ${cfg.title.slice(0, -1) || cfg.title}` : `New ${cfg.title}`)}
+            </DialogTitle>
+          </DialogHeader>
+          {preview ? (
+            <PreviewBlock cfg={cfg} header={preview} items={preview.__items as Item[]} />
+          ) : (
           <div className="space-y-3">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <div className="space-y-1.5"><Label className="text-xs">No.</Label><Input value={docNo} onChange={(e) => setDocNo(e.target.value)} className="font-mono" /></div>
@@ -249,7 +261,22 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
             <LineItemsEditor items={items} onChange={setItems} mode={cfg.partyRole === "tp" ? "tp" : "single"} />
             <div className="space-y-1.5"><Label className="text-xs">Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
           </div>
-          <DialogFooter><Button onClick={save}>Save</Button></DialogFooter>
+          )}
+          <DialogFooter>
+            {preview ? (
+              <>
+                {cfg.printPath && (
+                  <Button asChild variant="outline">
+                    <Link to={"/app/print/" + cfg.printPath + "/$id" as any} params={{ id: preview.id } as any}><Printer className="h-4 w-4" /> Print</Link>
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => setPreview(null)}><Pencil className="h-4 w-4" /> Edit</Button>
+                <Button onClick={() => setOpen(false)}>Close</Button>
+              </>
+            ) : (
+              <Button onClick={save}>Save</Button>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
@@ -257,3 +284,78 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
 }
 
 export { fmt };
+
+function PreviewBlock({ cfg, header, items }: { cfg: TxnConfig; header: any; items: Item[] }) {
+  const totals = items.reduce((a, it) => {
+    const rate = cfg.partyRole === "tp" ? (it.sale_rate ?? 0) : it.rate;
+    const base = (it.qty ?? 0) * rate;
+    const gst = base * (it.gst_pct ?? 0) / 100;
+    a.base += base; a.gst += gst; a.total += base + gst;
+    if (cfg.partyRole === "tp") a.cost += (it.qty ?? 0) * (it.purchase_rate ?? 0);
+    return a;
+  }, { base: 0, gst: 0, total: 0, cost: 0 });
+  return (
+    <div className="space-y-3 text-sm">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-md border bg-muted/30 p-3">
+        <Info label="No.">{<span className="font-mono">{header[cfg.noField]}</span>}</Info>
+        <Info label="Date">{fmtDate(header.date)}</Info>
+        {cfg.partyRole === "tp" ? (
+          <>
+            <Info label="Supplier">{header.supplier_name ?? "—"}</Info>
+            <Info label="Buyer">{header.buyer_name ?? "—"}</Info>
+          </>
+        ) : (
+          <Info label={cfg.partyRole === "buyer" ? "Buyer" : "Supplier"}>
+            {header.buyer_name ?? header.supplier_name ?? "—"}
+          </Info>
+        )}
+      </div>
+      <div className="rounded-md border overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="text-left p-2">Item</th>
+              <th className="text-right p-2">Qty</th>
+              <th className="text-right p-2">Rate</th>
+              <th className="text-right p-2">GST%</th>
+              <th className="text-right p-2">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((it, i) => {
+              const rate = cfg.partyRole === "tp" ? (it.sale_rate ?? 0) : it.rate;
+              const amt = (it.qty ?? 0) * rate * (1 + (it.gst_pct ?? 0) / 100);
+              return (
+                <tr key={i} className="border-t">
+                  <td className="p-2">{it.product_name ?? "—"}</td>
+                  <td className="p-2 text-right tabular-nums">{it.qty} {it.unit ?? ""}</td>
+                  <td className="p-2 text-right tabular-nums">₹{fmt(rate)}</td>
+                  <td className="p-2 text-right tabular-nums">{it.gst_pct}</td>
+                  <td className="p-2 text-right tabular-nums">₹{fmt(amt)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="flex justify-end">
+        <div className="text-right space-y-0.5">
+          <div>Subtotal: <span className="tabular-nums font-medium">₹{fmt(totals.base)}</span></div>
+          <div>GST: <span className="tabular-nums font-medium">₹{fmt(totals.gst)}</span></div>
+          <div className="text-base font-semibold">Total: <span className="tabular-nums">₹{fmt(totals.total)}</span></div>
+          {cfg.partyRole === "tp" && <div className="text-emerald-600">Margin: <span className="tabular-nums">₹{fmt(totals.base - totals.cost)}</span></div>}
+        </div>
+      </div>
+      {header.notes && <div className="text-xs text-muted-foreground">Notes: {header.notes}</div>}
+    </div>
+  );
+}
+
+function Info({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="font-medium">{children}</div>
+    </div>
+  );
+}
