@@ -458,8 +458,104 @@ export type Database = {
           },
         ]
       }
+      price_list_items: {
+        Row: {
+          category: string | null
+          cost_rate: number
+          discount_pct: number
+          gst_pct: number
+          hsn: string | null
+          id: string
+          list_rate: number
+          margin_pct: number
+          min_qty: number
+          mrp: number
+          position: number
+          price_list_id: string
+          product_code: string | null
+          product_id: string | null
+          product_name: string
+          unit: string | null
+        }
+        Insert: {
+          category?: string | null
+          cost_rate?: number
+          discount_pct?: number
+          gst_pct?: number
+          hsn?: string | null
+          id?: string
+          list_rate?: number
+          margin_pct?: number
+          min_qty?: number
+          mrp?: number
+          position?: number
+          price_list_id: string
+          product_code?: string | null
+          product_id?: string | null
+          product_name: string
+          unit?: string | null
+        }
+        Update: {
+          category?: string | null
+          cost_rate?: number
+          discount_pct?: number
+          gst_pct?: number
+          hsn?: string | null
+          id?: string
+          list_rate?: number
+          margin_pct?: number
+          min_qty?: number
+          mrp?: number
+          position?: number
+          price_list_id?: string
+          product_code?: string | null
+          product_id?: string | null
+          product_name?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_list_items_price_list_id_fkey"
+            columns: ["price_list_id"]
+            isOneToOne: false
+            referencedRelation: "price_lists"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_lists: {
+        Row: {
+          created_at: string
+          currency: string
+          effective_from: string
+          id: string
+          name: string
+          notes: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          currency?: string
+          effective_from?: string
+          id?: string
+          name: string
+          notes?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          currency?: string
+          effective_from?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       products: {
         Row: {
+          category: string | null
           code: string
           created_at: string
           hsn: string | null
@@ -475,6 +571,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          category?: string | null
           code: string
           created_at?: string
           hsn?: string | null
@@ -490,6 +587,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          category?: string | null
           code?: string
           created_at?: string
           hsn?: string | null
