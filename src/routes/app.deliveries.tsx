@@ -132,7 +132,14 @@ function DeliveriesPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-sm font-medium">{r.delivery_no}</span>
-                  {r.invoice_no && <Link to={"/app/lookup" as any} className="text-xs text-muted-foreground hover:underline" onClick={e => e.stopPropagation()}>· {r.invoice_no}</Link>}
+                  {r.invoice_no && (
+                    <Link
+                      to="/app/lookup"
+                      search={{ q: r.invoice_no } as any}
+                      className="text-xs font-mono text-primary hover:underline"
+                      onClick={e => e.stopPropagation()}
+                    >· {r.invoice_no}</Link>
+                  )}
                   <span className="text-xs text-muted-foreground">{fmtDate(r.date)}</span>
                 </div>
                 <div className="text-sm truncate">{r.buyer_name ?? "—"}{r.vehicle_no ? ` · ${r.vehicle_no}` : ""}</div>

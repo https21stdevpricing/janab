@@ -1,4 +1,4 @@
-import { createFileRoute, useSearch, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useSearch, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
@@ -300,7 +300,15 @@ function PaymentsPage() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-sm">{r.payment_no}</span>
                   <span className="text-xs text-muted-foreground">{fmtDate(r.date)}</span>
-                  {r.ref_doc && <span className="text-xs text-muted-foreground">· {r.ref_doc}</span>}
+                  {r.ref_doc && (
+                    <span className="text-xs text-muted-foreground flex flex-wrap gap-1">
+                      {r.ref_doc.split(",").map(s => s.trim()).filter(Boolean).map((ref, idx) => (
+                        <Link key={idx} to="/app/lookup" search={{ q: ref } as any}
+                          onClick={(e) => e.stopPropagation()}
+                          className="font-mono text-primary hover:underline">{ref}</Link>
+                      ))}
+                    </span>
+                  )}
                 </div>
                 <div className="text-sm truncate">{r.contact_name ?? "—"} <span className="text-muted-foreground">via {r.mode}</span></div>
                 {r.notes && <div className="text-xs text-muted-foreground truncate">{r.notes}</div>}
@@ -339,7 +347,9 @@ function PaymentsPage() {
                     {viewAllocs.map((a, i) => (
                       <div key={i} className="p-2 flex items-center gap-2 text-sm">
                         <Badge variant="outline" className="uppercase text-[10px]">{a.doc_kind}</Badge>
-                        <span className="font-mono text-xs">{a.doc_no}</span>
+                        <Link to="/app/lookup" search={{ q: a.doc_no } as any}
+                          className="font-mono text-xs text-primary hover:underline"
+                          onClick={() => setViewRow(null)}>{a.doc_no}</Link>
                         <span className="ml-auto tabular-nums font-semibold">{inr(a.amount)}</span>
                       </div>
                     ))}
