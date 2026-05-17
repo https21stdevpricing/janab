@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { History, PackageCheck, FileSpreadsheet, Keyboard } from "lucide-react";
+import { BookOpenCheck } from "lucide-react";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { ShortcutsProvider, useShortcutsHelp } from "@/lib/shortcuts";
 import { Kbd } from "@/components/kbd";
@@ -46,6 +47,7 @@ const nav: NavItem[] = [
   { to: "/app/lookup", label: "Lookup", icon: Search },
   { to: "/app/print", label: "Print", icon: Printer },
   { to: "/app/audit", label: "Backlog / Audit", icon: History },
+  { to: "/app/guide", label: "Quick guide", icon: BookOpenCheck },
   { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
