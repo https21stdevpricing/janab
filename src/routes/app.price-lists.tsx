@@ -687,33 +687,31 @@ function exportPdf(active: PriceList, items: Item[], totals: { cost: number; lis
   autoTable(doc, {
     startY: y + 86,
     margin: { left: M, right: M, bottom: 96 },
-    head: [["#", "Code", "Product", "HSN", "Unit", "MRP", "Your Price", "Disc %", "GST %", "Min Qty"]],
+    head: [["#", "Code", "Product", "HSN", "Unit", "Rate", "GST %", "Min Qty", "Amount (Incl. GST)"]],
     body: items.map((it, i) => [
       String(i + 1),
       it.product_code ?? "—",
       it.product_name,
       it.hsn ?? "—",
       it.unit ?? "—",
-      n(it.mrp) ? `Rs. ${fmt(it.mrp)}` : "—",
       `Rs. ${fmt(it.list_rate)}`,
-      n(it.discount_pct) ? `${fmt(it.discount_pct)}%` : "—",
       `${fmt(it.gst_pct)}%`,
       fmt(it.min_qty, 0),
+      `Rs. ${fmt(lineIncl(it))}`,
     ]),
-    styles: { font: "helvetica", fontSize: 9, cellPadding: 5, textColor: [30, 30, 30], lineColor: [230, 230, 230], lineWidth: 0.3 },
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 5, textColor: [30, 30, 30], lineColor: [230, 230, 230], lineWidth: 0.3, overflow: "linebreak", valign: "middle" },
     headStyles: { fillColor: BRAND_DARK, textColor: 255, fontStyle: "bold", fontSize: 9, halign: "left" },
     alternateRowStyles: { fillColor: [248, 252, 252] },
     columnStyles: {
       0: { halign: "right", cellWidth: 22, textColor: [120, 120, 120] },
-      1: { cellWidth: 58, font: "courier", fontSize: 8 },
+      1: { cellWidth: 56, font: "courier", fontSize: 8 },
       2: { cellWidth: "auto", fontStyle: "bold" },
-      3: { cellWidth: 48, font: "courier", fontSize: 8, halign: "center" },
-      4: { cellWidth: 38, halign: "center" },
-      5: { halign: "right", cellWidth: 56 },
-      6: { halign: "right", cellWidth: 68, fontStyle: "bold", textColor: BRAND_TEAL },
-      7: { halign: "right", cellWidth: 44 },
-      8: { halign: "right", cellWidth: 38 },
-      9: { halign: "right", cellWidth: 44 },
+      3: { cellWidth: 46, font: "courier", fontSize: 8, halign: "center" },
+      4: { cellWidth: 36, halign: "center" },
+      5: { halign: "right", cellWidth: 64, fontStyle: "bold", textColor: BRAND_TEAL },
+      6: { halign: "right", cellWidth: 40 },
+      7: { halign: "right", cellWidth: 42 },
+      8: { halign: "right", cellWidth: 78, fontStyle: "bold" },
     },
     didDrawPage: () => {
       // Footer band - drawn per page
@@ -744,14 +742,14 @@ function exportPdf(active: PriceList, items: Item[], totals: { cost: number; lis
   doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(60, 60, 60);
   doc.text(`Items listed`, W - M - tw + 12, blockY + 34);
   doc.text(String(totals.count), W - M - 12, blockY + 34, { align: "right" });
-  doc.text(`List value (excl. GST)`, W - M - tw + 12, blockY + 50);
+  doc.text(`Sub-total (excl. GST)`, W - M - tw + 12, blockY + 50);
   doc.text(inr(totals.list), W - M - 12, blockY + 50, { align: "right" });
   doc.text(`Est. GST`, W - M - tw + 12, blockY + 64);
   doc.text(inr(totals.gst), W - M - 12, blockY + 64, { align: "right" });
   doc.setDrawColor(...BRAND_TEAL); doc.line(W - M - tw + 12, blockY + 70, W - M - 12, blockY + 70);
   doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(...BRAND_DARK);
-  doc.text(`Inclusive Total`, W - M - tw + 12, blockY + 82);
-  doc.text(inr(totals.list + totals.gst), W - M - 12, blockY + 82, { align: "right" });
+  doc.text(`Grand Total (Incl. GST)`, W - M - tw + 12, blockY + 82);
+  doc.text(inr(totals.incl), W - M - 12, blockY + 82, { align: "right" });
 
   // Terms block (left)
   const termsW = W - M * 2 - tw - 16;
