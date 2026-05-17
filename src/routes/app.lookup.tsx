@@ -174,6 +174,7 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
   const payable = doc.kind === "sale" || doc.kind === "purchase" || doc.kind === "tp";
   const payDir = doc.kind === "purchase" ? "out" : "in";
   const goPay = () => navigate({ to: "/app/payments", search: { ref: no, dir: payDir } as any });
+  const goPaySupplier = () => navigate({ to: "/app/payments", search: { ref: no, dir: "out" } as any });
   const goDelivery = () => navigate({ to: "/app/deliveries" });
   const [journal, setJournal] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
@@ -186,12 +187,14 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
         .eq("ref_no", no).order("date");
       setJournal(jl ?? []);
       const { data: al } = await supabase.from("payment_allocations" as never)
-        .select("amount,doc_no,payment_id").eq("doc_id" as never, h.id) as any;
+        .select("amount,doc_no,payment_id,doc_kind").eq("doc_id" as never, h.id) as any;
       if (al && al.length) {
         const ids = al.map((a: any) => a.payment_id);
         const { data: pys } = await supabase.from("payments").select("*").in("id", ids);
         setPayments((pys ?? []).map((p: any) => ({
-          ...p, allocated: al.find((a: any) => a.payment_id === p.id)?.amount,
+          ...p,
+          allocated: al.find((a: any) => a.payment_id === p.id)?.amount,
+          alloc_side: al.find((a: any) => a.payment_id === p.id)?.doc_kind,
         })));
       } else setPayments([]);
       if (doc.party) {
@@ -244,18 +247,24 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
         </div>
         <div className="text-right">
           <div className="text-base font-semibold">{inr(doc.totals.total)}</div>
-          {doc.outstanding && doc.outstanding.balance > 0 && (
+          {doc.kind !== "tp" && doc.outstanding && doc.outstanding.balance > 0 && (
             <div className="text-xs text-destructive">Balance {inr(doc.outstanding.balance)}</div>
           )}
-          {doc.outstanding && (
+          {doc.kind !== "tp" && doc.outstanding && (
             <Badge variant={doc.outstanding.status === "paid" ? "default" : doc.outstanding.status === "partial" ? "secondary" : "outline"} className="mt-1 capitalize">{doc.outstanding.status}</Badge>
           )}
           <div className="mt-2 flex flex-col items-end gap-1">
             {printable && (
               <Button asChild size="sm" variant="outline"><Link to={"/app/print/" + printable + "/$id" as any} params={{ id: h.id } as any}><Printer className="h-3 w-3" /> Print</Link></Button>
             )}
-            {payable && doc.outstanding && doc.outstanding.balance > 0 && (
+            {payable && doc.kind !== "tp" && doc.outstanding && doc.outstanding.balance > 0 && (
               <Button size="sm" onClick={goPay}><Wallet className="h-3 w-3" /> {payDir === "in" ? "Receive" : "Pay"} {inr(doc.outstanding.balance)}</Button>
+            )}
+            {doc.kind === "tp" && doc.outstanding && doc.outstanding.balance > 0 && (
+              <Button size="sm" onClick={goPay}><Wallet className="h-3 w-3" /> Receive from buyer {inr(doc.outstanding.balance)}</Button>
+            )}
+            {doc.kind === "tp" && doc.supplierOutstanding && doc.supplierOutstanding.balance > 0 && (
+              <Button size="sm" variant="secondary" onClick={goPaySupplier}><Wallet className="h-3 w-3" /> Pay supplier {inr(doc.supplierOutstanding.balance)}</Button>
             )}
             {doc.kind === "sale" && (
               <Button size="sm" variant="outline" onClick={goDelivery}><Truck className="h-3 w-3" /> Delivery</Button>
@@ -264,6 +273,36 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
           </div>
         </div>
       </div>
+      {doc.kind === "tp" && (doc.party || doc.supplier) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2 p-3 border-b bg-muted/10">
+          <div className="rounded-md border bg-card p-3">
+            <div className="text-[10px] uppercase text-muted-foreground">Buyer (receivable)</div>
+            <div className="text-sm font-medium">{doc.party?.name ?? h.buyer_name ?? "—"}</div>
+            {doc.party && <div className="text-xs text-muted-foreground">{doc.party.code} · {doc.party.state ?? ""} {doc.party.phone ? `· ${doc.party.phone}` : ""}</div>}
+            {doc.outstanding && (
+              <div className="mt-2 flex gap-3 text-xs">
+                <span>Total <span className="font-semibold tabular-nums">{inr(doc.outstanding.total)}</span></span>
+                <span className="text-primary">Recv <span className="font-semibold tabular-nums">{inr(doc.outstanding.paid)}</span></span>
+                <span className={doc.outstanding.balance > 0 ? "text-destructive" : "text-primary"}>Bal <span className="font-semibold tabular-nums">{inr(doc.outstanding.balance)}</span></span>
+                <Badge variant="outline" className="capitalize text-[10px] h-5">{doc.outstanding.status}</Badge>
+              </div>
+            )}
+          </div>
+          <div className="rounded-md border bg-card p-3">
+            <div className="text-[10px] uppercase text-muted-foreground">Supplier (payable)</div>
+            <div className="text-sm font-medium">{doc.supplier?.name ?? h.supplier_name ?? "—"}</div>
+            {doc.supplier && <div className="text-xs text-muted-foreground">{doc.supplier.code} · {doc.supplier.state ?? ""} {doc.supplier.phone ? `· ${doc.supplier.phone}` : ""}</div>}
+            {doc.supplierOutstanding && (
+              <div className="mt-2 flex gap-3 text-xs">
+                <span>Total <span className="font-semibold tabular-nums">{inr(doc.supplierOutstanding.total)}</span></span>
+                <span className="text-primary">Paid <span className="font-semibold tabular-nums">{inr(doc.supplierOutstanding.paid)}</span></span>
+                <span className={doc.supplierOutstanding.balance > 0 ? "text-destructive" : "text-primary"}>Bal <span className="font-semibold tabular-nums">{inr(doc.supplierOutstanding.balance)}</span></span>
+                <Badge variant="outline" className="capitalize text-[10px] h-5">{doc.supplierOutstanding.status}</Badge>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {doc.totals.margin != null && (
         <div className="px-4 py-2 border-b text-xs flex gap-4">
           <span>Cost: <span className="font-medium tabular-nums">{inr(doc.totals.cost!)}</span></span>
@@ -271,7 +310,7 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
           <span className="text-emerald-600 dark:text-emerald-400">Margin: <span className="font-semibold tabular-nums">{inr(doc.totals.margin)}</span> ({doc.totals.subtotal ? ((doc.totals.margin / doc.totals.subtotal) * 100).toFixed(1) : "0"}%)</span>
         </div>
       )}
-      {doc.outstanding && (
+      {doc.kind !== "tp" && doc.outstanding && (
         <div className="grid grid-cols-3 gap-2 p-3 border-b bg-muted/20">
           <div className="rounded-md border bg-card p-2">
             <div className="text-[10px] uppercase text-muted-foreground">Total</div>
@@ -323,6 +362,9 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
                   <td className="p-2 font-mono text-xs">{p.payment_no}</td>
                   <td className="p-2">{fmtDate(p.date)}</td>
                   <td className="p-2 text-muted-foreground">{p.mode}</td>
+                  {doc.kind === "tp" && (
+                    <td className="p-2"><Badge variant="outline" className="text-[10px]">{p.alloc_side === "tp_purchase" ? "supplier" : "buyer"}</Badge></td>
+                  )}
                   <td className="p-2 text-right tabular-nums font-medium">{inr(p.allocated ?? p.amount)}</td>
                 </tr>
               ))}

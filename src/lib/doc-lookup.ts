@@ -25,6 +25,9 @@ export type DocLookupResult = {
   totals: { subtotal: number; gst: number; total: number; cost?: number; margin?: number };
   outstanding?: { total: number; paid: number; balance: number; status: string };
   party?: any; // contacts row
+  // TP only: supplier-side (payable) outstanding + supplier contact
+  supplierOutstanding?: { total: number; paid: number; balance: number; status: string };
+  supplier?: any;
 };
 
 export async function lookupDoc(rawId: string): Promise<DocLookupResult | null> {
@@ -60,12 +63,19 @@ export async function lookupDoc(rawId: string): Promise<DocLookupResult | null> 
 
   // Outstanding (sale / purchase / tp only)
   let outstanding: DocLookupResult["outstanding"] | undefined;
+  let supplierOutstanding: DocLookupResult["supplierOutstanding"] | undefined;
   if (cfg.kind === "sale" || cfg.kind === "purchase" || cfg.kind === "tp") {
     const { data: o } = await supabase
       .from("outstanding_view" as never).select("total,paid,balance,status")
       .eq("doc_kind" as never, cfg.kind).eq("doc_id" as never, header.id).maybeSingle() as { data: any };
     if (o) outstanding = { total: Number(o.total), paid: Number(o.paid), balance: Number(o.balance), status: o.status };
     else outstanding = { total, paid: 0, balance: total, status: total > 0 ? "unpaid" : "empty" };
+    if (cfg.kind === "tp") {
+      const { data: op } = await supabase
+        .from("outstanding_view" as never).select("total,paid,balance,status")
+        .eq("doc_kind" as never, "tp_purchase").eq("doc_id" as never, header.id).maybeSingle() as { data: any };
+      if (op) supplierOutstanding = { total: Number(op.total), paid: Number(op.paid), balance: Number(op.balance), status: op.status };
+    }
   } else if (cfg.kind === "payment") {
     outstanding = { total: Number(header.amount), paid: Number(header.amount), balance: 0, status: "paid" };
   }
@@ -77,8 +87,13 @@ export async function lookupDoc(rawId: string): Promise<DocLookupResult | null> 
     const { data } = await supabase.from("contacts").select("*").eq("id", partyId).maybeSingle();
     party = data;
   }
+  let supplier: any = null;
+  if (cfg.kind === "tp" && header.supplier_id) {
+    const { data } = await supabase.from("contacts").select("*").eq("id", header.supplier_id).maybeSingle();
+    supplier = data;
+  }
 
-  return { kind: cfg.kind, prefix: pfx, header, items, totals, outstanding, party };
+  return { kind: cfg.kind, prefix: pfx, header, items, totals, outstanding, party, supplierOutstanding, supplier };
 }
 
 // Open outstanding docs for a contact (used by Payments allocation panel).
