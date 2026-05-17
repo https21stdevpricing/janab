@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { fmt, fmtDate } from "@/lib/format";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
+import { Filter, ChevronDown, ChevronUp } from "lucide-react";
 
 export const Route = createFileRoute("/app/ledger")({ component: LedgerPage });
 
@@ -24,6 +25,7 @@ function LedgerPage() {
   const [side, setSide] = useState<"all" | "debit" | "credit">("all");
   const [sortBy, setSortBy] = useState<"date" | "amount" | "account">("date");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
     supabase.from("ledger_view").select("*").then(({ data }) => setRows(data ?? []));
@@ -85,7 +87,19 @@ function LedgerPage() {
       <PageHeader title="General Ledger" description="Every double-entry posting · latest on top · exports always start → end"
         actions={<ExcelBar onExport={onExport} />} />
 
-      {/* Filters */}
+      {/* Filter toggle */}
+      <div className="mb-3 flex items-center gap-2">
+        <Button variant={showFilters ? "default" : "outline"} size="sm" onClick={() => setShowFilters(s => !s)}>
+          <Filter className="h-4 w-4" /> Filters {showFilters ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+        </Button>
+        {(account !== "__all__" || party || refQ || from || to || side !== "all") && (
+          <Button variant="ghost" size="sm" onClick={resetFilters}>Clear</Button>
+        )}
+        <div className="ml-auto text-xs text-muted-foreground">{filtered.length} rows · sort: {sortBy} {sortDir}</div>
+      </div>
+
+      {/* Filters (collapsible) */}
+      {showFilters && (
       <div className="rounded-md border bg-card p-3 mb-3 grid grid-cols-2 md:grid-cols-6 gap-2">
         <div className="space-y-1 col-span-2 md:col-span-2">
           <Label className="text-[10px] uppercase text-muted-foreground">Account</Label>
@@ -136,6 +150,7 @@ function LedgerPage() {
         </div>
         <div className="flex items-end"><Button variant="outline" size="sm" className="h-8 w-full" onClick={resetFilters}>Reset</Button></div>
       </div>
+      )}
 
       {/* Totals */}
       <div className="grid grid-cols-3 gap-2 mb-3">
