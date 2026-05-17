@@ -194,6 +194,11 @@ function PaymentsPage() {
         const { error: e2 } = await supabase.from("payment_allocations" as never).insert(rows as never);
         if (e2) toast.error("Saved payment, but allocation failed: " + e2.message);
       }
+    } else if (contactId) {
+      // No manual allocations — auto-apply to oldest open documents for this contact (FIFO).
+      const { error: e3 } = await supabase.rpc("auto_allocate_payment" as never, { _pid: pay.id } as never);
+      if (e3) toast.error("Saved payment, but auto-allocation failed: " + e3.message);
+      else toast.success("Auto-applied to oldest open dues");
     }
     toast.success("Saved"); setOpen(false); load();
   };
