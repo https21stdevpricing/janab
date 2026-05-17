@@ -24,11 +24,16 @@ type SearchHit =
   | { kind: "product"; row: any }
   | { kind: "doc"; row: any; docKind: string; no: string; date: string; party: string };
 
+type ContactEnrich = { receivable: number; payable: number; open_docs: number };
+type ProductEnrich = { on_hand: number; reorder_level: number };
+
 function LookupPage() {
   const search = (Route.useSearch?.() ?? {}) as { q?: string };
   const [q, setQ] = useState(search.q ?? "");
   const [doc, setDoc] = useState<DocLookupResult | null>(null);
   const [hits, setHits] = useState<SearchHit[]>([]);
+  const [contactInfo, setContactInfo] = useState<Record<string, ContactEnrich>>({});
+  const [productInfo, setProductInfo] = useState<Record<string, ProductEnrich>>({});
   const [busy, setBusy] = useState(false);
 
   const run = async () => {
@@ -62,6 +67,32 @@ function LookupPage() {
     setHits(out);
     if (out.length === 0) toast.error("Nothing found");
     setBusy(false);
+    // Enrich asynchronously
+    const cids = (cs ?? []).map((c: any) => c.id);
+    const pids = (ps ?? []).map((p: any) => p.id);
+    if (cids.length) {
+      const { data: ag } = await supabase
+        .from("party_aging_view" as never)
+        .select("party_id,side,total_balance,open_docs")
+        .in("party_id" as never, cids) as any;
+      const acc: Record<string, ContactEnrich> = {};
+      for (const r of (ag ?? []) as any[]) {
+        acc[r.party_id] ??= { receivable: 0, payable: 0, open_docs: 0 };
+        if (r.side === "receivable") acc[r.party_id].receivable += Number(r.total_balance ?? 0);
+        else acc[r.party_id].payable += Number(r.total_balance ?? 0);
+        acc[r.party_id].open_docs += Number(r.open_docs ?? 0);
+      }
+      setContactInfo(acc);
+    } else setContactInfo({});
+    if (pids.length) {
+      const { data: st } = await supabase
+        .from("stock_view")
+        .select("product_id,on_hand,reorder_level")
+        .in("product_id", pids);
+      const acc: Record<string, ProductEnrich> = {};
+      for (const r of (st ?? []) as any[]) acc[r.product_id] = { on_hand: Number(r.on_hand ?? 0), reorder_level: Number(r.reorder_level ?? 0) };
+      setProductInfo(acc);
+    } else setProductInfo({});
   };
 
   useEffect(() => { if (search.q) { setQ(search.q); setTimeout(() => run(), 0); } /* eslint-disable-next-line */ }, [search.q]);
@@ -89,13 +120,33 @@ function LookupPage() {
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{h.row.name} <span className="font-mono text-xs text-muted-foreground">{h.row.code}</span></div>
                   <div className="text-xs text-muted-foreground truncate">{h.row.state} {h.row.phone ? `· ${h.row.phone}` : ""} {h.row.gstin ? `· ${h.row.gstin}` : ""}</div>
+                  {contactInfo[h.row.id] && (
+                    <div className="text-xs mt-1 flex flex-wrap gap-2">
+                      {contactInfo[h.row.id].receivable > 0 && <span className="text-primary">Recv {inr(contactInfo[h.row.id].receivable)}</span>}
+                      {contactInfo[h.row.id].payable > 0 && <span className="text-destructive">Pay {inr(contactInfo[h.row.id].payable)}</span>}
+                      {contactInfo[h.row.id].open_docs > 0 && <span className="text-muted-foreground">{contactInfo[h.row.id].open_docs} open</span>}
+                    </div>
+                  )}
                 </div>
+                <Button size="sm" variant="outline" asChild onClick={(e) => e.stopPropagation()}>
+                  <Link to={h.row.type === "supplier" ? "/app/suppliers" : "/app/buyers"}>Open</Link>
+                </Button>
               </>}
               {h.kind === "product" && <>
                 <Badge variant="outline">Product</Badge>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium truncate">{h.row.name} <span className="font-mono text-xs text-muted-foreground">{h.row.code}</span></div>
                   <div className="text-xs text-muted-foreground truncate">{h.row.unit} · HSN {h.row.hsn ?? "—"} · Sale ₹{fmt(h.row.sale_rate)}</div>
+                  {productInfo[h.row.id] && (
+                    <div className="text-xs mt-1 flex flex-wrap gap-2">
+                      <span className={productInfo[h.row.id].on_hand <= productInfo[h.row.id].reorder_level ? "text-destructive font-medium" : "text-foreground"}>
+                        Stock {fmt(productInfo[h.row.id].on_hand)} {h.row.unit}
+                      </span>
+                      {productInfo[h.row.id].on_hand <= productInfo[h.row.id].reorder_level && (
+                        <span className="text-destructive">Low (reorder {fmt(productInfo[h.row.id].reorder_level)})</span>
+                      )}
+                    </div>
+                  )}
                 </div>
               </>}
               {h.kind === "doc" && <>

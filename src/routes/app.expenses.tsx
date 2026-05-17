@@ -12,7 +12,7 @@ import { inr, fmtDate, todayISO } from "@/lib/format";
 import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
-import { exportToExcel, importFromExcel, pick, num } from "@/lib/excel";
+import { exportToExcel, importFromExcel, smartPick, num, parseDate } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/expenses")({ component: ExpensesPage });
 const CATS = ["General", "Transport", "Labour", "Rent", "Utilities", "Office", "Travel", "Marketing", "Repair", "Tax"];
@@ -66,11 +66,11 @@ function ExpensesPage() {
       if (!user) return;
       const payload = data.map((r) => ({
         user_id: user.id,
-        date: String(pick(r, "Date", "date") ?? todayISO()).slice(0, 10),
-        category: pick(r, "Category", "category") || "General",
-        amount: num(pick(r, "Amount", "amount")),
-        mode: pick(r, "Mode", "mode") || "Cash",
-        notes: pick(r, "Notes", "notes") || null,
+        date: parseDate(smartPick(r, ["Date", "Expense Date", "Txn Date"])) ?? todayISO(),
+        category: smartPick(r, ["Category", "Type", "Head"]) || "General",
+        amount: num(smartPick(r, ["Amount", "Total", "Value", "₹"])),
+        mode: smartPick(r, ["Mode", "Payment Mode", "Pay Mode"]) || "Cash",
+        notes: smartPick(r, ["Notes", "Remarks", "Description"]) || null,
       })).filter((r) => r.amount > 0);
       if (payload.length === 0) { toast.error("No valid rows"); return; }
       const { error } = await supabase.from("expenses").insert(payload);
