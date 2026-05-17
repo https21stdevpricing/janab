@@ -362,6 +362,9 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
                   <td className="p-2 font-mono text-xs">{p.payment_no}</td>
                   <td className="p-2">{fmtDate(p.date)}</td>
                   <td className="p-2 text-muted-foreground">{p.mode}</td>
+                  {doc.kind === "tp" && (
+                    <td className="p-2"><Badge variant="outline" className="text-[10px]">{p.alloc_side === "tp_purchase" ? "supplier" : "buyer"}</Badge></td>
+                  )}
                   <td className="p-2 text-right tabular-nums font-medium">{inr(p.allocated ?? p.amount)}</td>
                 </tr>
               ))}
