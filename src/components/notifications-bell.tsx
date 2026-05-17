@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -12,6 +12,7 @@ type N = { id: string; at: string; kind: string; severity: string; title: string
 export function NotificationsBell() {
   const [items, setItems] = useState<N[]>([]);
   const [open, setOpen] = useState(false);
+  const channelName = useRef(`notif-bell-${Math.random().toString(36).slice(2)}`);
 
   const load = async () => {
     const { data } = await supabase
@@ -20,12 +21,18 @@ export function NotificationsBell() {
   };
 
   useEffect(() => {
+    let alive = true;
     load();
     const ch = supabase
-      .channel("notif-bell")
-      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => load())
+      .channel(channelName.current)
+      .on("postgres_changes", { event: "*", schema: "public", table: "notifications" }, () => {
+        if (alive) load();
+      })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      alive = false;
+      supabase.removeChannel(ch);
+    };
   }, []);
 
   const unread = items.filter(i => !i.read).length;
