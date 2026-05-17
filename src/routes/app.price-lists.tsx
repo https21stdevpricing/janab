@@ -19,6 +19,12 @@ import { toast } from "sonner";
 import { Plus, Trash2, Tag, Calculator, Download, Pencil, FileSpreadsheet, Layers, FileText } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import swLogo from "@/assets/sw-logo.png";
+
+// Stone World brand
+const BRAND_TEAL: [number, number, number] = [26, 182, 188];
+const BRAND_DARK: [number, number, number] = [15, 23, 42];
+const BRAND_SOFT: [number, number, number] = [236, 253, 254];
 
 export const Route = createFileRoute("/app/price-lists")({ component: PriceListsPage });
 
@@ -77,7 +83,6 @@ function PriceListsPage() {
     setLists((pls ?? []) as PriceList[]);
     setProducts((prods ?? []) as Product[]);
     setSettings((st as Settings) ?? null);
-    if (!activeId && pls && pls.length) setActiveId(pls[0].id);
   };
   useEffect(() => { load(); }, []);
 
@@ -263,97 +268,16 @@ function PriceListsPage() {
   const onPdf = () => {
     if (!active) return;
     if (!items.length) { toast.error("Add items first"); return; }
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const W = doc.internal.pageSize.getWidth();
-    const M = 36;
-    const co = settings ?? { company_name: "Your Company", address: "", phone: "", email: "", gstin: "", state: "" };
+    void exportPdf(active, items, totals, settings);
+  };
 
-    // Brand band
-    doc.setFillColor(20, 24, 39);
-    doc.rect(0, 0, W, 70, "F");
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold").setFontSize(18);
-    doc.text(co.company_name || "Your Company", M, 32);
-    doc.setFont("helvetica", "normal").setFontSize(9);
-    const coLine = [co.address, co.state].filter(Boolean).join(", ");
-    if (coLine) doc.text(coLine, M, 48);
-    const coLine2 = [co.phone && `Ph: ${co.phone}`, co.email, co.gstin && `GSTIN: ${co.gstin}`].filter(Boolean).join("  ·  ");
-    if (coLine2) doc.text(coLine2, M, 62);
-
-    // Title strip
-    doc.setFillColor(244, 244, 247);
-    doc.rect(0, 70, W, 36, "F");
-    doc.setTextColor(20, 24, 39);
-    doc.setFont("helvetica", "bold").setFontSize(13);
-    doc.text("PRICE LIST", M, 93);
-    doc.setFont("helvetica", "normal").setFontSize(10);
-    doc.text(`Category: ${active.category ?? "—"}`, M + 110, 93);
-    const meta = `${active.name}  ·  w.e.f. ${fmtDate(active.effective_from)}${active.valid_until ? `  ·  valid till ${fmtDate(active.valid_until)}` : ""}`;
-    doc.text(meta, W - M, 93, { align: "right" });
-
-    // Customer box
-    let y = 120;
-    doc.setDrawColor(220);
-    doc.roundedRect(M, y, W - M * 2, 60, 4, 4);
-    doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(120);
-    doc.text("PREPARED FOR", M + 10, y + 14);
-    doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(20);
-    doc.text(active.buyer_name || "Walk-in customer", M + 10, y + 32);
-    doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(60);
-    const cust = [active.buyer_address, active.buyer_phone && `Ph: ${active.buyer_phone}`].filter(Boolean).join("  ·  ");
-    if (cust) doc.text(cust, M + 10, y + 48);
-    doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(120);
-    doc.text(`Date: ${fmtDate(todayISO())}`, W - M - 10, y + 14, { align: "right" });
-    doc.text(`Items: ${items.length}`, W - M - 10, y + 30, { align: "right" });
-    doc.text(`Currency: ${active.currency}`, W - M - 10, y + 46, { align: "right" });
-
-    // Items table
-    autoTable(doc, {
-      startY: y + 76,
-      margin: { left: M, right: M },
-      head: [["#", "Code", "Product", "HSN", "Unit", "MRP", "Your Price", "Disc %", "GST %", "Min Qty"]],
-      body: items.map((it, i) => [
-        i + 1, it.product_code ?? "", it.product_name, it.hsn ?? "", it.unit ?? "",
-        n(it.mrp) ? fmt(it.mrp) : "—",
-        inr(it.list_rate),
-        n(it.discount_pct) ? `${fmt(it.discount_pct)}%` : "—",
-        `${fmt(it.gst_pct)}%`,
-        fmt(it.min_qty, 0),
-      ]),
-      styles: { font: "helvetica", fontSize: 9, cellPadding: 5, textColor: 30 },
-      headStyles: { fillColor: [20, 24, 39], textColor: 255, fontStyle: "bold" },
-      alternateRowStyles: { fillColor: [249, 250, 251] },
-      columnStyles: {
-        0: { halign: "right", cellWidth: 22 },
-        1: { cellWidth: 55, font: "courier", fontSize: 8 },
-        3: { cellWidth: 50, font: "courier", fontSize: 8 },
-        4: { cellWidth: 40 },
-        5: { halign: "right", cellWidth: 50 },
-        6: { halign: "right", cellWidth: 65, fontStyle: "bold" },
-        7: { halign: "right", cellWidth: 45 },
-        8: { halign: "right", cellWidth: 40 },
-        9: { halign: "right", cellWidth: 45 },
-      },
-    });
-
-    // Footer summary + terms on every page
-    const pageCount = (doc as any).getNumberOfPages();
-    for (let p = 1; p <= pageCount; p++) {
-      doc.setPage(p);
-      const H = doc.internal.pageSize.getHeight();
-      doc.setDrawColor(230); doc.line(M, H - 70, W - M, H - 70);
-      doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(110);
-      const terms = active.terms || "Prices subject to change. E&OE.";
-      doc.text(doc.splitTextToSize(`Terms: ${terms}`, W - M * 2), M, H - 56);
-      doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(20);
-      doc.text(`Total list value (excl. GST): ${inr(totals.list)}   ·   Est. GST: ${inr(totals.gst)}   ·   Inclusive: ${inr(totals.list + totals.gst)}`, M, H - 30);
-      doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(140);
-      doc.text(`Page ${p} of ${pageCount}`, W - M, H - 14, { align: "right" });
-      doc.text(co.company_name || "", M, H - 14);
-    }
-
-    const fname = `PriceList_${(active.buyer_name || "Customer").replace(/\s+/g, "_")}_${(active.category || "").replace(/\s+/g, "_")}_${active.effective_from}.pdf`;
-    doc.save(fname);
+  const downloadListPdf = async (pl: PriceList) => {
+    const { data } = await supabase.from("price_list_items").select("*").eq("price_list_id", pl.id).order("position");
+    const rows = (data ?? []) as Item[];
+    if (!rows.length) { toast.error("This list has no items yet"); return; }
+    let cost = 0, list = 0, mrp = 0, gst = 0;
+    for (const it of rows) { cost += it.cost_rate; list += it.list_rate; mrp += it.mrp; gst += it.list_rate * (it.gst_pct / 100); }
+    exportPdf(pl, rows, { cost, list, mrp, gst, count: rows.length }, settings);
   };
 
   return (
@@ -380,15 +304,24 @@ function PriceListsPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-3">
         <div className="rounded-md border bg-card p-2 space-y-1">
-          <div className="text-[10px] uppercase text-muted-foreground px-2 py-1">My price lists</div>
+          <div className="flex items-center justify-between px-2 py-1">
+            <div className="text-[10px] uppercase text-muted-foreground">My price lists</div>
+            {activeId && <button onClick={() => setActiveId(null)} className="text-[10px] text-muted-foreground hover:text-foreground underline">Collapse</button>}
+          </div>
           {lists.length === 0 && <div className="text-xs text-muted-foreground px-2 py-3">No price lists yet</div>}
           {lists.map((pl) => (
-            <button key={pl.id} onClick={() => setActiveId(pl.id)}
-              className={`w-full text-left px-2 py-1.5 rounded text-sm hover:bg-muted ${activeId === pl.id ? "bg-muted font-medium" : ""}`}>
-              <div className="flex items-center gap-1.5"><Tag className="h-3.5 w-3.5" /> {pl.name}</div>
-              <div className="text-[10px] text-muted-foreground truncate">{pl.buyer_name || "—"} · {pl.category || "no cat"}</div>
-              <div className="text-[10px] text-muted-foreground">w.e.f. {fmtDate(pl.effective_from)}</div>
-            </button>
+            <div key={pl.id} className={`group rounded text-sm hover:bg-muted ${activeId === pl.id ? "bg-muted" : ""}`}>
+              <button onClick={() => setActiveId(activeId === pl.id ? null : pl.id)} className="w-full text-left px-2 py-1.5">
+                <div className={`flex items-center gap-1.5 ${activeId === pl.id ? "font-medium" : ""}`}><Tag className="h-3.5 w-3.5" /> {pl.name}</div>
+                <div className="text-[10px] text-muted-foreground truncate">{pl.buyer_name || "—"} · {pl.category || "no cat"}</div>
+                <div className="text-[10px] text-muted-foreground">w.e.f. {fmtDate(pl.effective_from)}</div>
+              </button>
+              <div className="px-2 pb-1.5">
+                <Button size="sm" variant="outline" className="h-6 w-full text-[11px]" onClick={(e) => { e.stopPropagation(); downloadListPdf(pl); }}>
+                  <Download className="h-3 w-3" /> PDF
+                </Button>
+              </div>
+            </div>
           ))}
         </div>
 
@@ -602,4 +535,156 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "go
       <div className={`text-base font-semibold tabular-nums ${tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : ""}`}>{value}</div>
     </div>
   );
+}
+
+function exportPdf(active: PriceList, items: Item[], totals: { cost: number; list: number; mrp: number; gst: number; count: number }, settings: Settings | null) {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const M = 36;
+  const co = settings ?? { company_name: "Stone World", address: "", phone: "", email: "", gstin: "", state: "" };
+
+  // ===== HEADER =====
+  // Teal accent stripe
+  doc.setFillColor(...BRAND_TEAL);
+  doc.rect(0, 0, W, 6, "F");
+  // Dark header band
+  doc.setFillColor(...BRAND_DARK);
+  doc.rect(0, 6, W, 78, "F");
+
+  // Logo (left)
+  try { doc.addImage(swLogo, "PNG", M, 18, 56, 56); } catch {}
+
+  // Company info (next to logo)
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold").setFontSize(20);
+  doc.text(co.company_name || "Stone World", M + 70, 40);
+  doc.setFont("helvetica", "normal").setFontSize(8.5);
+  doc.setTextColor(200, 230, 232);
+  const coLine = [co.address, co.state].filter(Boolean).join(", ");
+  if (coLine) doc.text(coLine, M + 70, 55);
+  const coLine2 = [co.phone && `Ph: ${co.phone}`, co.email, co.gstin && `GSTIN: ${co.gstin}`].filter(Boolean).join("   |   ");
+  if (coLine2) doc.text(coLine2, M + 70, 68);
+
+  // Title pill on right
+  doc.setFillColor(...BRAND_TEAL);
+  doc.roundedRect(W - M - 150, 24, 150, 44, 4, 4, "F");
+  doc.setTextColor(255, 255, 255);
+  doc.setFont("helvetica", "bold").setFontSize(14);
+  doc.text("PRICE LIST", W - M - 75, 44, { align: "center" });
+  doc.setFont("helvetica", "normal").setFontSize(8);
+  doc.text(active.category || "All categories", W - M - 75, 58, { align: "center" });
+
+  // ===== CUSTOMER + META BOX =====
+  let y = 100;
+  doc.setFillColor(...BRAND_SOFT);
+  doc.setDrawColor(...BRAND_TEAL);
+  doc.setLineWidth(0.8);
+  doc.roundedRect(M, y, W - M * 2, 72, 4, 4, "FD");
+
+  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...BRAND_TEAL);
+  doc.text("PREPARED FOR", M + 12, y + 16);
+  doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(...BRAND_DARK);
+  doc.text(active.buyer_name || "Walk-in Customer", M + 12, y + 34);
+  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(60, 60, 60);
+  if (active.buyer_address) doc.text(doc.splitTextToSize(active.buyer_address, (W - M * 2) / 2 - 24), M + 12, y + 50);
+  if (active.buyer_phone) doc.text(`Phone: ${active.buyer_phone}`, M + 12, y + 64);
+
+  // Right column
+  const rx = W - M - 12;
+  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...BRAND_TEAL);
+  doc.text("LIST DETAILS", rx, y + 16, { align: "right" });
+  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...BRAND_DARK);
+  doc.text(`Reference: ${active.name}`, rx, y + 32, { align: "right" });
+  doc.text(`Effective: ${fmtDate(active.effective_from)}`, rx, y + 46, { align: "right" });
+  doc.text(active.valid_until ? `Valid until: ${fmtDate(active.valid_until)}` : `Date: ${fmtDate(todayISO())}`, rx, y + 60, { align: "right" });
+
+  // ===== ITEMS TABLE =====
+  autoTable(doc, {
+    startY: y + 86,
+    margin: { left: M, right: M, bottom: 96 },
+    head: [["#", "Code", "Product", "HSN", "Unit", "MRP", "Your Price", "Disc %", "GST %", "Min Qty"]],
+    body: items.map((it, i) => [
+      String(i + 1),
+      it.product_code ?? "—",
+      it.product_name,
+      it.hsn ?? "—",
+      it.unit ?? "—",
+      n(it.mrp) ? `Rs. ${fmt(it.mrp)}` : "—",
+      `Rs. ${fmt(it.list_rate)}`,
+      n(it.discount_pct) ? `${fmt(it.discount_pct)}%` : "—",
+      `${fmt(it.gst_pct)}%`,
+      fmt(it.min_qty, 0),
+    ]),
+    styles: { font: "helvetica", fontSize: 9, cellPadding: 5, textColor: [30, 30, 30], lineColor: [230, 230, 230], lineWidth: 0.3 },
+    headStyles: { fillColor: BRAND_DARK, textColor: 255, fontStyle: "bold", fontSize: 9, halign: "left" },
+    alternateRowStyles: { fillColor: [248, 252, 252] },
+    columnStyles: {
+      0: { halign: "right", cellWidth: 22, textColor: [120, 120, 120] },
+      1: { cellWidth: 58, font: "courier", fontSize: 8 },
+      2: { cellWidth: "auto", fontStyle: "bold" },
+      3: { cellWidth: 48, font: "courier", fontSize: 8, halign: "center" },
+      4: { cellWidth: 38, halign: "center" },
+      5: { halign: "right", cellWidth: 56 },
+      6: { halign: "right", cellWidth: 68, fontStyle: "bold", textColor: BRAND_TEAL },
+      7: { halign: "right", cellWidth: 44 },
+      8: { halign: "right", cellWidth: 38 },
+      9: { halign: "right", cellWidth: 44 },
+    },
+    didDrawPage: () => {
+      // Footer band - drawn per page
+      doc.setFillColor(...BRAND_DARK);
+      doc.rect(0, H - 28, W, 28, "F");
+      doc.setFillColor(...BRAND_TEAL);
+      doc.rect(0, H - 32, W, 4, "F");
+      doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(200, 230, 232);
+      doc.text(co.company_name || "Stone World", M, H - 11);
+      const pageStr = `Page ${doc.getCurrentPageInfo().pageNumber}`;
+      doc.text(pageStr, W - M, H - 11, { align: "right" });
+    },
+  });
+
+  // ===== TOTALS + TERMS on last page =====
+  const finalY = (doc as any).lastAutoTable?.finalY ?? (y + 200);
+  const remaining = H - 100 - finalY;
+  let blockY = finalY + 16;
+  if (remaining < 130) { doc.addPage(); blockY = 40; }
+
+  // Totals box (right)
+  const tw = 220;
+  doc.setDrawColor(...BRAND_TEAL); doc.setLineWidth(0.8);
+  doc.setFillColor(255, 255, 255);
+  doc.roundedRect(W - M - tw, blockY, tw, 86, 4, 4, "FD");
+  doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...BRAND_TEAL);
+  doc.text("SUMMARY", W - M - tw + 12, blockY + 16);
+  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(60, 60, 60);
+  doc.text(`Items listed`, W - M - tw + 12, blockY + 34);
+  doc.text(String(totals.count), W - M - 12, blockY + 34, { align: "right" });
+  doc.text(`List value (excl. GST)`, W - M - tw + 12, blockY + 50);
+  doc.text(inr(totals.list), W - M - 12, blockY + 50, { align: "right" });
+  doc.text(`Est. GST`, W - M - tw + 12, blockY + 64);
+  doc.text(inr(totals.gst), W - M - 12, blockY + 64, { align: "right" });
+  doc.setDrawColor(...BRAND_TEAL); doc.line(W - M - tw + 12, blockY + 70, W - M - 12, blockY + 70);
+  doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(...BRAND_DARK);
+  doc.text(`Inclusive Total`, W - M - tw + 12, blockY + 82);
+  doc.text(inr(totals.list + totals.gst), W - M - 12, blockY + 82, { align: "right" });
+
+  // Terms block (left)
+  const termsW = W - M * 2 - tw - 16;
+  doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...BRAND_TEAL);
+  doc.text("TERMS & CONDITIONS", M, blockY + 12);
+  doc.setDrawColor(...BRAND_TEAL); doc.line(M, blockY + 16, M + 110, blockY + 16);
+  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(60, 60, 60);
+  const termsTxt = active.terms || "Prices are subject to availability and may change without prior notice. Quoted rates are exclusive of transport and installation unless specified. Payment terms as agreed. E&OE.";
+  const lines = doc.splitTextToSize(termsTxt, termsW);
+  doc.text(lines, M, blockY + 30);
+
+  // Signature line
+  doc.setDrawColor(180); doc.setLineWidth(0.4);
+  doc.line(M, H - 60, M + 160, H - 60);
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(120);
+  doc.text(`For ${co.company_name || "Stone World"} — Authorised Signatory`, M, H - 48);
+
+  const fname = `PriceList_${(active.buyer_name || "Customer").replace(/\s+/g, "_")}_${(active.category || "list").replace(/\s+/g, "_")}_${active.effective_from}.pdf`;
+  doc.save(fname);
 }
