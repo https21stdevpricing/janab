@@ -8,6 +8,8 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { seedDemoData, clearAllData } from "@/lib/seed-demo";
+import { downloadFullBackup, getLastBackupAt } from "@/lib/backup";
+import { Download, ShieldCheck, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/app/settings")({ component: SettingsPage });
 
@@ -15,6 +17,8 @@ function SettingsPage() {
   const [s, setS] = useState<any>(null);
   const [seeding, setSeeding] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [backing, setBacking] = useState(false);
+  const [lastBackup, setLastBackup] = useState<string | null>(getLastBackupAt());
 
   useEffect(() => { supabase.from("settings").select("*").maybeSingle().then(({ data }) => setS(data)); }, []);
 
@@ -43,6 +47,16 @@ function SettingsPage() {
     finally { setClearing(false); }
   };
 
+  const runBackup = async () => {
+    setBacking(true);
+    try { await downloadFullBackup(); setLastBackup(getLastBackupAt()); toast.success("Backup downloaded"); }
+    catch (e: any) { toast.error(e.message ?? "Backup failed"); }
+    finally { setBacking(false); }
+  };
+
+  const lastDays = lastBackup ? Math.floor((Date.now() - new Date(lastBackup).getTime()) / 86400000) : null;
+  const stale = lastDays == null || lastDays >= 7;
+
   if (!s) return <div className="text-sm text-muted-foreground">Loading…</div>;
 
   return (
@@ -61,6 +75,49 @@ function SettingsPage() {
           <div className="md:col-span-2"><Button onClick={save}>Save</Button></div>
         </CardContent>
       </Card>
+
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Backups &amp; data safety</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <div className="rounded-md border bg-muted/30 p-3 space-y-1.5">
+            <div className="font-medium">How your data is protected</div>
+            <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
+              <li>Cloud database with <b>automatic daily snapshots</b> retained by the platform — recoverable on request.</li>
+              <li>Point-in-time restore is available for the live cloud project (contact support for restore window).</li>
+              <li>Row-level security keeps your books isolated from every other user.</li>
+              <li>You can pull a <b>full local copy any time</b> with the button below — one Excel file, one sheet per table.</li>
+            </ul>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={runBackup} disabled={backing}>
+              <Download className="h-4 w-4" /> {backing ? "Preparing…" : "Download full backup (.xlsx)"}
+            </Button>
+            <div className="text-xs text-muted-foreground">
+              {lastBackup
+                ? <>Last backup: <b>{new Date(lastBackup).toLocaleString()}</b> ({lastDays}d ago)</>
+                : <>No local backup yet.</>}
+            </div>
+          </div>
+          {stale && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs">
+              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+              <div><b>Weekly backup recommended.</b> Download a fresh copy every Sunday and keep it on a different device / drive. In an emergency (accidental delete, account loss) you can re-import this Excel file sheet-by-sheet.</div>
+            </div>
+          )}
+          <details className="text-xs text-muted-foreground">
+            <summary className="cursor-pointer text-foreground font-medium">Emergency recovery checklist</summary>
+            <ol className="list-decimal list-inside mt-2 space-y-1">
+              <li>Stop entering new transactions to prevent further drift.</li>
+              <li>Open Settings → download a fresh backup if the app still loads.</li>
+              <li>If data is missing, contact support — daily cloud snapshots can restore to any recent point.</li>
+              <li>If the cloud project is unreachable, open your latest local .xlsx backup — every sheet maps 1:1 to a table and can be re-imported from the matching page (Products → Products sheet, Contacts → Contacts sheet, etc.).</li>
+            </ol>
+          </details>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader><CardTitle>Data tools</CardTitle></CardHeader>
         <CardContent className="space-y-4">
