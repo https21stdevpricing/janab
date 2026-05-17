@@ -299,9 +299,14 @@ function PriceListsPage() {
     const { data } = await supabase.from("price_list_items").select("*").eq("price_list_id", pl.id).order("position");
     const rows = (data ?? []) as Item[];
     if (!rows.length) { toast.error("This list has no items yet"); return; }
-    let cost = 0, list = 0, mrp = 0, gst = 0;
-    for (const it of rows) { cost += it.cost_rate; list += it.list_rate; mrp += it.mrp; gst += it.list_rate * (it.gst_pct / 100); }
-    exportPdf(pl, rows, { cost, list, mrp, gst, count: rows.length }, settings);
+    let cost = 0, list = 0, mrp = 0, gst = 0, incl = 0;
+    for (const it of rows) {
+      const qty = Math.max(1, n(it.min_qty));
+      const lineEx = n(it.list_rate) * qty;
+      const lineGst = lineEx * (n(it.gst_pct) / 100);
+      cost += n(it.cost_rate) * qty; list += lineEx; mrp += n(it.mrp) * qty; gst += lineGst; incl += lineEx + lineGst;
+    }
+    exportPdf(pl, rows, { cost, list, mrp, gst, incl, count: rows.length }, settings);
   };
 
   return (
