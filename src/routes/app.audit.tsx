@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 
 export const Route = createFileRoute("/app/audit")({ component: AuditPage });
 
@@ -21,6 +21,7 @@ function AuditPage() {
   const [q, setQ] = useState("");
   const [entity, setEntity] = useState<string>("all");
   const [action, setAction] = useState<string>("all");
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     const { data } = await supabase.from("audit_log" as never).select("*").order("at", { ascending: false }).limit(500) as any;
@@ -98,18 +99,31 @@ function AuditPage() {
                   {r.ref_no && <span className="font-mono ml-1">{r.ref_no}</span>}
                 </div>
                 <div className="text-xs text-muted-foreground capitalize">{r.entity.replace("_", " ")}</div>
-                {r.diff && Object.keys(r.diff).length > 0 && (
-                  <div className="text-[11px] mt-1 space-y-0.5">
-                    {Object.entries(r.diff).slice(0, 6).map(([k, v]: any) => (
-                      <div key={k} className="font-mono break-all">
-                        <span className="text-muted-foreground">{k}:</span>{" "}
-                        <span className="line-through text-destructive/70">{String(v.old ?? "—")}</span>
-                        <span className="text-muted-foreground"> → </span>
-                        <span className="text-primary">{String(v.new ?? "—")}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {r.diff && Object.keys(r.diff).length > 0 && (() => {
+                  const entries = Object.entries(r.diff);
+                  const isOpen = !!expanded[r.id];
+                  const shown = isOpen ? entries : entries.slice(0, 6);
+                  return (
+                    <div className="text-[11px] mt-1 space-y-0.5">
+                      {shown.map(([k, v]: any) => (
+                        <div key={k} className="font-mono break-all">
+                          <span className="text-muted-foreground">{k}:</span>{" "}
+                          <span className="line-through text-destructive/70">{String(v?.old ?? "—")}</span>
+                          <span className="text-muted-foreground"> → </span>
+                          <span className="text-primary">{String(v?.new ?? "—")}</span>
+                        </div>
+                      ))}
+                      {entries.length > 6 && (
+                        <Button
+                          size="sm" variant="ghost" className="h-6 px-2 text-[11px] mt-1"
+                          onClick={() => setExpanded(s => ({ ...s, [r.id]: !isOpen }))}
+                        >
+                          {isOpen ? <><ChevronUp className="h-3 w-3" /> Show less</> : <><ChevronDown className="h-3 w-3" /> Show all {entries.length} changes</>}
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
               <div className="flex flex-col items-end gap-1">
                 <div className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
