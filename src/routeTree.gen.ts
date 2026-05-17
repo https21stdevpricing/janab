@@ -24,7 +24,6 @@ import { Route as AppQuotationsRouteImport } from './routes/app.quotations'
 import { Route as AppPurchasesRouteImport } from './routes/app.purchases'
 import { Route as AppProductsRouteImport } from './routes/app.products'
 import { Route as AppPrintRouteImport } from './routes/app.print'
-import { Route as AppPriceListsRouteImport } from './routes/app.price-lists'
 import { Route as AppPaymentsRouteImport } from './routes/app.payments'
 import { Route as AppLookupRouteImport } from './routes/app.lookup'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
@@ -115,11 +114,6 @@ const AppPrintRoute = AppPrintRouteImport.update({
   path: '/print',
   getParentRoute: () => AppRoute,
 } as any)
-const AppPriceListsRoute = AppPriceListsRouteImport.update({
-  id: '/price-lists',
-  path: '/price-lists',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppPaymentsRoute = AppPaymentsRouteImport.update({
   id: '/payments',
   path: '/payments',
@@ -208,7 +202,6 @@ export interface FileRoutesByFullPath {
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/payments': typeof AppPaymentsRoute
-  '/app/price-lists': typeof AppPriceListsRoute
   '/app/print': typeof AppPrintRouteWithChildren
   '/app/products': typeof AppProductsRoute
   '/app/purchases': typeof AppPurchasesRoute
@@ -239,7 +232,6 @@ export interface FileRoutesByTo {
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/payments': typeof AppPaymentsRoute
-  '/app/price-lists': typeof AppPriceListsRoute
   '/app/print': typeof AppPrintRouteWithChildren
   '/app/products': typeof AppProductsRoute
   '/app/purchases': typeof AppPurchasesRoute
@@ -272,7 +264,6 @@ export interface FileRoutesById {
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/payments': typeof AppPaymentsRoute
-  '/app/price-lists': typeof AppPriceListsRoute
   '/app/print': typeof AppPrintRouteWithChildren
   '/app/products': typeof AppProductsRoute
   '/app/purchases': typeof AppPurchasesRoute
@@ -306,7 +297,6 @@ export interface FileRouteTypes {
     | '/app/ledger'
     | '/app/lookup'
     | '/app/payments'
-    | '/app/price-lists'
     | '/app/print'
     | '/app/products'
     | '/app/purchases'
@@ -337,7 +327,6 @@ export interface FileRouteTypes {
     | '/app/ledger'
     | '/app/lookup'
     | '/app/payments'
-    | '/app/price-lists'
     | '/app/print'
     | '/app/products'
     | '/app/purchases'
@@ -369,7 +358,6 @@ export interface FileRouteTypes {
     | '/app/ledger'
     | '/app/lookup'
     | '/app/payments'
-    | '/app/price-lists'
     | '/app/print'
     | '/app/products'
     | '/app/purchases'
@@ -497,13 +485,6 @@ declare module '@tanstack/react-router' {
       path: '/print'
       fullPath: '/app/print'
       preLoaderRoute: typeof AppPrintRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/app/price-lists': {
-      id: '/app/price-lists'
-      path: '/price-lists'
-      fullPath: '/app/price-lists'
-      preLoaderRoute: typeof AppPriceListsRouteImport
       parentRoute: typeof AppRoute
     }
     '/app/payments': {
@@ -634,7 +615,6 @@ interface AppRouteChildren {
   AppLedgerRoute: typeof AppLedgerRoute
   AppLookupRoute: typeof AppLookupRoute
   AppPaymentsRoute: typeof AppPaymentsRoute
-  AppPriceListsRoute: typeof AppPriceListsRoute
   AppPrintRoute: typeof AppPrintRouteWithChildren
   AppProductsRoute: typeof AppProductsRoute
   AppPurchasesRoute: typeof AppPurchasesRoute
@@ -661,7 +641,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppLedgerRoute: AppLedgerRoute,
   AppLookupRoute: AppLookupRoute,
   AppPaymentsRoute: AppPaymentsRoute,
-  AppPriceListsRoute: AppPriceListsRoute,
   AppPrintRoute: AppPrintRouteWithChildren,
   AppProductsRoute: AppProductsRoute,
   AppPurchasesRoute: AppPurchasesRoute,
@@ -686,3 +665,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
