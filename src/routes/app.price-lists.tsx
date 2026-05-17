@@ -54,6 +54,16 @@ type Settings = {
 
 const n = (x: any) => Number(x ?? 0) || 0;
 const r2 = (x: number) => Math.round(x * 100) / 100;
+const lineIncl = (it: { list_rate: number; min_qty: number; gst_pct: number }) =>
+  r2(n(it.list_rate) * Math.max(1, n(it.min_qty)) * (1 + n(it.gst_pct) / 100));
+const rowErrors = (it: Item) => {
+  const errs: Record<string, string> = {};
+  if (!(n(it.list_rate) > 0)) errs.list_rate = "Rate must be > 0";
+  if (n(it.mrp) > 0 && n(it.list_rate) > n(it.mrp)) errs.list_rate = "Rate above MRP";
+  if (n(it.gst_pct) < 0 || n(it.gst_pct) > 50) errs.gst_pct = "GST 0–50%";
+  if (!(n(it.min_qty) >= 1)) errs.min_qty = "Min qty ≥ 1";
+  return errs;
+};
 
 function PriceListsPage() {
   const [lists, setLists] = useState<PriceList[]>([]);
