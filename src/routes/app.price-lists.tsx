@@ -19,14 +19,7 @@ import { fmt, inr, todayISO, fmtDate } from "@/lib/format";
 import { exportToExcel } from "@/lib/excel";
 import { toast } from "sonner";
 import { Plus, Trash2, Tag, Calculator, Download, Pencil, FileSpreadsheet, Layers, FileText, Search, Check } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import swLogo from "@/assets/sw-logo.png";
-
-// Stone World brand
-const BRAND_TEAL: [number, number, number] = [26, 182, 188];
-const BRAND_DARK: [number, number, number] = [15, 23, 42];
-const BRAND_SOFT: [number, number, number] = [236, 253, 254];
+import { defaultTerms, drawKeyValuePanel, drawStoneWorldFooter, drawStoneWorldHeader, drawTotalsBlock, ensurePdfSpace, newStoneWorldPdf, pdfMoney, pdfPct, stoneWorldTable, swPdf } from "@/lib/pdf-theme";
 
 export const Route = createFileRoute("/app/price-lists")({ component: PriceListsPage });
 
