@@ -326,7 +326,53 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
           </div>
         </div>
       )}
-      {doc.items.length > 0 && (
+      {doc.items.length > 0 && doc.kind === "tp" && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[720px]">
+            <thead className="bg-muted/50 text-xs uppercase tracking-wide">
+              <tr>
+                <th className="text-left p-2">Product</th>
+                <th className="text-right p-2">Qty</th>
+                <th className="text-right p-2">Buy rate</th>
+                <th className="text-right p-2">Sell rate</th>
+                <th className="text-right p-2">GST%</th>
+                <th className="text-right p-2">Cost</th>
+                <th className="text-right p-2">Sale</th>
+                <th className="text-right p-2">Margin</th>
+              </tr>
+            </thead>
+            <tbody>
+              {doc.items.map((it, i) => {
+                const qty = Number(it.qty || 0);
+                const buy = Number(it.purchase_rate || 0);
+                const sell = Number(it.sale_rate || 0);
+                const cost = qty * buy;
+                const sale = qty * sell;
+                const margin = sale - cost;
+                return (
+                  <tr key={i} className="border-t">
+                    <td className="p-2">{it.product_name}</td>
+                    <td className="p-2 text-right tabular-nums">{fmt(qty)} {it.unit}</td>
+                    <td className="p-2 text-right tabular-nums">{fmt(buy)}</td>
+                    <td className="p-2 text-right tabular-nums">{fmt(sell)}</td>
+                    <td className="p-2 text-right tabular-nums">{fmt(it.gst_pct)}</td>
+                    <td className="p-2 text-right tabular-nums">{fmt(cost)}</td>
+                    <td className="p-2 text-right tabular-nums">{fmt(sale)}</td>
+                    <td className={`p-2 text-right tabular-nums font-medium ${margin >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>{fmt(margin)}</td>
+                  </tr>
+                );
+              })}
+              <tr className="border-t bg-muted/30 font-semibold">
+                <td className="p-2" colSpan={5}>Totals</td>
+                <td className="p-2 text-right tabular-nums">{fmt(doc.totals.cost ?? 0)}</td>
+                <td className="p-2 text-right tabular-nums">{fmt(doc.totals.subtotal)}</td>
+                <td className={`p-2 text-right tabular-nums ${(doc.totals.margin ?? 0) >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>{fmt(doc.totals.margin ?? 0)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
+      {doc.items.length > 0 && doc.kind !== "tp" && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[600px]">
             <thead className="bg-muted/50 text-xs uppercase tracking-wide">
@@ -359,7 +405,9 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
             <tbody>
               {payments.map((p: any) => (
                 <tr key={p.id} className="border-t">
-                  <td className="p-2 font-mono text-xs">{p.payment_no}</td>
+                  <td className="p-2 font-mono text-xs">
+                    <Link to="/app/lookup" search={{ q: p.payment_no } as any} className="text-primary hover:underline">{p.payment_no}</Link>
+                  </td>
                   <td className="p-2">{fmtDate(p.date)}</td>
                   <td className="p-2 text-muted-foreground">{p.mode}</td>
                   {doc.kind === "tp" && (
@@ -404,7 +452,7 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
             {partyDocs.filter((d) => d.no !== no).slice(0, 10).map((d, i) => (
               <div key={i} className="px-4 py-2 flex items-center gap-3 text-sm">
                 <Badge variant="outline">{d.kind}</Badge>
-                <span className="font-mono text-xs">{d.no}</span>
+                <Link to="/app/lookup" search={{ q: d.no } as any} className="font-mono text-xs text-primary hover:underline">{d.no}</Link>
                 <span className="text-xs text-muted-foreground">{fmtDate(d.date)}</span>
                 <span className="text-xs text-muted-foreground truncate ml-auto">{d.party}</span>
               </div>
