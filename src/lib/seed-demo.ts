@@ -169,3 +169,18 @@ export async function seedDemoData() {
     email: "hello@stoneworld.in",
   }).eq("user_id", uid);
 }
+
+export async function clearAllData() {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in");
+  const uid = user.id;
+  // Delete in dependency-safe order. Item tables and allocations cascade from headers.
+  await supabase.from("payments").delete().eq("user_id", uid);
+  await supabase.from("expenses").delete().eq("user_id", uid);
+  await supabase.from("sales").delete().eq("user_id", uid);
+  await supabase.from("purchases").delete().eq("user_id", uid);
+  await supabase.from("third_party").delete().eq("user_id", uid);
+  await supabase.from("quotations").delete().eq("user_id", uid);
+  await supabase.from("products").delete().eq("user_id", uid);
+  await supabase.from("contacts").delete().eq("user_id", uid);
+}
