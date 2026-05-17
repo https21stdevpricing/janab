@@ -19,14 +19,7 @@ import { fmt, inr, todayISO, fmtDate } from "@/lib/format";
 import { exportToExcel } from "@/lib/excel";
 import { toast } from "sonner";
 import { Plus, Trash2, Tag, Calculator, Download, Pencil, FileSpreadsheet, Layers, FileText, Search, Check } from "lucide-react";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import swLogo from "@/assets/sw-logo.png";
-
-// Stone World brand
-const BRAND_TEAL: [number, number, number] = [26, 182, 188];
-const BRAND_DARK: [number, number, number] = [15, 23, 42];
-const BRAND_SOFT: [number, number, number] = [236, 253, 254];
+import { defaultTerms, drawKeyValuePanel, drawStoneWorldFooter, drawStoneWorldHeader, drawTotalsBlock, ensurePdfSpace, newStoneWorldPdf, pdfMoney, pdfPct, stoneWorldTable, swPdf } from "@/lib/pdf-theme";
 
 export const Route = createFileRoute("/app/price-lists")({ component: PriceListsPage });
 
@@ -622,150 +615,93 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "go
 }
 
 function exportPdf(active: PriceList, items: Item[], totals: { cost: number; list: number; mrp: number; gst: number; incl: number; count: number }, settings: Settings | null) {
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const doc = newStoneWorldPdf();
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
-  const M = 36;
-  const co = settings ?? { company_name: "Stone World", address: "", phone: "", email: "", gstin: "", state: "" };
+  const { margin: M, y } = drawStoneWorldHeader(doc, settings, {
+    title: "Price List",
+    subtitle: active.category || "All Categories",
+    reference: active.name,
+    date: active.effective_from,
+    validUntil: active.valid_until,
+  });
 
-  // ===== HEADER (white, seamless) =====
-  // Logo (left)
-  try { doc.addImage(swLogo, "PNG", M, 36, 48, 48); } catch {}
+  const panelW = (W - M * 2 - 14) / 2;
+  drawKeyValuePanel(doc, M, y, panelW, "Prepared For", [
+    ["Customer", active.buyer_name || "Walk-in Customer"],
+    ["Phone", active.buyer_phone],
+    ["Address", active.buyer_address],
+  ]);
+  drawKeyValuePanel(doc, M + panelW + 14, y, panelW, "List Details", [
+    ["Category", active.category || "All categories"],
+    ["Effective", fmtDate(active.effective_from)],
+    ["Valid Until", active.valid_until ? fmtDate(active.valid_until) : "Until revised"],
+  ]);
 
-  // Company info (next to logo)
-  doc.setFont("helvetica", "bold").setFontSize(18).setTextColor(...BRAND_DARK);
-  doc.text(co.company_name || "Stone World", M + 62, 56);
-  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(110, 116, 130);
-  const coLine = [co.address, co.state].filter(Boolean).join(", ");
-  if (coLine) doc.text(coLine, M + 62, 70);
-  const coLine2 = [co.phone && `Ph: ${co.phone}`, co.email, co.gstin && `GSTIN: ${co.gstin}`].filter(Boolean).join("   ·   ");
-  if (coLine2) doc.text(coLine2, M + 62, 82);
-
-  // Title (right, text only)
-  doc.setFont("helvetica", "bold").setFontSize(22).setTextColor(...BRAND_DARK);
-  doc.text("PRICE LIST", W - M, 56, { align: "right" });
-  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...BRAND_TEAL);
-  doc.text(active.category || "All categories", W - M, 72, { align: "right" });
-  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(140, 146, 160);
-  doc.text(`Ref: ${active.name}`, W - M, 84, { align: "right" });
-
-  // Hairline divider
-  doc.setDrawColor(225, 228, 235); doc.setLineWidth(0.5);
-  doc.line(M, 100, W - M, 100);
-
-  // ===== CUSTOMER + META (no box, seamless rows) =====
-  let y = 116;
-  doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...BRAND_TEAL);
-  doc.text("PREPARED FOR", M, y);
-  doc.setFont("helvetica", "bold").setFontSize(13).setTextColor(...BRAND_DARK);
-  doc.text(active.buyer_name || "Walk-in Customer", M, y + 16);
-  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(90, 96, 110);
-  let cy = y + 30;
-  if (active.buyer_address) {
-    const addr = doc.splitTextToSize(active.buyer_address, (W - M * 2) / 2 - 12);
-    doc.text(addr, M, cy); cy += addr.length * 11;
-  }
-  if (active.buyer_phone) { doc.text(`Phone: ${active.buyer_phone}`, M, cy); cy += 11; }
-
-  // Right column
-  const rx = W - M;
-  doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...BRAND_TEAL);
-  doc.text("LIST DETAILS", rx, y, { align: "right" });
-  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...BRAND_DARK);
-  doc.text(`Effective: ${fmtDate(active.effective_from)}`, rx, y + 18, { align: "right" });
-  doc.text(active.valid_until ? `Valid until: ${fmtDate(active.valid_until)}` : `Issued: ${fmtDate(todayISO())}`, rx, y + 32, { align: "right" });
-  if (active.buyer_phone || active.buyer_address) {
-    // keep right column compact
-  }
-
-  const metaBottom = Math.max(cy, y + 44);
-  // Hairline divider before table
-  doc.setDrawColor(225, 228, 235); doc.setLineWidth(0.5);
-  doc.line(M, metaBottom + 4, W - M, metaBottom + 4);
-
-  // ===== ITEMS TABLE (white, hairline rules) =====
-  autoTable(doc, {
-    startY: metaBottom + 16,
-    margin: { left: M, right: M, bottom: 60 },
-    head: [["#", "Code", "Product", "HSN", "Unit", "Rate", "GST %", "Min Qty", "Amount (Incl. GST)"]],
+  stoneWorldTable(doc, {
+    startY: y + 112,
+    margin: { left: M, right: M, top: 60, bottom: 66 },
+    head: [["#", "Code", "Product", "HSN", "Unit", "Rate", "GST", "Min", "Amount Incl. GST"]],
     body: items.map((it, i) => [
       String(i + 1),
-      it.product_code ?? "—",
+      it.product_code ?? "-",
       it.product_name,
-      it.hsn ?? "—",
-      it.unit ?? "—",
-      `Rs. ${fmt(it.list_rate)}`,
-      `${fmt(it.gst_pct)}%`,
+      it.hsn ?? "-",
+      it.unit ?? "-",
+      pdfMoney(it.list_rate),
+      pdfPct(it.gst_pct),
       fmt(it.min_qty, 0),
-      `Rs. ${fmt(lineIncl(it))}`,
+      pdfMoney(lineIncl(it)),
     ]),
-    theme: "plain",
-    styles: { font: "helvetica", fontSize: 9, cellPadding: { top: 7, right: 6, bottom: 7, left: 6 }, textColor: [30, 33, 42], lineColor: [232, 234, 240], lineWidth: 0, overflow: "linebreak", valign: "middle" },
-    headStyles: { fillColor: [255, 255, 255], textColor: [110, 116, 130], fontStyle: "bold", fontSize: 8, halign: "left", cellPadding: { top: 4, right: 6, bottom: 8, left: 6 }, lineColor: BRAND_DARK, lineWidth: { bottom: 0.8 } as any },
-    bodyStyles: { lineWidth: { bottom: 0.3 } as any, lineColor: [232, 234, 240] },
     columnStyles: {
-      0: { halign: "right", cellWidth: 22, textColor: [160, 165, 178] },
-      1: { cellWidth: 56, font: "courier", fontSize: 8 },
-      2: { cellWidth: "auto", fontStyle: "bold" },
-      3: { cellWidth: 46, font: "courier", fontSize: 8, halign: "center", textColor: [110, 116, 130] },
-      4: { cellWidth: 36, halign: "center" },
-      5: { halign: "right", cellWidth: 64, fontStyle: "bold", textColor: BRAND_DARK },
-      6: { halign: "right", cellWidth: 40, textColor: [110, 116, 130] },
-      7: { halign: "right", cellWidth: 42, textColor: [110, 116, 130] },
-      8: { halign: "right", cellWidth: 78, fontStyle: "bold", textColor: BRAND_TEAL },
+      0: { halign: "center", cellWidth: 20, textColor: swPdf.muted },
+      1: { cellWidth: 50, font: "courier", fontSize: 8 },
+      2: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 130 },
+      3: { cellWidth: 40, halign: "center", font: "courier", fontSize: 8, textColor: swPdf.muted },
+      4: { cellWidth: 34, halign: "center" },
+      5: { halign: "right", cellWidth: 62, fontStyle: "bold", textColor: swPdf.ink },
+      6: { halign: "right", cellWidth: 36, textColor: swPdf.muted },
+      7: { halign: "right", cellWidth: 40, textColor: swPdf.muted },
+      8: { halign: "right", cellWidth: 82, fontStyle: "bold", textColor: swPdf.tealDark },
     },
-    didDrawPage: () => {
-      // Minimal white footer with hairline rule
-      doc.setDrawColor(225, 228, 235); doc.setLineWidth(0.5);
-      doc.line(M, H - 30, W - M, H - 30);
-      doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(140, 146, 160);
-      doc.text(co.company_name || "Stone World", M, H - 18);
-      const pageStr = `Page ${doc.getCurrentPageInfo().pageNumber}`;
-      doc.text(pageStr, W - M, H - 18, { align: "right" });
+    didDrawPage: (data: any) => {
+      if (data.pageNumber > 1) {
+        doc.setFillColor(...swPdf.teal);
+        doc.rect(0, 0, W, 5, "F");
+        doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.ink);
+        doc.text(`PRICE LIST - ${active.buyer_name || "Customer"}`, M, 34);
+        doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
+        doc.text(active.category || "All categories", W - M, 34, { align: "right" });
+        doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
+        doc.line(M, 44, W - M, 44);
+      }
     },
   });
 
-  // ===== TOTALS + TERMS (seamless, no boxes) =====
-  const finalY = (doc as any).lastAutoTable?.finalY ?? (metaBottom + 200);
-  const remaining = H - 70 - finalY;
-  let blockY = finalY + 18;
-  if (remaining < 150) { doc.addPage(); blockY = 60; }
+  const finalY = (doc as any).lastAutoTable?.finalY ?? (y + 240);
+  let blockY = ensurePdfSpace(doc, finalY + 18, 134, M, 66);
+  const totalsW = 232;
+  const termsW = W - M * 2 - totalsW - 18;
 
-  // Totals (right, label/value rows)
-  const tw = 220;
-  const tx = W - M - tw;
-  const rowY = (i: number) => blockY + 14 + i * 16;
-  doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(110, 116, 130);
-  doc.text(`Items listed`, tx, rowY(0));
-  doc.text(`Sub-total (excl. GST)`, tx, rowY(1));
-  doc.text(`GST (estimated)`, tx, rowY(2));
-  doc.setTextColor(...BRAND_DARK).setFont("helvetica", "normal");
-  doc.text(String(totals.count), W - M, rowY(0), { align: "right" });
-  doc.text(inr(totals.list), W - M, rowY(1), { align: "right" });
-  doc.text(inr(totals.gst), W - M, rowY(2), { align: "right" });
-  // Grand total — dark accent rule
-  doc.setDrawColor(...BRAND_DARK); doc.setLineWidth(0.8);
-  doc.line(tx, rowY(3) - 4, W - M, rowY(3) - 4);
-  doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(...BRAND_DARK);
-  doc.text(`Grand Total (Incl. GST)`, tx, rowY(3) + 8);
-  doc.setTextColor(...BRAND_TEAL);
-  doc.text(inr(totals.incl), W - M, rowY(3) + 8, { align: "right" });
-
-  // Terms block (left)
-  const termsW = W - M * 2 - tw - 24;
-  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...BRAND_TEAL);
+  doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...swPdf.tealDark);
   doc.text("TERMS & CONDITIONS", M, blockY + 14);
-  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(90, 96, 110);
-  const termsTxt = active.terms || "Prices are subject to availability and may change without prior notice. Quoted rates are exclusive of transport and installation unless specified. Payment terms as agreed. E&OE.";
-  const lines = doc.splitTextToSize(termsTxt, termsW);
-  doc.text(lines, M, blockY + 30);
+  doc.setFont("helvetica", "normal").setFontSize(8.8).setTextColor(...swPdf.muted);
+  const termsLines = doc.splitTextToSize(active.terms || defaultTerms("price list"), termsW);
+  doc.text(termsLines.slice(0, 7), M, blockY + 32);
 
-  // Signature line
-  doc.setDrawColor(210, 213, 222); doc.setLineWidth(0.4);
-  doc.line(M, H - 60, M + 160, H - 60);
-  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(140, 146, 160);
-  doc.text(`For ${co.company_name || "Stone World"} — Authorised Signatory`, M, H - 48);
+  drawTotalsBlock(doc, W - M - totalsW, blockY, totalsW, [
+    ["Items Listed", String(totals.count)],
+    ["Subtotal (Excl. GST)", pdfMoney(totals.list)],
+    ["GST Estimated", pdfMoney(totals.gst)],
+  ], "Grand Total", pdfMoney(totals.incl));
 
+  blockY = ensurePdfSpace(doc, blockY + 122, 46, M, 66);
+  doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
+  doc.line(M, blockY + 18, M + 172, blockY + 18);
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
+  doc.text(`For ${settings?.company_name || "StoneWorld Traders"} - Authorised Signatory`, M, blockY + 33);
+
+  drawStoneWorldFooter(doc, settings, M);
   const fname = `PriceList_${(active.buyer_name || "Customer").replace(/\s+/g, "_")}_${(active.category || "list").replace(/\s+/g, "_")}_${active.effective_from}.pdf`;
   doc.save(fname);
 }

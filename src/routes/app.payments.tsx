@@ -13,12 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { inr, fmt, fmtDate, todayISO } from "@/lib/format";
 import { lookupDoc, openDocsFor } from "@/lib/doc-lookup";
 import { toast } from "sonner";
-import { Trash2, ArrowDownLeft, ArrowUpRight, X, Eye, FileSpreadsheet } from "lucide-react";
+import { Trash2, ArrowDownLeft, ArrowUpRight, X, Eye, FileSpreadsheet, Printer } from "lucide-react";
 import { Kbd } from "@/components/kbd";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useShortcut } from "@/lib/shortcuts";
+import { exportStoneWorldPayment } from "@/lib/pdf-theme";
 
 function daysBetween(iso: string) {
   const d = new Date(iso); const now = new Date();
@@ -53,6 +54,7 @@ function PaymentsPage() {
   // View (detail preview) state
   const [viewRow, setViewRow] = useState<Row | null>(null);
   const [viewAllocs, setViewAllocs] = useState<Array<{ doc_kind: string; doc_no: string; amount: number }>>([]);
+  const [company, setCompany] = useState<any>(null);
   // Aggregate receivable / payable totals
   const [totalRecv, setTotalRecv] = useState(0);
   const [totalPay, setTotalPay] = useState(0);
@@ -240,9 +242,13 @@ function PaymentsPage() {
 
   const openView = async (r: Row) => {
     setViewRow(r);
-    const { data } = await supabase.from("payment_allocations" as never)
-      .select("doc_kind,doc_no,amount").eq("payment_id" as never, r.id) as any;
+    const [{ data }, { data: st }] = await Promise.all([
+      supabase.from("payment_allocations" as never)
+        .select("doc_kind,doc_no,amount").eq("payment_id" as never, r.id) as any,
+      supabase.from("settings").select("company_name,address,phone,email,gstin,state").maybeSingle(),
+    ]);
     setViewAllocs((data ?? []) as any);
+    setCompany(st);
   };
 
 
@@ -377,6 +383,13 @@ function PaymentsPage() {
             </div>
           )}
           <div className="mt-2 flex flex-col gap-2 pt-3 border-t">
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => viewRow && exportStoneWorldPayment(viewRow, viewAllocs, company)}
+            >
+              <Printer className="h-4 w-4" /> Download Branded PDF
+            </Button>
             <Button
               variant="outline"
               className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"

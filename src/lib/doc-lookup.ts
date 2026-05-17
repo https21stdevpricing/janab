@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 // Maps an ID prefix to the actual tables it lives in.
 export type DocKind = "sale" | "purchase" | "tp" | "quote" | "payment";
+export type PrintableDocKind = Exclude<DocKind, "payment">;
 
 const MAP: Record<string, { kind: DocKind; table: string; items?: string; fk?: string; noCol: string }> = {
   INV: { kind: "sale",     table: "sales",       items: "sale_items",       fk: "sale_id",      noCol: "invoice_no" },
@@ -107,4 +108,13 @@ export async function openDocsFor(contactId: string, direction: "in" | "out") {
     .gt("balance" as never, 0)
     .order("date" as never, { ascending: true }) as { data: any[] };
   return data ?? [];
+}
+
+export async function lookupDocById(kind: PrintableDocKind, id: string): Promise<DocLookupResult | null> {
+  const cfg = Object.values(MAP).find((entry) => entry.kind === kind && entry.items);
+  if (!cfg) return null;
+  const { data: header } = await supabase
+    .from(cfg.table as never).select("*").eq("id" as never, id).maybeSingle() as { data: any };
+  const no = header?.[cfg.noCol];
+  return no ? lookupDoc(no) : null;
 }
