@@ -18,6 +18,7 @@ import { Kbd } from "@/components/kbd";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useShortcut } from "@/lib/shortcuts";
 
 function daysBetween(iso: string) {
   const d = new Date(iso); const now = new Date();
@@ -186,6 +187,9 @@ function PaymentsPage() {
     setAmount(0); setMode("Bank"); setNotes(""); setRefLookup(""); setOpenDocs([]); setAllocs([]);
     setOpen(true);
   };
+
+  // Page shortcuts: N = new (defaults to Receipt)
+  useShortcut("n", () => { if (!open) startNew("in"); }, !open);
 
   // Auto-fill from ref doc id
   const fillFromDoc = async () => {

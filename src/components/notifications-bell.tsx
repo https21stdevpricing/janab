@@ -2,16 +2,20 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Check, Plus, Eye } from "lucide-react";
-import { Link } from "@tanstack/react-router";
-import { fmtDate } from "@/lib/format";
+import { Bell, Check, Plus, Eye, ExternalLink } from "lucide-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { fmtDate, inr } from "@/lib/format";
+import { lookupDoc, type DocLookupResult } from "@/lib/doc-lookup";
 
 type N = { id: string; at: string; kind: string; severity: string; title: string; body: string | null; link: string | null; read: boolean };
 
 export function NotificationsBell() {
   const [items, setItems] = useState<N[]>([]);
   const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState<{ notif: N; doc: DocLookupResult | null } | null>(null);
+  const navigate = useNavigate();
   const channelName = useRef(`notif-bell-${Math.random().toString(36).slice(2)}`);
 
   const load = async () => {
@@ -49,29 +53,33 @@ export function NotificationsBell() {
   const dot = (s: string) =>
     s === "error" ? "bg-destructive" : s === "warning" ? "bg-amber-500" : s === "success" ? "bg-emerald-500" : "bg-sky-500";
 
-  // Try to extract a doc ref number from the notification body/title for the Lookup preview.
+  // Strict ref extraction: prefix-NNN (digits required after the hyphen)
   const refOf = (n: N): string | null => {
     const text = `${n.title ?? ""} ${n.body ?? ""}`;
-    const m = text.match(/\b(INV|PO|TP|QT|PAY|EXP)[-/]?[A-Z0-9-]+\b/i);
-    return m ? m[0] : null;
+    const m = text.match(/\b(INV|PO|TP|QUO|QT|PAY|RI|PY|EXP)[-/]?\d[A-Z0-9-]*/i);
+    return m ? m[0].toUpperCase().replace("/", "-") : null;
   };
 
-  const openPreview = (n: N) => {
-    markOne(n.id); setOpen(false);
+  const openPreview = async (n: N) => {
+    markOne(n.id);
+    setOpen(false);
     const ref = refOf(n);
-    if (ref) window.location.assign(`/app/lookup?q=${encodeURIComponent(ref)}`);
-    else if (n.link) window.location.assign(n.link);
+    let doc: DocLookupResult | null = null;
+    if (ref) {
+      try { doc = await lookupDoc(ref); } catch { doc = null; }
+    }
+    setPreview({ notif: n, doc });
   };
   const openAction = (n: N) => {
-    markOne(n.id); setOpen(false);
-    if (n.link) window.location.assign(n.link);
-    else {
-      const ref = refOf(n);
-      if (ref) window.location.assign(`/app/lookup?q=${encodeURIComponent(ref)}`);
-    }
+    markOne(n.id); setOpen(false); setPreview(null);
+    if (n.link) { navigate({ to: n.link as any }); return; }
+    const ref = refOf(n);
+    if (ref) navigate({ to: "/app/lookup", search: { q: ref } as any });
+    else navigate({ to: "/app/audit" });
   };
 
   return (
+    <>
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
@@ -118,5 +126,57 @@ export function NotificationsBell() {
         </div>
       </PopoverContent>
     </Popover>
+    <NotificationPreview state={preview} onClose={() => setPreview(null)} onOpenFull={() => preview && openAction(preview.notif)} />
+    </>
+  );
+}
+
+function NotificationPreview({
+  state, onClose, onOpenFull,
+}: { state: { notif: N; doc: DocLookupResult | null } | null; onClose: () => void; onOpenFull: () => void }) {
+  return (
+    <Dialog open={!!state} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-base">
+            <Eye className="h-4 w-4" /> {state?.notif.title}
+          </DialogTitle>
+        </DialogHeader>
+        {state && (
+          <div className="space-y-3 text-sm">
+            {state.notif.body && <p className="text-muted-foreground">{state.notif.body}</p>}
+            {state.doc ? (
+              <div className="rounded-md border bg-muted/30 p-3 space-y-1">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="uppercase text-[10px]">{state.doc.kind}</Badge>
+                  <span className="font-mono text-sm font-semibold">
+                    {state.doc.header.invoice_no ?? state.doc.header.po_no ?? state.doc.header.tp_no ?? state.doc.header.quote_no ?? state.doc.header.payment_no}
+                  </span>
+                  <span className="text-xs text-muted-foreground ml-auto">{fmtDate(state.doc.header.date)}</span>
+                </div>
+                {state.doc.party && <div className="text-sm">{state.doc.party.name}</div>}
+                <div className="flex justify-between pt-1 border-t mt-1">
+                  <span className="text-muted-foreground">Total</span>
+                  <span className="font-semibold tabular-nums">{inr(state.doc.totals.total)}</span>
+                </div>
+                {state.doc.outstanding && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Balance</span>
+                    <span className={`font-semibold tabular-nums ${state.doc.outstanding.balance > 0 ? "text-destructive" : "text-primary"}`}>{inr(state.doc.outstanding.balance)}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-xs text-muted-foreground border rounded-md p-2">No linked document found. Tap “Open” to view the full page.</div>
+            )}
+            <div className="text-[10px] text-muted-foreground">{fmtDate(state.notif.at)} · {new Date(state.notif.at).toLocaleTimeString()}</div>
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button onClick={onOpenFull}><ExternalLink className="h-4 w-4" /> Open full</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
