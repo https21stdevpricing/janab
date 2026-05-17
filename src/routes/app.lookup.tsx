@@ -271,6 +271,22 @@ function DocDetail({ doc }: { doc: DocLookupResult }) {
           <span className="text-emerald-600 dark:text-emerald-400">Margin: <span className="font-semibold tabular-nums">{inr(doc.totals.margin)}</span> ({doc.totals.subtotal ? ((doc.totals.margin / doc.totals.subtotal) * 100).toFixed(1) : "0"}%)</span>
         </div>
       )}
+      {doc.outstanding && (
+        <div className="grid grid-cols-3 gap-2 p-3 border-b bg-muted/20">
+          <div className="rounded-md border bg-card p-2">
+            <div className="text-[10px] uppercase text-muted-foreground">Total</div>
+            <div className="text-sm font-semibold tabular-nums">{inr(doc.outstanding.total)}</div>
+          </div>
+          <div className="rounded-md border bg-card p-2">
+            <div className="text-[10px] uppercase text-muted-foreground">Paid</div>
+            <div className="text-sm font-semibold tabular-nums text-primary">{inr(doc.outstanding.paid)}</div>
+          </div>
+          <div className="rounded-md border bg-card p-2">
+            <div className="text-[10px] uppercase text-muted-foreground">Balance</div>
+            <div className={`text-sm font-semibold tabular-nums ${doc.outstanding.balance > 0 ? "text-destructive" : "text-primary"}`}>{inr(doc.outstanding.balance)}</div>
+          </div>
+        </div>
+      )}
       {doc.items.length > 0 && (
         <div className="overflow-x-auto">
           <table className="w-full text-sm min-w-[600px]">
