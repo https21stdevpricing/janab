@@ -61,3 +61,48 @@ export function num(v: any): number {
   const n = Number(String(v).replace(/[,₹\s]/g, ""));
   return isFinite(n) ? n : 0;
 }
+
+// Normalize header key (strip spaces, punct, lowercase) so "GST No." and "gst_no" match.
+const norm = (s: string) => s.toLowerCase().replace(/[\s_\-./\\:#%₹$()]+/g, "");
+
+// Smart pick: tries any alias, normalized.
+export function smartPick(row: Record<string, any>, aliases: string[]): any {
+  const keys = Object.keys(row);
+  const lookup = new Map(keys.map((k) => [norm(k), k]));
+  for (const a of aliases) {
+    const hit = lookup.get(norm(a));
+    if (hit != null && row[hit] != null && row[hit] !== "") return row[hit];
+  }
+  // Also try contains-match as fallback
+  for (const a of aliases) {
+    const na = norm(a);
+    for (const [nk, k] of lookup) {
+      if (nk.includes(na) && row[k] != null && row[k] !== "") return row[k];
+    }
+  }
+  return null;
+}
+
+// Excel date serial → JS date
+export function parseDate(v: any): string | null {
+  if (v == null || v === "") return null;
+  if (v instanceof Date) return v.toISOString().slice(0, 10);
+  if (typeof v === "number") {
+    // Excel epoch = 1899-12-30
+    const ms = (v - 25569) * 86400 * 1000;
+    const d = new Date(ms);
+    if (isFinite(d.getTime())) return d.toISOString().slice(0, 10);
+    return null;
+  }
+  const s = String(v).trim();
+  // dd-mm-yyyy or dd/mm/yyyy
+  const m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})$/);
+  if (m) {
+    const [_, d, mo, y] = m;
+    const yr = y.length === 2 ? Number(y) + 2000 : Number(y);
+    const iso = `${yr}-${mo.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    if (!isNaN(new Date(iso).getTime())) return iso;
+  }
+  const d = new Date(s);
+  return isFinite(d.getTime()) ? d.toISOString().slice(0, 10) : null;
+}
