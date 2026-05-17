@@ -57,8 +57,12 @@ function AppLayout() {
     if (!loading && !user) navigate({ to: "/login", replace: true });
   }, [user, loading, navigate]);
 
-  if (loading || !user) {
-    return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Loading…</div>;
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Checking session…</div>;
+  }
+
+  if (!user) {
+    return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Opening sign in…</div>;
   }
 
   const NavBody = () => (
