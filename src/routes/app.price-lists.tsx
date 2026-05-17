@@ -11,12 +11,14 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Empty } from "@/components/empty";
 import { ContactPicker } from "@/components/contact-picker";
 import { fmt, inr, todayISO, fmtDate } from "@/lib/format";
 import { exportToExcel } from "@/lib/excel";
 import { toast } from "sonner";
-import { Plus, Trash2, Tag, Calculator, Download, Pencil, FileSpreadsheet, Layers, FileText } from "lucide-react";
+import { Plus, Trash2, Tag, Calculator, Download, Pencil, FileSpreadsheet, Layers, FileText, Search, Check } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import swLogo from "@/assets/sw-logo.png";
@@ -70,6 +72,8 @@ function PriceListsPage() {
   const [defaultMinQty, setDefaultMinQty] = useState<number>(1);
 
   const [openNew, setOpenNew] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState("");
   const [newForm, setNewForm] = useState<{ name: string; effective_from: string; valid_until: string; notes: string; terms: string; category: string; buyer_id: string | null; buyer_name: string | null; buyer_phone: string; buyer_address: string }>(
     { name: "", effective_from: todayISO(), valid_until: "", notes: "", terms: "Prices inclusive of GST unless mentioned. Valid for the period specified. Subject to stock availability.", category: "", buyer_id: null, buyer_name: null, buyer_phone: "", buyer_address: "" }
   );
@@ -431,6 +435,55 @@ function PriceListsPage() {
               </div>
 
               {/* Product picker */}
+              {active.category && (
+                <div className="rounded-md border bg-card p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Search className="h-4 w-4 text-muted-foreground" />
+                    <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" size="sm" className="flex-1 justify-start text-muted-foreground font-normal">
+                          Search & add product from “{active.category}”…
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="p-0 w-[min(520px,92vw)]" align="start">
+                        <Command shouldFilter={false}>
+                          <CommandInput placeholder="Type product name, code, or HSN…" value={pickerQuery} onValueChange={setPickerQuery} />
+                          <CommandList>
+                            <CommandEmpty>No products found in this category.</CommandEmpty>
+                            <CommandGroup heading={`${active.category} — ${catProducts.filter(p => {
+                              const q = pickerQuery.trim().toLowerCase();
+                              if (!q) return true;
+                              return `${p.code} ${p.name} ${p.hsn ?? ""}`.toLowerCase().includes(q);
+                            }).length} match(es)`}>
+                              {catProducts.filter(p => {
+                                const q = pickerQuery.trim().toLowerCase();
+                                if (!q) return true;
+                                return `${p.code} ${p.name} ${p.hsn ?? ""}`.toLowerCase().includes(q);
+                              }).slice(0, 50).map(p => {
+                                const added = items.some(i => i.product_id === p.id);
+                                return (
+                                  <CommandItem key={p.id} value={`${p.code} ${p.name}`} onSelect={() => { if (!added) addOne(p); setPickerQuery(""); }}>
+                                    <div className="flex items-center justify-between gap-2 w-full">
+                                      <div className="min-w-0">
+                                        <div className="text-sm truncate"><span className="font-mono text-[11px] text-muted-foreground mr-2">{p.code}</span>{p.name}</div>
+                                        <div className="text-[11px] text-muted-foreground">MRP {fmt(p.sale_rate)} · Cost {fmt(p.purchase_rate)} · {p.unit ?? "—"}{p.hsn ? ` · HSN ${p.hsn}` : ""}</div>
+                                      </div>
+                                      {added ? <Check className="h-4 w-4 text-primary shrink-0" /> : <Plus className="h-4 w-4 text-muted-foreground shrink-0" />}
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+                    <Badge variant="outline" className="text-[10px]">{items.length} added</Badge>
+                  </div>
+                </div>
+              )}
+
+              {/* Browse picker (kept for at-a-glance addition) */}
               {active.category && catProducts.length > 0 && (
                 <div className="rounded-md border bg-card">
                   <div className="px-3 py-2 border-b bg-muted/30 text-xs font-medium">Available in “{active.category}” — click + to add</div>
