@@ -1,13 +1,16 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
+import { ExternalLink } from "lucide-react";
 
 export const Route = createFileRoute("/app/audit")({ component: AuditPage });
 
@@ -51,6 +54,14 @@ function AuditPage() {
   const actBadge = (a: string) =>
     a === "insert" ? "default" : a === "update" ? "secondary" : "destructive";
 
+  const entityLabel: Record<string, string> = {
+    sales: "Sale", purchases: "Purchase", third_party: "Third-party", quotations: "Quote",
+    payments: "Payment", expenses: "Expense", products: "Product", contacts: "Contact",
+    deliveries: "Delivery", sale_items: "Sale line", purchase_items: "Purchase line",
+    tp_items: "TP line", quotation_items: "Quote line", delivery_items: "Delivery line",
+    payment_allocations: "Allocation",
+  };
+
   return (
     <div>
       <PageHeader title="Backlog / Audit Log" description="Every create, update and delete with timestamp"
@@ -82,18 +93,35 @@ function AuditPage() {
             <div key={r.id} className="p-3 flex items-start gap-2 text-sm">
               <Badge variant={actBadge(r.action) as any} className="capitalize w-16 justify-center">{r.action}</Badge>
               <div className="flex-1 min-w-0">
-                <div className="font-medium truncate">{r.summary}</div>
-                <div className="text-xs text-muted-foreground">{r.entity}{r.ref_no ? ` · ${r.ref_no}` : ""}</div>
+                <div className="font-medium truncate">
+                  {entityLabel[r.entity] ?? r.entity} {r.action === "insert" ? "created" : r.action === "delete" ? "deleted" : "updated"}
+                  {r.ref_no && <span className="font-mono ml-1">{r.ref_no}</span>}
+                </div>
+                <div className="text-xs text-muted-foreground capitalize">{r.entity.replace("_", " ")}</div>
                 {r.diff && Object.keys(r.diff).length > 0 && (
-                  <div className="text-[11px] text-muted-foreground mt-1 font-mono break-all">
-                    {Object.entries(r.diff).slice(0, 4).map(([k, v]: any) => (
-                      <span key={k} className="mr-2">{k}: {String(v.old ?? "—")} → {String(v.new ?? "—")}</span>
+                  <div className="text-[11px] mt-1 space-y-0.5">
+                    {Object.entries(r.diff).slice(0, 6).map(([k, v]: any) => (
+                      <div key={k} className="font-mono break-all">
+                        <span className="text-muted-foreground">{k}:</span>{" "}
+                        <span className="line-through text-destructive/70">{String(v.old ?? "—")}</span>
+                        <span className="text-muted-foreground"> → </span>
+                        <span className="text-primary">{String(v.new ?? "—")}</span>
+                      </div>
                     ))}
                   </div>
                 )}
               </div>
-              <div className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
-                {new Date(r.at).toLocaleString()}
+              <div className="flex flex-col items-end gap-1">
+                <div className="text-[11px] text-muted-foreground tabular-nums whitespace-nowrap">
+                  {new Date(r.at).toLocaleString()}
+                </div>
+                {r.ref_no && r.action !== "delete" && (
+                  <Button asChild size="sm" variant="ghost" className="h-6 px-2">
+                    <Link to="/app/lookup" search={{ q: r.ref_no } as any}>
+                      <ExternalLink className="h-3 w-3" /> Open
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           ))}
