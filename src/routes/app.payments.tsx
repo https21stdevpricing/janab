@@ -385,6 +385,13 @@ function PaymentsPage() {
           <div className="mt-2 flex flex-col gap-2 pt-3 border-t">
             <Button
               variant="outline"
+              className="w-full"
+              onClick={() => viewRow && exportStoneWorldPayment(viewRow, viewAllocs, company)}
+            >
+              <Printer className="h-4 w-4" /> Download Branded PDF
+            </Button>
+            <Button
+              variant="outline"
               className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
               onClick={() => { if (viewRow) { del(viewRow.id); setViewRow(null); } }}
             >
