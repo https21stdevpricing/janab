@@ -93,7 +93,7 @@ function DeliveriesPage() {
       { header: "Invoice", key: "invoice_no" }, { header: "Buyer", key: "buyer_name" },
       { header: "Status", key: "status" }, { header: "Vehicle", key: "vehicle_no" },
       { header: "Driver", key: "driver_name" }, { header: "Phone", key: "driver_phone" },
-      { header: "Transporter", key: "transporter" }, { header: "LR", key: "lr_no" },
+      { header: "Transporter", key: "transporter" }, { header: "Challan No", key: "lr_no" },
     ], rows: filtered,
   });
 
@@ -173,7 +173,7 @@ function DeliveriesPage() {
                 <div><div className="text-[10px] uppercase text-muted-foreground">Driver</div><div>{edit.driver_name || "—"}</div></div>
                 <div><div className="text-[10px] uppercase text-muted-foreground">Phone</div><div className="flex items-center gap-1">{edit.driver_phone ? <><Phone className="h-3 w-3" />{edit.driver_phone}</> : "—"}</div></div>
                 <div><div className="text-[10px] uppercase text-muted-foreground">Transporter</div><div>{edit.transporter || "—"}</div></div>
-                <div><div className="text-[10px] uppercase text-muted-foreground">LR no</div><div>{edit.lr_no || "—"}</div></div>
+                <div><div className="text-[10px] uppercase text-muted-foreground">Challan No</div><div>{edit.lr_no || "—"}</div></div>
                 {edit.notes && <div className="col-span-2"><div className="text-[10px] uppercase text-muted-foreground">Notes</div><div className="flex items-start gap-1"><FileText className="h-3 w-3 mt-0.5" />{edit.notes}</div></div>}
               </div>
               <div>
@@ -214,7 +214,7 @@ function DeliveriesPage() {
                   <Input value={edit.driver_name ?? ""} onChange={e => setEdit({ ...edit, driver_name: e.target.value })} /></div>
                 <div><Label className="text-xs">Driver phone</Label>
                   <Input value={edit.driver_phone ?? ""} onChange={e => setEdit({ ...edit, driver_phone: e.target.value })} /></div>
-                <div><Label className="text-xs">LR no</Label>
+                <div><Label className="text-xs">Challan No</Label>
                   <Input value={edit.lr_no ?? ""} onChange={e => setEdit({ ...edit, lr_no: e.target.value })} /></div>
                 <div><Label className="text-xs">Status</Label>
                   <Select value={edit.status} onValueChange={v => setEdit({ ...edit, status: v })}>

@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Check } from "lucide-react";
+import { Bell, Check, Plus, Eye } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { fmtDate } from "@/lib/format";
 
@@ -49,6 +49,28 @@ export function NotificationsBell() {
   const dot = (s: string) =>
     s === "error" ? "bg-destructive" : s === "warning" ? "bg-amber-500" : s === "success" ? "bg-emerald-500" : "bg-sky-500";
 
+  // Try to extract a doc ref number from the notification body/title for the Lookup preview.
+  const refOf = (n: N): string | null => {
+    const text = `${n.title ?? ""} ${n.body ?? ""}`;
+    const m = text.match(/\b(INV|PO|TP|QT|PAY|EXP)[-/]?[A-Z0-9-]+\b/i);
+    return m ? m[0] : null;
+  };
+
+  const openPreview = (n: N) => {
+    markOne(n.id); setOpen(false);
+    const ref = refOf(n);
+    if (ref) window.location.assign(`/app/lookup?q=${encodeURIComponent(ref)}`);
+    else if (n.link) window.location.assign(n.link);
+  };
+  const openAction = (n: N) => {
+    markOne(n.id); setOpen(false);
+    if (n.link) window.location.assign(n.link);
+    else {
+      const ref = refOf(n);
+      if (ref) window.location.assign(`/app/lookup?q=${encodeURIComponent(ref)}`);
+    }
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -73,15 +95,24 @@ export function NotificationsBell() {
           {items.length === 0 ? (
             <div className="p-6 text-sm text-muted-foreground text-center">No notifications yet.</div>
           ) : items.map(n => (
-            <div key={n.id} className={`p-3 border-b flex gap-2 cursor-pointer hover:bg-muted/40 ${!n.read ? "bg-primary/[0.04]" : ""}`}
-              onClick={() => { markOne(n.id); if (n.link) { setOpen(false); window.location.assign(n.link); } }}>
+            <div key={n.id} className={`p-3 border-b flex gap-2 hover:bg-muted/40 ${!n.read ? "bg-primary/[0.04]" : ""}`}>
               <span className={`mt-1.5 h-2 w-2 rounded-full shrink-0 ${dot(n.severity)}`} />
-              <div className="min-w-0 flex-1">
+              <button className="min-w-0 flex-1 text-left" onClick={() => openPreview(n)} title="Open preview">
                 <div className="text-sm font-medium truncate">{n.title}</div>
                 {n.body && <div className="text-xs text-muted-foreground truncate">{n.body}</div>}
                 <div className="text-[10px] text-muted-foreground mt-0.5">{fmtDate(n.at)} · {new Date(n.at).toLocaleTimeString()}</div>
+              </button>
+              <div className="flex flex-col items-end gap-1">
+                {!n.read && <Badge variant="secondary" className="h-5">new</Badge>}
+                <div className="flex gap-0.5">
+                  <Button variant="ghost" size="icon" className="h-6 w-6" title="Preview doc" onClick={() => openPreview(n)}>
+                    <Eye className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" title="Open entry / page" onClick={() => openAction(n)}>
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
-              {!n.read && <Badge variant="secondary" className="h-5">new</Badge>}
             </div>
           ))}
         </div>
