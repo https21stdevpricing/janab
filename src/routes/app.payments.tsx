@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { inr, fmt, fmtDate, todayISO } from "@/lib/format";
 import { lookupDoc, openDocsFor } from "@/lib/doc-lookup";
 import { toast } from "sonner";
-import { Trash2, ArrowDownLeft, ArrowUpRight, X, Eye, Pencil } from "lucide-react";
+import { Trash2, ArrowDownLeft, ArrowUpRight, X, Eye } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -230,14 +230,6 @@ function PaymentsPage() {
     setViewAllocs((data ?? []) as any);
   };
 
-  const editFromView = () => {
-    if (!viewRow) return;
-    const r = viewRow;
-    setDirection(r.direction); setDate(r.date); setContactId(r.contact_id); setContactName(r.contact_name);
-    setAmount(Number(r.amount)); setMode(r.mode ?? "Bank"); setNotes(r.notes ?? ""); setRefLookup("");
-    setAllocs(viewAllocs.map(a => ({ doc_kind: a.doc_kind as any, doc_id: "", doc_no: a.doc_no, amount: Number(a.amount) })));
-    setViewRow(null); setOpen(true);
-  };
 
   const onExport = () => {
     exportToExcel({
