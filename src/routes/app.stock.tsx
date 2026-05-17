@@ -69,8 +69,8 @@ function StockPage() {
   const openMovements = async (r: StockRow) => {
     setSelected(r); setMoves([]);
     const [{ data: pi }, { data: si }] = await Promise.all([
-      supabase.from("purchase_items").select("qty,rate,purchases:purchases!inner(po_no,date,supplier_name)").eq("product_id", r.product_id) as any,
-      supabase.from("sale_items").select("qty,rate,sales:sales!inner(invoice_no,date,buyer_name)").eq("product_id", r.product_id) as any,
+      supabase.from("purchase_items").select("qty,rate,purchases!inner(po_no,date,supplier_name)").eq("product_id", r.product_id) as any,
+      supabase.from("sale_items").select("qty,rate,sales!inner(invoice_no,date,buyer_name)").eq("product_id", r.product_id) as any,
     ]);
     const arr: Move[] = [];
     for (const x of (pi ?? []) as any[]) arr.push({ date: x.purchases.date, kind: "Purchase", doc_no: x.purchases.po_no, party: x.purchases.supplier_name ?? "—", qty: Number(x.qty), rate: Number(x.rate ?? 0) });
