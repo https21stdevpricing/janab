@@ -33,6 +33,7 @@ export const Route = createFileRoute("/app/payments")({
   validateSearch: (s: Record<string, unknown>) => ({
     ref: typeof s.ref === "string" ? s.ref : undefined,
     dir: s.dir === "out" ? "out" as const : s.dir === "in" ? "in" as const : undefined,
+    party: typeof s.party === "string" ? s.party : undefined,
   }),
 });
 
@@ -84,6 +85,22 @@ function PaymentsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.ref]);
+
+  // Autofill from ?party= (from Buyers/Suppliers pages)
+  useEffect(() => {
+    if (search.party && !open) {
+      (async () => {
+        const { data: c } = await supabase.from("contacts").select("id,name").eq("id", search.party!).maybeSingle();
+        setDirection(search.dir ?? "in");
+        setDate(todayISO()); setAmount(0); setMode("Bank"); setNotes(""); setRefLookup("");
+        setContactId(search.party!);
+        setContactName(c?.name ?? null);
+        setOpen(true);
+        navigate({ to: "/app/payments", search: {} as any, replace: true });
+      })();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.party]);
 
   const filtered = useMemo(() => rows.filter(r =>
     (filter === "all" || r.direction === filter) &&
