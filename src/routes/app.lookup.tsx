@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { exportStoneWorldDocument } from "@/lib/pdf-theme";
 
 export const Route = createFileRoute("/app/lookup")({
   component: LookupPage,
@@ -259,6 +260,7 @@ export function DocDetail({ doc }: { doc: DocLookupResult }) {
   const [journal, setJournal] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
   const [partyDocs, setPartyDocs] = useState<any[]>([]);
+  const [company, setCompany] = useState<any>(null);
 
   useEffect(() => {
     (async () => {
@@ -266,6 +268,8 @@ export function DocDetail({ doc }: { doc: DocLookupResult }) {
         .select("date,account,party,debit,credit,narration,ref_no")
         .eq("ref_no", no).order("date");
       setJournal(jl ?? []);
+      const { data: st } = await supabase.from("settings").select("company_name,address,phone,email,gstin,state").maybeSingle();
+      setCompany(st);
       const { data: al } = await supabase.from("payment_allocations" as never)
         .select("amount,doc_no,payment_id,doc_kind").eq("doc_id" as never, h.id) as any;
       if (al && al.length) {
@@ -336,6 +340,9 @@ export function DocDetail({ doc }: { doc: DocLookupResult }) {
           <div className="mt-2 flex flex-col items-end gap-1">
             {printable && (
               <Button asChild size="sm" variant="outline"><Link to={"/app/print/" + printable + "/$id" as any} params={{ id: h.id } as any}><Printer className="h-3 w-3" /> Print</Link></Button>
+            )}
+            {doc.kind !== "payment" && (
+              <Button size="sm" variant="outline" onClick={() => exportStoneWorldDocument(doc, company)}><Printer className="h-3 w-3" /> PDF</Button>
             )}
             {payable && doc.kind !== "tp" && doc.outstanding && doc.outstanding.balance > 0 && (
               <Button size="sm" onClick={goPay}><Wallet className="h-3 w-3" /> {payDir === "in" ? "Receive" : "Pay"} {inr(doc.outstanding.balance)}</Button>
