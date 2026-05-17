@@ -13,7 +13,8 @@ import { Badge } from "@/components/ui/badge";
 import { inr, fmt, fmtDate, todayISO } from "@/lib/format";
 import { lookupDoc, openDocsFor } from "@/lib/doc-lookup";
 import { toast } from "sonner";
-import { Trash2, ArrowDownLeft, ArrowUpRight, X, Eye } from "lucide-react";
+import { Trash2, ArrowDownLeft, ArrowUpRight, X, Eye, FileSpreadsheet } from "lucide-react";
+import { Kbd } from "@/components/kbd";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -35,6 +36,7 @@ export const Route = createFileRoute("/app/payments")({
     ref: typeof s.ref === "string" ? s.ref : undefined,
     dir: s.dir === "out" ? "out" as const : s.dir === "in" ? "in" as const : undefined,
     party: typeof s.party === "string" ? s.party : undefined,
+    new: s.new === "in" ? "in" as const : s.new === "out" ? "out" as const : undefined,
   }),
 });
 
@@ -99,6 +101,15 @@ function PaymentsPage() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search.ref]);
+
+  // Auto-open new dialog from ?new=in|out (keyboard shortcut R/P)
+  useEffect(() => {
+    if (search.new && !open) {
+      startNew(search.new);
+      navigate({ to: "/app/payments", search: {} as any, replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search.new]);
 
   // Autofill from ?party= (from Buyers/Suppliers pages)
   useEffect(() => {
@@ -254,22 +265,22 @@ function PaymentsPage() {
       <PageHeader title="Payments" description="Money in (receipts) and out — auto-allocated against invoices" actions={
         <>
           <ExcelBar onExport={onExport} />
-          <Button size="sm" variant="outline" onClick={() => startNew("in")}><ArrowDownLeft className="h-4 w-4" /> Receipt</Button>
-          <Button size="sm" onClick={() => startNew("out")}><ArrowUpRight className="h-4 w-4" /> Payment</Button>
+          <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receipt <Kbd>R</Kbd></Button>
+          <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Payment <Kbd>P</Kbd></Button>
         </>
       } />
 
-      {/* Bills outstanding summary */}
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <div className="rounded-md border bg-card p-3">
-          <div className="text-[10px] uppercase text-muted-foreground">Bills receivable (from buyers)</div>
+      {/* Bills outstanding — link to dedicated Bills page */}
+      <Link to="/app/bills" className="grid grid-cols-2 gap-2 mb-3 group">
+        <div className="rounded-md border bg-card p-3 group-hover:bg-muted/40 transition-colors">
+          <div className="text-[10px] uppercase text-muted-foreground flex items-center gap-1"><FileSpreadsheet className="h-3 w-3" /> Bills receivable</div>
           <div className="text-base sm:text-lg font-semibold text-primary tabular-nums">{inr(totalRecv)}</div>
         </div>
-        <div className="rounded-md border bg-card p-3">
-          <div className="text-[10px] uppercase text-muted-foreground">Bills payable (to suppliers)</div>
+        <div className="rounded-md border bg-card p-3 group-hover:bg-muted/40 transition-colors">
+          <div className="text-[10px] uppercase text-muted-foreground flex items-center gap-1"><FileSpreadsheet className="h-3 w-3" /> Bills payable <Kbd>B</Kbd></div>
           <div className="text-base sm:text-lg font-semibold text-destructive tabular-nums">{inr(totalPay)}</div>
         </div>
-      </div>
+      </Link>
 
       {/* Tabs + search */}
       <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-3">
