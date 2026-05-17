@@ -12,6 +12,10 @@ import { exportToExcel } from "@/lib/excel";
 import { inr, fmtDate } from "@/lib/format";
 import { Kbd } from "@/components/kbd";
 import { ArrowDownLeft, ArrowUpRight, FileSpreadsheet } from "lucide-react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { DocDetail } from "@/routes/app.lookup";
+import { lookupDoc, type DocLookupResult } from "@/lib/doc-lookup";
+import { Eye, X } from "lucide-react";
 
 export const Route = createFileRoute("/app/bills")({ component: BillsPage });
 
@@ -49,6 +53,12 @@ function BillsPage() {
   const [tab, setTab] = useState<"receivable" | "payable">("receivable");
   const [q, setQ] = useState("");
   const [bucketFilter, setBucketFilter] = useState<"all" | "0–30" | "31–60" | "61–90" | "90+">("all");
+  const [preview, setPreview] = useState<DocLookupResult | null>(null);
+
+  const openPreview = async (docNo: string) => {
+    const r = await lookupDoc(docNo);
+    if (r) setPreview(r);
+  };
 
   const load = async () => {
     const { data } = await supabase
@@ -157,14 +167,15 @@ function BillsPage() {
                 const d = ageDays(r.date); const b = bucket(d);
                 return (
                   <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t">
-                    <td className="p-2"><Link to="/app/lookup" search={{ q: r.doc_no } as any} className="font-mono text-primary hover:underline">{r.doc_no}</Link></td>
+                    <td className="p-2"><button onClick={() => openPreview(r.doc_no)} className="font-mono text-primary hover:underline">{r.doc_no}</button></td>
                     <td className="p-2">{fmtDate(r.date)}</td>
                     <td className="p-2 truncate max-w-[200px]">{r.party_name ?? "—"}</td>
                     <td className="p-2 text-right tabular-nums">{inr(r.total)}</td>
                     <td className="p-2 text-right tabular-nums">{inr(r.paid)}</td>
                     <td className="p-2 text-right tabular-nums font-medium">{inr(r.balance)}</td>
                     <td className="p-2"><Badge variant={bucketTone(b) as any}>{b} · {d}d</Badge></td>
-                    <td className="p-2 text-right">
+                    <td className="p-2 text-right whitespace-nowrap">
+                      <Button size="sm" variant="ghost" onClick={() => openPreview(r.doc_no)} title="Preview bill"><Eye className="h-3.5 w-3.5" /></Button>
                       <Button size="sm" variant="outline" asChild>
                         <Link to="/app/payments" search={{ ref: r.doc_no, dir: tab === "receivable" ? "in" : "out" } as any}>
                           {tab === "receivable" ? "Receive" : "Pay"}
@@ -178,6 +189,15 @@ function BillsPage() {
           </table>
         </div>
       )}
+      <Dialog open={!!preview} onOpenChange={o => !o && setPreview(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+          <div className="px-4 py-3 border-b flex items-center justify-between">
+            <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Bill preview</DialogTitle>
+            <button className="rounded-md p-1 hover:bg-muted" onClick={() => setPreview(null)} aria-label="Close"><X className="h-4 w-4" /></button>
+          </div>
+          {preview && <DocDetail doc={preview} />}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

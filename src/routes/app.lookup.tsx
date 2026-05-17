@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
@@ -9,10 +9,11 @@ import { Empty } from "@/components/empty";
 import { Badge } from "@/components/ui/badge";
 import { fmt, fmtDate, inr } from "@/lib/format";
 import { lookupDoc, prefixOf, type DocLookupResult } from "@/lib/doc-lookup";
-import { Search, Printer, Wallet, Truck } from "lucide-react";
+import { Search, Printer, Wallet, Truck, X } from "lucide-react";
 import { toast } from "sonner";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/app/lookup")({
   component: LookupPage,
@@ -35,6 +36,9 @@ function LookupPage() {
   const [contactInfo, setContactInfo] = useState<Record<string, ContactEnrich>>({});
   const [productInfo, setProductInfo] = useState<Record<string, ProductEnrich>>({});
   const [busy, setBusy] = useState(false);
+  const [suggest, setSuggest] = useState<SearchHit[]>([]);
+  const [showSuggest, setShowSuggest] = useState(false);
+  const suggestTimer = useRef<number | null>(null);
 
   const run = async () => {
     const term = q.trim();
@@ -101,15 +105,91 @@ function LookupPage() {
     if (h.kind === "doc") { setQ(h.no); const r = await lookupDoc(h.no); if (r) setDoc(r); }
   };
 
+  // Autocomplete (debounced)
+  useEffect(() => {
+    if (suggestTimer.current) window.clearTimeout(suggestTimer.current);
+    const term = q.trim();
+    if (term.length < 2) { setSuggest([]); return; }
+    suggestTimer.current = window.setTimeout(async () => {
+      const like = `%${term}%`;
+      const out: SearchHit[] = [];
+      const [{ data: cs }, { data: ps }, { data: ss }, { data: pos }, { data: tps }, { data: pys }] = await Promise.all([
+        supabase.from("contacts").select("id,name,code,type,state,phone,gstin").or(`name.ilike.${like},phone.ilike.${like},gstin.ilike.${like},code.ilike.${like}`).limit(5),
+        supabase.from("products").select("id,name,code,unit,hsn,sale_rate").or(`name.ilike.${like},code.ilike.${like},hsn.ilike.${like}`).limit(5),
+        supabase.from("sales").select("id,invoice_no,date,buyer_name").or(`invoice_no.ilike.${like},buyer_name.ilike.${like}`).limit(4),
+        supabase.from("purchases").select("id,po_no,date,supplier_name").or(`po_no.ilike.${like},supplier_name.ilike.${like}`).limit(4),
+        supabase.from("third_party").select("id,tp_no,date,buyer_name,supplier_name").or(`tp_no.ilike.${like},buyer_name.ilike.${like},supplier_name.ilike.${like}`).limit(3),
+        supabase.from("payments").select("id,payment_no,date,contact_name,direction").or(`payment_no.ilike.${like},contact_name.ilike.${like}`).limit(3),
+      ]);
+      for (const r of cs ?? []) out.push({ kind: "contact", row: r });
+      for (const r of ps ?? []) out.push({ kind: "product", row: r });
+      for (const r of ss ?? []) out.push({ kind: "doc", docKind: "Sale", no: r.invoice_no, date: r.date, party: r.buyer_name ?? "—", row: r });
+      for (const r of pos ?? []) out.push({ kind: "doc", docKind: "Purchase", no: r.po_no, date: r.date, party: r.supplier_name ?? "—", row: r });
+      for (const r of tps ?? []) out.push({ kind: "doc", docKind: "TP", no: r.tp_no, date: r.date, party: `${r.supplier_name ?? "—"} → ${r.buyer_name ?? "—"}`, row: r });
+      for (const r of pys ?? []) out.push({ kind: "doc", docKind: r.direction === "in" ? "Receipt" : "Payment", no: r.payment_no, date: r.date, party: r.contact_name ?? "—", row: r });
+      setSuggest(out.slice(0, 12));
+    }, 220);
+    return () => { if (suggestTimer.current) window.clearTimeout(suggestTimer.current); };
+  }, [q]);
+
+  const pickSuggestion = async (h: SearchHit) => {
+    setShowSuggest(false);
+    if (h.kind === "doc") { setQ(h.no); const r = await lookupDoc(h.no); if (r) setDoc(r); return; }
+    setQ(h.kind === "contact" ? h.row.name : h.row.name);
+    setHits([h]);
+  };
+
   return (
     <div>
       <PageHeader title="Lookup" description="Search invoices, POs, TPs, quotes, payments, buyers/suppliers, products" />
-      <div className="flex gap-2 mb-4 max-w-xl">
-        <Input className="font-mono" placeholder="ID, name, phone, GSTIN, HSN…" value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && run()} />
-        <Button onClick={run} disabled={busy}><Search className="h-4 w-4" /> Find</Button>
+      <div className="relative mb-4 max-w-xl">
+        <div className="flex gap-2">
+          <Input
+            className="font-mono"
+            placeholder="ID, name, phone, GSTIN, HSN…"
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setShowSuggest(true); }}
+            onFocus={() => setShowSuggest(true)}
+            onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
+            onKeyDown={(e) => { if (e.key === "Enter") { setShowSuggest(false); run(); } if (e.key === "Escape") setShowSuggest(false); }}
+          />
+          <Button onClick={() => { setShowSuggest(false); run(); }} disabled={busy}><Search className="h-4 w-4" /> Find</Button>
+        </div>
+        {showSuggest && suggest.length > 0 && (
+          <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-md border bg-popover shadow-md max-h-80 overflow-y-auto">
+            {suggest.map((h, i) => (
+              <button key={i} type="button" className="w-full text-left px-3 py-2 hover:bg-muted/60 flex items-center gap-2 border-b last:border-b-0"
+                onMouseDown={(e) => { e.preventDefault(); pickSuggestion(h); }}>
+                {h.kind === "contact" && <>
+                  <Badge variant="outline" className="capitalize text-[10px]">{h.row.type}</Badge>
+                  <span className="font-medium truncate flex-1">{h.row.name}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">{h.row.code}</span>
+                </>}
+                {h.kind === "product" && <>
+                  <Badge variant="outline" className="text-[10px]">Product</Badge>
+                  <span className="font-medium truncate flex-1">{h.row.name}</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">{h.row.code}</span>
+                </>}
+                {h.kind === "doc" && <>
+                  <Badge className="text-[10px]">{h.docKind}</Badge>
+                  <span className="font-mono text-sm">{h.no}</span>
+                  <span className="text-[11px] text-muted-foreground truncate flex-1">{h.party}</span>
+                </>}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {doc && <DocDetail doc={doc} />}
+      <Dialog open={!!doc} onOpenChange={(o) => !o && setDoc(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+          <div className="px-4 py-3 border-b flex items-center justify-between">
+            <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Document preview</DialogTitle>
+            <button className="rounded-md p-1 hover:bg-muted" onClick={() => setDoc(null)} aria-label="Close"><X className="h-4 w-4" /></button>
+          </div>
+          {doc && <DocDetail doc={doc} />}
+        </DialogContent>
+      </Dialog>
 
       {hits.length > 0 && (
         <div className="rounded-md border bg-card divide-y mt-4">
@@ -166,7 +246,7 @@ function LookupPage() {
   );
 }
 
-function DocDetail({ doc }: { doc: DocLookupResult }) {
+export function DocDetail({ doc }: { doc: DocLookupResult }) {
   const h = doc.header;
   const no = h.invoice_no ?? h.po_no ?? h.tp_no ?? h.quote_no ?? h.payment_no;
   const printable = doc.kind === "sale" ? "invoice" : doc.kind === "quote" ? "quote" : null;
