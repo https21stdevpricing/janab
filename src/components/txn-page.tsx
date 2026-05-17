@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
+import { Kbd } from "@/components/kbd";
+import { useShortcut } from "@/lib/shortcuts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -201,7 +203,7 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
       <PageHeader title={cfg.title} description={cfg.description} actions={
         <>
           <ExcelBar onExport={onExport} />
-          <Button size="sm" onClick={startNew}><Plus className="h-4 w-4" /> New</Button>
+          <Button size="sm" onClick={startNew} title="New (N)"><Plus className="h-4 w-4" /> New <Kbd>N</Kbd></Button>
         </>
       } />
 
