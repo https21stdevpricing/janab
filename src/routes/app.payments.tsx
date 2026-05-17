@@ -194,6 +194,11 @@ function PaymentsPage() {
         const { error: e2 } = await supabase.from("payment_allocations" as never).insert(rows as never);
         if (e2) toast.error("Saved payment, but allocation failed: " + e2.message);
       }
+    } else if (contactId) {
+      // No manual allocations — auto-apply to oldest open documents for this contact (FIFO).
+      const { error: e3 } = await supabase.rpc("auto_allocate_payment" as never, { _pid: pay.id } as never);
+      if (e3) toast.error("Saved payment, but auto-allocation failed: " + e3.message);
+      else toast.success("Auto-applied to oldest open dues");
     }
     toast.success("Saved"); setOpen(false); load();
   };
@@ -280,13 +285,14 @@ function PaymentsPage() {
 
           {/* Quick autofill */}
           <div className="rounded-md border bg-muted/30 p-3 space-y-2">
-            <Label className="text-xs">Auto-fill from invoice / PO / TP id</Label>
+            <Label className="text-xs">Settling a specific invoice / PO? Paste its id</Label>
             <div className="flex gap-2">
               <Input className="font-mono" placeholder="e.g. INV-0001" value={refLookup}
                 onChange={(e) => setRefLookup(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), fillFromDoc())} />
               <Button type="button" variant="outline" onClick={fillFromDoc}>Fetch</Button>
             </div>
+            <p className="text-[11px] text-muted-foreground">Or just pick the party below and enter the total amount — we'll auto-apply it to the oldest open dues.</p>
           </div>
 
           <div className="grid grid-cols-2 gap-3 mt-3">
@@ -296,7 +302,11 @@ function PaymentsPage() {
             <div className="col-span-2 space-y-1.5"><Label className="text-xs">{direction === "in" ? "From buyer" : "To supplier"}</Label>
               <ContactPicker filter={direction === "in" ? "buyer" : "supplier"} value={contactId} onChange={(id, n) => { setContactId(id); setContactName(n); setAllocs([]); }} />
             </div>
-            <div className="space-y-1.5"><Label className="text-xs">Amount ₹</Label><Input type="number" value={amount} onChange={(e) => setAmount(+e.target.value)} /></div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">{direction === "in" ? "Amount received" : "Amount paid"} (₹)</Label>
+              <Input type="number" value={amount} onChange={(e) => setAmount(+e.target.value)} />
+              <p className="text-[10px] text-muted-foreground">Total of this single receipt/payment, not per invoice.</p>
+            </div>
             <div className="space-y-1.5"><Label className="text-xs">Mode</Label>
               <Select value={mode} onValueChange={setMode}><SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="Bank">Bank</SelectItem><SelectItem value="Cash">Cash</SelectItem><SelectItem value="UPI">UPI</SelectItem><SelectItem value="Cheque">Cheque</SelectItem></SelectContent>
