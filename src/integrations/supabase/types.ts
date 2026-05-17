@@ -525,31 +525,52 @@ export type Database = {
       }
       price_lists: {
         Row: {
+          buyer_address: string | null
+          buyer_id: string | null
+          buyer_name: string | null
+          buyer_phone: string | null
+          category: string | null
           created_at: string
           currency: string
           effective_from: string
           id: string
           name: string
           notes: string | null
+          terms: string | null
           user_id: string
+          valid_until: string | null
         }
         Insert: {
+          buyer_address?: string | null
+          buyer_id?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          category?: string | null
           created_at?: string
           currency?: string
           effective_from?: string
           id?: string
           name: string
           notes?: string | null
+          terms?: string | null
           user_id: string
+          valid_until?: string | null
         }
         Update: {
+          buyer_address?: string | null
+          buyer_id?: string | null
+          buyer_name?: string | null
+          buyer_phone?: string | null
+          category?: string | null
           created_at?: string
           currency?: string
           effective_from?: string
           id?: string
           name?: string
           notes?: string | null
+          terms?: string | null
           user_id?: string
+          valid_until?: string | null
         }
         Relationships: []
       }
