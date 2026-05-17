@@ -19,6 +19,12 @@ import { toast } from "sonner";
 import { Plus, Trash2, Tag, Calculator, Download, Pencil, FileSpreadsheet, Layers, FileText } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import swLogo from "@/assets/sw-logo.png";
+
+// Stone World brand
+const BRAND_TEAL: [number, number, number] = [26, 182, 188];
+const BRAND_DARK: [number, number, number] = [15, 23, 42];
+const BRAND_SOFT: [number, number, number] = [236, 253, 254];
 
 export const Route = createFileRoute("/app/price-lists")({ component: PriceListsPage });
 
@@ -77,7 +83,6 @@ function PriceListsPage() {
     setLists((pls ?? []) as PriceList[]);
     setProducts((prods ?? []) as Product[]);
     setSettings((st as Settings) ?? null);
-    if (!activeId && pls && pls.length) setActiveId(pls[0].id);
   };
   useEffect(() => { load(); }, []);
 
