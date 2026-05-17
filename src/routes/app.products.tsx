@@ -5,14 +5,15 @@ import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
 
@@ -21,10 +22,21 @@ export const Route = createFileRoute("/app/products")({ component: ProductsPage 
 type Row = {
   id: string; code: string; name: string; unit: string | null; hsn: string | null;
   purchase_rate: number | null; sale_rate: number | null; opening_stock: number | null; reorder_level: number | null;
+  kind: "stocked" | "order_basis";
 };
 type StockMeta = { product_id: string; on_hand: number; purchased: number; sold: number };
 
-const empty: Omit<Row, "id"> = { code: "", name: "", unit: "sqft", hsn: "", purchase_rate: 0, sale_rate: 0, opening_stock: 0, reorder_level: 0 };
+const empty: Omit<Row, "id"> = { code: "", name: "", unit: "sqft", hsn: "", purchase_rate: 0, sale_rate: 0, opening_stock: 0, reorder_level: 0, kind: "stocked" };
+
+const UNITS = ["sqft", "sqm", "pcs", "box", "bag", "kg", "g", "ton", "m", "ft", "running ft", "ltr"] as const;
+
+// Dimension → sqft conversion. Returns area in square feet.
+function toSqft(l: number, b: number, unit: "in" | "cm" | "mm" | "ft" | "m") {
+  if (!l || !b) return 0;
+  const toFt: Record<typeof unit, number> = { in: 1 / 12, cm: 1 / 30.48, mm: 1 / 304.8, ft: 1, m: 3.28084 };
+  const f = toFt[unit];
+  return l * f * b * f;
+}
 
 function ProductsPage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -34,6 +46,8 @@ function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Row | null>(null);
   const [form, setForm] = useState<Omit<Row, "id">>(empty);
+  // dimension calculator
+  const [dim, setDim] = useState<{ l: number; b: number; pieces: number; unit: "in" | "cm" | "mm" | "ft" | "m" }>({ l: 0, b: 0, pieces: 1, unit: "in" });
 
   const load = async () => {
     const [{ data, error }, { data: sv }] = await Promise.all([
@@ -47,13 +61,8 @@ function ProductsPage() {
   };
   useEffect(() => { load(); }, []);
 
-  // Classify: a product is "Order-basis" when it has no opening stock AND no movements
-  // (you sell it but don't keep yard inventory). Anything with stock or any in/out is "Stocked".
-  const isOrderBasis = (r: Row) => {
-    const m = stock[r.id];
-    const moved = (m?.purchased ?? 0) + (m?.sold ?? 0);
-    return Number(r.opening_stock ?? 0) === 0 && moved === 0;
-  };
+  // Classification is now explicit via the `kind` column.
+  const isOrderBasis = (r: Row) => r.kind === "order_basis";
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
@@ -84,13 +93,25 @@ function ProductsPage() {
     return { onHand, valueCost, valueSale, low, skus };
   }, [rows, stock]);
 
-  const startNew = () => { setEdit(null); setForm(empty); setOpen(true); };
-  const startEdit = (r: Row) => { setEdit(r); setForm({ code: r.code, name: r.name, unit: r.unit, hsn: r.hsn, purchase_rate: r.purchase_rate, sale_rate: r.sale_rate, opening_stock: r.opening_stock, reorder_level: r.reorder_level }); setOpen(true); };
+  const startNew = (kind: "stocked" | "order_basis") => {
+    setEdit(null); setForm({ ...empty, kind }); setDim({ l: 0, b: 0, pieces: 1, unit: "in" }); setOpen(true);
+  };
+  const startEdit = (r: Row) => {
+    setEdit(r);
+    setForm({ code: r.code, name: r.name, unit: r.unit, hsn: r.hsn, purchase_rate: r.purchase_rate, sale_rate: r.sale_rate, opening_stock: r.opening_stock, reorder_level: r.reorder_level, kind: r.kind ?? "stocked" });
+    setDim({ l: 0, b: 0, pieces: 1, unit: "in" });
+    setOpen(true);
+  };
 
   const save = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const payload = { ...form, user_id: user.id };
+    if (!form.name?.trim()) { toast.error("Name is required"); return; }
+    // On-order products do not hold yard inventory — force zero so accounting stays clean.
+    const safe = form.kind === "order_basis"
+      ? { ...form, opening_stock: 0, reorder_level: 0 }
+      : form;
+    const payload = { ...safe, user_id: user.id } as any;
     const { error } = edit
       ? await supabase.from("products").update(payload).eq("id", edit.id)
       : await supabase.from("products").insert(payload);
@@ -113,6 +134,7 @@ function ProductsPage() {
       columns: [
         { header: "Code", key: "code" },
         { header: "Name", key: "name" },
+        { header: "Kind", key: "kind" },
         { header: "Unit", key: "unit" },
         { header: "HSN", key: "hsn" },
         { header: "Purchase Rate", key: "purchase_rate" },
@@ -132,6 +154,7 @@ function ProductsPage() {
       const payload = data
         .map((r) => ({
           user_id: user.id,
+          kind: (String(smartPick(r, ["Kind", "Type"]) || "").toLowerCase().startsWith("order") ? "order_basis" : "stocked"),
           code: smartPick(r, ["Code", "SKU", "Item Code", "Product Code"]) || "",
           name: smartPick(r, ["Name", "Product Name", "Item", "Description"]) || "",
           unit: smartPick(r, ["Unit", "UOM", "Units"]) || "sqft",
@@ -149,31 +172,23 @@ function ProductsPage() {
     } catch (e: any) { toast.error(e.message ?? "Import failed"); }
   };
 
+  const computedArea = toSqft(dim.l, dim.b, dim.unit) * (dim.pieces || 1);
+  const showCalc = (form.unit ?? "").toLowerCase() === "sqft" && form.kind === "stocked";
+
   return (
     <div>
       <PageHeader
         title="Products"
-        description="Stones / slabs / SKUs. Split between items you stock and items you sell on order."
+        description="Stones / slabs / SKUs. Split between items you stock in your yard and items you sell on order."
         actions={
           <>
           <ExcelBar onExport={onExport} onImport={onImport} />
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild><Button size="sm" onClick={startNew}><Plus className="h-4 w-4" /> New Product</Button></DialogTrigger>
-            <DialogContent>
-              <DialogHeader><DialogTitle>{edit ? "Edit product" : "New product"}</DialogTitle></DialogHeader>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Code"><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} /></Field>
-                <Field label="Unit"><Input value={form.unit ?? ""} onChange={(e) => setForm({ ...form, unit: e.target.value })} /></Field>
-                <Field label="Name" wide><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
-                <Field label="HSN"><Input value={form.hsn ?? ""} onChange={(e) => setForm({ ...form, hsn: e.target.value })} /></Field>
-                <Field label="Reorder level"><Input type="number" value={form.reorder_level ?? 0} onChange={(e) => setForm({ ...form, reorder_level: +e.target.value })} /></Field>
-                <Field label="Purchase rate"><Input type="number" value={form.purchase_rate ?? 0} onChange={(e) => setForm({ ...form, purchase_rate: +e.target.value })} /></Field>
-                <Field label="Sale rate"><Input type="number" value={form.sale_rate ?? 0} onChange={(e) => setForm({ ...form, sale_rate: +e.target.value })} /></Field>
-                <Field label="Opening stock"><Input type="number" value={form.opening_stock ?? 0} onChange={(e) => setForm({ ...form, opening_stock: +e.target.value })} /></Field>
-              </div>
-              <DialogFooter><Button onClick={save}>Save</Button></DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" variant="outline" onClick={() => startNew("stocked")} title="Add an item you keep in your yard">
+            <Boxes className="h-4 w-4" /> <span className="hidden sm:inline">Inventory</span>
+          </Button>
+          <Button size="sm" onClick={() => startNew("order_basis")} title="Add an item you sell only on order">
+            <ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">On-order</span>
+          </Button>
           </>
         }
       />
@@ -193,6 +208,9 @@ function ProductsPage() {
             <TabsTrigger value="order">On-order only <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge></TabsTrigger>
           </TabsList>
           <Input placeholder="Search code / name / HSN…" className="max-w-xs" value={q} onChange={e => setQ(e.target.value)} />
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
+            <Plus className="h-4 w-4" /> Add {tab === "order" ? "on-order item" : "inventory item"}
+          </Button>
         </div>
         <p className="text-[11px] text-muted-foreground mt-2">
           {tab === "stocked"
@@ -247,6 +265,87 @@ function ProductsPage() {
           </Table>
         </div>
       )}
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {form.kind === "order_basis" ? <ClipboardList className="h-4 w-4" /> : <Boxes className="h-4 w-4" />}
+              {edit ? "Edit product" : (form.kind === "order_basis" ? "New on-order product" : "New inventory product")}
+            </DialogTitle>
+          </DialogHeader>
+
+          {/* Kind switcher (also editable when fixing a mis-tagged item) */}
+          <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-1">
+            <button
+              type="button"
+              className={`text-xs px-2 py-1.5 rounded ${form.kind === "stocked" ? "bg-background shadow font-medium" : "text-muted-foreground"}`}
+              onClick={() => setForm({ ...form, kind: "stocked" })}
+            >Inventory (held in yard)</button>
+            <button
+              type="button"
+              className={`text-xs px-2 py-1.5 rounded ${form.kind === "order_basis" ? "bg-background shadow font-medium" : "text-muted-foreground"}`}
+              onClick={() => setForm({ ...form, kind: "order_basis", opening_stock: 0, reorder_level: 0 })}
+            >On-order only</button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Code (auto if empty)"><Input value={form.code} placeholder="P-####" onChange={(e) => setForm({ ...form, code: e.target.value })} /></Field>
+            <Field label="Unit">
+              <Select value={form.unit ?? "sqft"} onValueChange={(v) => setForm({ ...form, unit: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </Field>
+            <Field label="Name *" wide><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Black Galaxy Granite" /></Field>
+            <Field label="HSN"><Input value={form.hsn ?? ""} onChange={(e) => setForm({ ...form, hsn: e.target.value })} placeholder="GST HSN code" /></Field>
+            <Field label="Purchase rate (per unit)"><Input type="number" inputMode="decimal" value={form.purchase_rate ?? 0} onChange={(e) => setForm({ ...form, purchase_rate: +e.target.value })} /></Field>
+            <Field label="Sale rate (per unit)" wide={form.kind === "order_basis"}><Input type="number" inputMode="decimal" value={form.sale_rate ?? 0} onChange={(e) => setForm({ ...form, sale_rate: +e.target.value })} /></Field>
+            {form.kind === "stocked" && (
+              <>
+                <Field label="Opening stock"><Input type="number" inputMode="decimal" value={form.opening_stock ?? 0} onChange={(e) => setForm({ ...form, opening_stock: +e.target.value })} /></Field>
+                <Field label="Reorder level"><Input type="number" inputMode="decimal" value={form.reorder_level ?? 0} onChange={(e) => setForm({ ...form, reorder_level: +e.target.value })} /></Field>
+              </>
+            )}
+          </div>
+
+          {showCalc && (
+            <div className="rounded-md border bg-muted/30 p-3 space-y-2">
+              <div className="text-xs font-medium flex items-center gap-1.5"><Calculator className="h-3.5 w-3.5" /> Slab → sqft calculator</div>
+              <div className="grid grid-cols-4 gap-2">
+                <div className="space-y-1"><Label className="text-[10px]">Length</Label><Input type="number" inputMode="decimal" value={dim.l || ""} onChange={(e) => setDim({ ...dim, l: +e.target.value })} /></div>
+                <div className="space-y-1"><Label className="text-[10px]">Breadth</Label><Input type="number" inputMode="decimal" value={dim.b || ""} onChange={(e) => setDim({ ...dim, b: +e.target.value })} /></div>
+                <div className="space-y-1"><Label className="text-[10px]">Unit</Label>
+                  <Select value={dim.unit} onValueChange={(v) => setDim({ ...dim, unit: v as any })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {(["in", "cm", "mm", "ft", "m"] as const).map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1"><Label className="text-[10px]">Pieces</Label><Input type="number" inputMode="numeric" value={dim.pieces || ""} onChange={(e) => setDim({ ...dim, pieces: +e.target.value })} /></div>
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground">Area: </span>
+                  <span className="font-semibold tabular-nums">{fmt(computedArea)} sqft</span>
+                  {dim.pieces > 1 && <span className="text-muted-foreground"> ({fmt(toSqft(dim.l, dim.b, dim.unit))} × {dim.pieces})</span>}
+                </div>
+                <Button size="sm" type="button" variant="outline" disabled={!computedArea}
+                  onClick={() => setForm({ ...form, opening_stock: +computedArea.toFixed(2) })}>
+                  Use as opening stock
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-2">
+            <Button onClick={save} className="w-full sm:w-auto">Save product</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
