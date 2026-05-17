@@ -15,7 +15,7 @@ import { ArrowDownLeft, ArrowUpRight, FileSpreadsheet } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { DocDetail } from "@/routes/app.lookup";
 import { lookupDoc, type DocLookupResult } from "@/lib/doc-lookup";
-import { Eye, X } from "lucide-react";
+import { Eye } from "lucide-react";
 
 export const Route = createFileRoute("/app/bills")({ component: BillsPage });
 
@@ -191,11 +191,13 @@ function BillsPage() {
       )}
       <Dialog open={!!preview} onOpenChange={o => !o && setPreview(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
-          <div className="px-4 py-3 border-b flex items-center justify-between">
+          <div className="px-4 py-3 border-b">
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Bill preview</DialogTitle>
-            <button className="rounded-md p-1 hover:bg-muted" onClick={() => setPreview(null)} aria-label="Close"><X className="h-4 w-4" /></button>
           </div>
-          {preview && <DocDetail doc={preview} />}
+          <div className="p-4">{preview && <DocDetail doc={preview} />}</div>
+          <div className="px-4 py-3 border-t flex justify-end">
+            <Button variant="outline" onClick={() => setPreview(null)}>Close</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

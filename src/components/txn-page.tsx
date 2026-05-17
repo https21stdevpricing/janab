@@ -17,6 +17,8 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Printer, CheckCircle2 } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
+import { DocDetail } from "@/routes/app.lookup";
+import { lookupDoc, type DocLookupResult } from "@/lib/doc-lookup";
 
 export type TxnConfig = {
   title: string;
@@ -36,6 +38,7 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
   const [preview, setPreview] = useState<any | null>(null);
+  const [docPreview, setDocPreview] = useState<DocLookupResult | null>(null);
   const [docNo, setDocNo] = useState("");
   const [date, setDate] = useState(todayISO());
   const [buyerId, setBuyerId] = useState<string | null>(null);
@@ -179,6 +182,12 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const openPreview = async (r: any) => {
+    const res = await lookupDoc(r[cfg.noField]);
+    if (res) setDocPreview(res);
+    else toast.error("Could not load preview");
+  };
+
   const onExport = async () => {
     const { data: its } = await supabase.from(cfg.itemsTable).select("*");
     const byDoc: Record<string, any[]> = {};
@@ -247,7 +256,14 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
       {rows.length === 0 ? <Empty>No entries yet.</Empty> : (
         <div className="space-y-2">
           {rows.map(r => (
-            <div key={r.id} className="rounded-md border bg-card p-3 flex flex-wrap items-center gap-3">
+            <div
+              key={r.id}
+              className="rounded-md border bg-card p-3 flex flex-wrap items-center gap-3 cursor-pointer hover:bg-muted/40 transition-colors"
+              onClick={() => openPreview(r)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter") openPreview(r); }}
+            >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-sm font-medium">{r[cfg.noField]}</span>
@@ -259,7 +275,7 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
                     : (r.buyer_name ?? r.supplier_name ?? "—")}
                 </div>
               </div>
-              <div className="flex gap-1">
+              <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                 {cfg.printPath && (
                   <Button asChild variant="ghost" size="icon" title="Print">
                     <Link to={"/app/print/" + cfg.printPath + "/$id" as any} params={{ id: r.id } as any}><Printer className="h-4 w-4" /></Link>
@@ -316,6 +332,18 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
               <Button onClick={save}>Save</Button>
             )}
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!docPreview} onOpenChange={(o) => !o && setDocPreview(null)}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+          <div className="px-4 py-3 border-b">
+            <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">{cfg.title.replace(/s$/, "")} preview</DialogTitle>
+          </div>
+          <div className="p-4">{docPreview && <DocDetail doc={docPreview} />}</div>
+          <div className="px-4 py-3 border-t flex justify-end">
+            <Button variant="outline" onClick={() => setDocPreview(null)}>Close</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
