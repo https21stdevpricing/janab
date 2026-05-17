@@ -109,7 +109,7 @@ function BillsPage() {
   return (
     <div>
       <PageHeader
-        title={<span className="flex items-center gap-2"><FileSpreadsheet className="h-4 w-4" /> Bills <Kbd>B</Kbd></span> as any}
+        title={<span className="inline-flex items-center gap-2"><FileSpreadsheet className="h-4 w-4" /> Bills <Kbd>B</Kbd></span>}
         description="Outstanding receivables and payables grouped by aging."
         actions={<ExcelBar onExport={onExport} />}
       />
