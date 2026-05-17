@@ -7,13 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { seedDemoData } from "@/lib/seed-demo";
+import { seedDemoData, clearAllData } from "@/lib/seed-demo";
 
 export const Route = createFileRoute("/app/settings")({ component: SettingsPage });
 
 function SettingsPage() {
   const [s, setS] = useState<any>(null);
   const [seeding, setSeeding] = useState(false);
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => { supabase.from("settings").select("*").maybeSingle().then(({ data }) => setS(data)); }, []);
 
@@ -32,6 +33,14 @@ function SettingsPage() {
     try { await seedDemoData(); toast.success("Demo data loaded"); const { data } = await supabase.from("settings").select("*").maybeSingle(); setS(data); }
     catch (e: any) { toast.error(e.message ?? "Failed"); }
     finally { setSeeding(false); }
+  };
+
+  const clearAll = async () => {
+    if (!confirm("This will permanently DELETE all your products, contacts, sales, purchases, payments, expenses, third-party deals and quotations.\n\nContinue?")) return;
+    setClearing(true);
+    try { await clearAllData(); toast.success("All data cleared"); }
+    catch (e: any) { toast.error(e.message ?? "Failed"); }
+    finally { setClearing(false); }
   };
 
   if (!s) return <div className="text-sm text-muted-foreground">Loading…</div>;
@@ -53,10 +62,16 @@ function SettingsPage() {
         </CardContent>
       </Card>
       <Card>
-        <CardHeader><CardTitle>Demo data</CardTitle></CardHeader>
-        <CardContent className="space-y-2">
-          <p className="text-sm text-muted-foreground">Replace your books with a complete sample dataset — products, contacts, sales, purchases, third-party deals, quotations, payments, and expenses.</p>
-          <Button variant="outline" disabled={seeding} onClick={seed}>{seeding ? "Loading…" : "Load demo data"}</Button>
+        <CardHeader><CardTitle>Data tools</CardTitle></CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <p className="text-sm text-muted-foreground mb-2">Replace your books with a complete sample dataset — products, contacts, sales, purchases, third-party deals, quotations, payments, and expenses.</p>
+            <Button variant="outline" disabled={seeding || clearing} onClick={seed}>{seeding ? "Loading…" : "Load demo data"}</Button>
+          </div>
+          <div className="border-t pt-4">
+            <p className="text-sm text-muted-foreground mb-2"><span className="text-destructive font-medium">Danger zone.</span> Permanently delete every transaction, contact, and product in your account. Your company profile is kept.</p>
+            <Button variant="destructive" disabled={seeding || clearing} onClick={clearAll}>{clearing ? "Clearing…" : "Clear all data"}</Button>
+          </div>
         </CardContent>
       </Card>
     </div>
