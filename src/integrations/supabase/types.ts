@@ -119,6 +119,7 @@ export type Database = {
           sale_id: string | null
           ship_address: string | null
           status: string
+          tp_id: string | null
           transporter: string | null
           user_id: string
           vehicle_no: string | null
@@ -140,6 +141,7 @@ export type Database = {
           sale_id?: string | null
           ship_address?: string | null
           status?: string
+          tp_id?: string | null
           transporter?: string | null
           user_id: string
           vehicle_no?: string | null
@@ -161,6 +163,7 @@ export type Database = {
           sale_id?: string | null
           ship_address?: string | null
           status?: string
+          tp_id?: string | null
           transporter?: string | null
           user_id?: string
           vehicle_no?: string | null
