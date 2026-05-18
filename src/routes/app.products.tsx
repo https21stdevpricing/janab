@@ -410,3 +410,12 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "go
     </div>
   );
 }
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-muted/40 p-2 min-w-0">
+      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
+      <div className="font-medium truncate tabular-nums">{value}</div>
+    </div>
+  );
+}
