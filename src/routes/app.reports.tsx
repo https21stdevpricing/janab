@@ -265,6 +265,27 @@ function Section({ title }: { title: string }) {
   return <div className="text-xs uppercase tracking-wide text-muted-foreground mt-2 mb-1">{title}</div>;
 }
 
+function HintTip({ text, small }: { text: string; small?: boolean }) {
+  const size = small ? "h-3 w-3" : "h-3.5 w-3.5";
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="More info"
+          className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground focus:outline-none"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Info className={size} />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent side="top" className="max-w-xs text-xs leading-relaxed">
+        {text}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function Kpi({ label, value, hint, tone }: { label: string; value: string; hint: string; tone?: "good" | "warn" | "bad" }) {
   const toneCls = tone === "good" ? "text-primary" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : tone === "bad" ? "text-destructive" : "";
   return (
