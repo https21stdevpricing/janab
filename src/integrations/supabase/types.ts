@@ -1379,6 +1379,7 @@ export type Database = {
         Args: { _col: string; _prefix: string; _table: string; _user: string }
         Returns: string
       }
+      _refresh_payment_narration: { Args: { _pid: string }; Returns: undefined }
       auto_allocate_payment: { Args: { _pid: string }; Returns: undefined }
       next_doc_no: {
         Args: { _col: string; _prefix: string; _table: string; _user: string }
