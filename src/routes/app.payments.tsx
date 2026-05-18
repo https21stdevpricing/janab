@@ -43,7 +43,7 @@ export const Route = createFileRoute("/app/payments")({
 });
 
 type Row = { id: string; payment_no: string; date: string; direction: "in" | "out"; contact_id: string | null; contact_name: string | null; amount: number; mode: string | null; ref_doc: string | null; notes: string | null };
-type Alloc = { doc_kind: "sale" | "purchase" | "tp"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
+type Alloc = { doc_kind: "sale" | "purchase" | "tp" | "tp_purchase"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
 
 function PaymentsPage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -87,6 +87,7 @@ function PaymentsPage() {
     load();
     const ch = supabase.channel("payments-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
@@ -198,10 +199,14 @@ function PaymentsPage() {
     if (!refLookup.trim()) return;
     const r = await lookupDoc(refLookup);
     if (!r) { toast.error("Document not found"); return; }
-    if (r.party) { setContactId(r.party.id); setContactName(r.party.name); }
-    if (r.outstanding && (r.kind === "sale" || r.kind === "purchase" || r.kind === "tp")) {
-      setAmount(Number(r.outstanding.balance.toFixed(2)));
-      setAllocs([{ doc_kind: r.kind, doc_id: r.header.id, doc_no: r.header.invoice_no ?? r.header.po_no ?? r.header.tp_no, amount: r.outstanding.balance, balance: r.outstanding.balance, total: r.outstanding.total }]);
+    const isTpPayable = r.kind === "tp" && direction === "out";
+    const selectedParty = isTpPayable ? r.supplier : r.party;
+    const selectedOutstanding = isTpPayable ? r.supplierOutstanding : r.outstanding;
+    if (selectedParty) { setContactId(selectedParty.id); setContactName(selectedParty.name); }
+    if (selectedOutstanding && (r.kind === "sale" || r.kind === "purchase" || r.kind === "tp")) {
+      const docKind = isTpPayable ? "tp_purchase" : r.kind;
+      setAmount(Number(selectedOutstanding.balance.toFixed(2)));
+      setAllocs([{ doc_kind: docKind, doc_id: r.header.id, doc_no: r.header.invoice_no ?? r.header.po_no ?? r.header.tp_no, amount: selectedOutstanding.balance, balance: selectedOutstanding.balance, total: selectedOutstanding.total }]);
     }
     toast.success(`Loaded ${refLookup.toUpperCase()}`);
   };
