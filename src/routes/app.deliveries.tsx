@@ -17,7 +17,7 @@ import { exportToExcel } from "@/lib/excel";
 
 export const Route = createFileRoute("/app/deliveries")({ component: DeliveriesPage });
 
-type Delivery = { id: string; delivery_no: string; sale_id: string | null; invoice_no: string | null; date: string;
+type Delivery = { id: string; delivery_no: string; sale_id: string | null; tp_id?: string | null; invoice_no: string | null; date: string;
   buyer_id: string | null; buyer_name: string | null; ship_address: string | null; vehicle_no: string | null;
   driver_name: string | null; driver_phone: string | null; transporter: string | null; lr_no: string | null;
   status: string; dispatched_at: string | null; delivered_at: string | null; notes: string | null };
@@ -25,6 +25,7 @@ type DItem = { id: string; product_name: string | null; unit: string | null; qty
 
 const STATUSES = ["pending", "packed", "dispatched", "delivered", "cancelled"];
 const badgeFor = (s: string) => s === "delivered" ? "default" : s === "dispatched" ? "secondary" : s === "cancelled" ? "destructive" : "outline";
+const sourceLabel = (d: Delivery) => d.tp_id ? "TP delivery" : "Sale delivery";
 
 function DeliveriesPage() {
   const [rows, setRows] = useState<Delivery[]>([]);
@@ -43,9 +44,17 @@ function DeliveriesPage() {
     load();
     const ch = supabase.channel("deliveries-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "deliveries" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "delivery_items" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
+
+  const summary = useMemo(() => ({
+    total: rows.length,
+    pending: rows.filter(r => r.status === "pending" || r.status === "packed").length,
+    inTransit: rows.filter(r => r.status === "dispatched").length,
+    delivered: rows.filter(r => r.status === "delivered").length,
+  }), [rows]);
 
   const filtered = useMemo(() => rows.filter(r =>
     (statusF === "all" || r.status === statusF) &&
@@ -63,6 +72,10 @@ function DeliveriesPage() {
 
   const save = async () => {
     if (!edit) return;
+    for (const it of items) {
+      if (Number(it.qty_delivered) < 0) { toast.error("Delivered quantity cannot be negative"); return; }
+      if (Number(it.qty_delivered) > Number(it.qty_ordered)) { toast.error(`${it.product_name ?? "Item"}: delivered quantity is more than ordered`); return; }
+    }
     const { error } = await supabase.from("deliveries" as never).update({
       vehicle_no: edit.vehicle_no, driver_name: edit.driver_name, driver_phone: edit.driver_phone,
       transporter: edit.transporter, lr_no: edit.lr_no, ship_address: edit.ship_address,
