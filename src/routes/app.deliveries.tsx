@@ -115,18 +115,26 @@ function DeliveriesPage() {
       <PageHeader title="Deliveries" description="Auto-created from every sale, editable here"
         actions={<ExcelBar onExport={onExport} />} />
 
-      <div className="rounded-md border bg-muted/30 p-3 mb-3">
-        <Label className="text-xs">Find delivery by invoice id</Label>
-        <div className="flex gap-2 mt-1">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+        <DeliveryTile label="Total" value={String(summary.total)} />
+        <DeliveryTile label="Pending / packed" value={String(summary.pending)} />
+        <DeliveryTile label="Dispatched" value={String(summary.inTransit)} />
+        <DeliveryTile label="Delivered" value={String(summary.delivered)} />
+      </div>
+
+      <section className="rounded-md border bg-card p-3 mb-3 space-y-3">
+        <div className="flex flex-col gap-1">
+          <h2 className="text-sm font-semibold">Find and filter delivery challans</h2>
+          <p className="text-xs text-muted-foreground">Search by delivery no, invoice/TP no, buyer, vehicle, or status.</p>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Input className="font-mono max-w-xs" placeholder="e.g. INV-0001" value={findInv}
             onChange={e => setFindInv(e.target.value)}
             onKeyDown={e => e.key === "Enter" && (e.preventDefault(), findByInvoice())} />
           <Button variant="outline" onClick={findByInvoice}><Search className="h-4 w-4" /> Open</Button>
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2 mb-3">
-        <Input className="max-w-xs" placeholder="Search no, invoice, buyer…" value={q} onChange={e => setQ(e.target.value)} />
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <Input className="sm:max-w-xs" placeholder="Search delivery list…" value={q} onChange={e => setQ(e.target.value)} />
         <Select value={statusF} onValueChange={setStatusF}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -136,6 +144,7 @@ function DeliveriesPage() {
         </Select>
         <div className="ml-auto text-xs text-muted-foreground self-center">{filtered.length} deliveries</div>
       </div>
+      </section>
 
       {filtered.length === 0 ? <Empty>No deliveries match.</Empty> : (
         <div className="space-y-2">
@@ -145,6 +154,7 @@ function DeliveriesPage() {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-mono text-sm font-medium">{r.delivery_no}</span>
+                  <Badge variant="outline" className="text-[10px]">{sourceLabel(r)}</Badge>
                   {r.invoice_no && (
                     <Link
                       to="/app/lookup"
@@ -155,7 +165,7 @@ function DeliveriesPage() {
                   )}
                   <span className="text-xs text-muted-foreground">{fmtDate(r.date)}</span>
                 </div>
-                <div className="text-sm truncate">{r.buyer_name ?? "—"}{r.vehicle_no ? ` · ${r.vehicle_no}` : ""}</div>
+                <div className="text-sm truncate">{r.buyer_name ?? "—"}{r.vehicle_no ? ` · ${r.vehicle_no}` : ""}{r.transporter ? ` · ${r.transporter}` : ""}</div>
               </div>
               <Badge variant={badgeFor(r.status) as any} className="capitalize">{r.status}</Badge>
               <ChevronRight className="h-4 w-4 text-muted-foreground" />
