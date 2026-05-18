@@ -99,7 +99,7 @@ export async function lookupDoc(rawId: string): Promise<DocLookupResult | null> 
 
 // Open outstanding docs for a contact (used by Payments allocation panel).
 export async function openDocsFor(contactId: string, direction: "in" | "out") {
-  const kinds = direction === "in" ? ["sale", "tp"] : ["purchase"];
+  const kinds = direction === "in" ? ["sale", "tp"] : ["purchase", "tp_purchase"];
   const { data } = await supabase
     .from("outstanding_view" as never)
     .select("*")

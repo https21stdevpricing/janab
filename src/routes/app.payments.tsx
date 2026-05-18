@@ -31,6 +31,13 @@ function ageBadge(days: number) {
   if (days <= 60) return { label: `${days}d`, tone: "warn" } as const;
   return { label: `${days}d`, tone: "bad" } as const;
 }
+function docKindLabel(kind: string) {
+  if (kind === "sale") return "Invoice";
+  if (kind === "purchase") return "Purchase";
+  if (kind === "tp") return "TP sale";
+  if (kind === "tp_purchase") return "TP purchase";
+  return kind;
+}
 
 export const Route = createFileRoute("/app/payments")({
   component: PaymentsPage,
@@ -43,7 +50,7 @@ export const Route = createFileRoute("/app/payments")({
 });
 
 type Row = { id: string; payment_no: string; date: string; direction: "in" | "out"; contact_id: string | null; contact_name: string | null; amount: number; mode: string | null; ref_doc: string | null; notes: string | null };
-type Alloc = { doc_kind: "sale" | "purchase" | "tp"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
+type Alloc = { doc_kind: "sale" | "purchase" | "tp" | "tp_purchase"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
 
 function PaymentsPage() {
   const [rows, setRows] = useState<Row[]>([]);
@@ -87,6 +94,7 @@ function PaymentsPage() {
     load();
     const ch = supabase.channel("payments-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
@@ -198,10 +206,14 @@ function PaymentsPage() {
     if (!refLookup.trim()) return;
     const r = await lookupDoc(refLookup);
     if (!r) { toast.error("Document not found"); return; }
-    if (r.party) { setContactId(r.party.id); setContactName(r.party.name); }
-    if (r.outstanding && (r.kind === "sale" || r.kind === "purchase" || r.kind === "tp")) {
-      setAmount(Number(r.outstanding.balance.toFixed(2)));
-      setAllocs([{ doc_kind: r.kind, doc_id: r.header.id, doc_no: r.header.invoice_no ?? r.header.po_no ?? r.header.tp_no, amount: r.outstanding.balance, balance: r.outstanding.balance, total: r.outstanding.total }]);
+    const isTpPayable = r.kind === "tp" && direction === "out";
+    const selectedParty = isTpPayable ? r.supplier : r.party;
+    const selectedOutstanding = isTpPayable ? r.supplierOutstanding : r.outstanding;
+    if (selectedParty) { setContactId(selectedParty.id); setContactName(selectedParty.name); }
+    if (selectedOutstanding && (r.kind === "sale" || r.kind === "purchase" || r.kind === "tp")) {
+      const docKind = isTpPayable ? "tp_purchase" : r.kind;
+      setAmount(Number(selectedOutstanding.balance.toFixed(2)));
+      setAllocs([{ doc_kind: docKind, doc_id: r.header.id, doc_no: r.header.invoice_no ?? r.header.po_no ?? r.header.tp_no, amount: selectedOutstanding.balance, balance: selectedOutstanding.balance, total: selectedOutstanding.total }]);
     }
     toast.success(`Loaded ${refLookup.toUpperCase()}`);
   };
@@ -370,7 +382,7 @@ function PaymentsPage() {
                   <div className="border rounded-md divide-y">
                     {viewAllocs.map((a, i) => (
                       <div key={i} className="p-2.5 flex items-center gap-2 text-sm">
-                        <Badge variant="outline" className="uppercase text-[10px]">{a.doc_kind}</Badge>
+                        <Badge variant="outline" className="text-[10px]">{docKindLabel(a.doc_kind)}</Badge>
                         <Link to="/app/lookup" search={{ q: a.doc_no } as any}
                           className="font-mono text-xs text-primary hover:underline"
                           onClick={() => setViewRow(null)}>{a.doc_no}</Link>
@@ -458,22 +470,28 @@ function PaymentsPage() {
                     const picked = allocs.find(a => a.doc_id === d.doc_id);
                     const age = ageBadge(daysBetween(d.date));
                     return (
-                      <div key={d.doc_id} className={`p-2 flex items-center gap-2 cursor-pointer ${picked ? "bg-primary/5" : ""}`} onClick={() => toggleDoc(d)}>
-                        <Badge variant="outline" className="uppercase">{d.doc_kind}</Badge>
-                        <span className="font-mono text-xs">{d.doc_no}</span>
-                        <span className="text-xs text-muted-foreground">{fmtDate(d.date)}</span>
-                        <Badge variant={age.tone === "bad" ? "destructive" : age.tone === "warn" ? "secondary" : "outline"} className="text-[10px] py-0">{age.label}</Badge>
-                        <div className="ml-auto text-xs tabular-nums">
-                          Bal <span className="font-semibold">{inr(d.balance)}</span> / {inr(d.total)}
+                      <div key={`${d.doc_kind}-${d.doc_id}`} className={`p-2.5 cursor-pointer ${picked ? "bg-primary/5" : ""}`} onClick={() => toggleDoc(d)}>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <Badge variant="outline" className="text-[10px]">{docKindLabel(d.doc_kind)}</Badge>
+                              <span className="font-mono text-xs">{d.doc_no}</span>
+                              <Badge variant={age.tone === "bad" ? "destructive" : age.tone === "warn" ? "secondary" : "outline"} className="text-[10px] py-0">{age.label}</Badge>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1">{fmtDate(d.date)} · balance <span className="font-semibold text-foreground">{inr(d.balance)}</span> of {inr(d.total)}</div>
+                          </div>
+                          <div className="flex items-center gap-2 sm:justify-end">
+                            <span className="text-xs text-muted-foreground">Allocate</span>
+                            {picked ? (
+                              <Input type="number" className="w-28 h-8 text-right" value={picked.amount}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => {
+                                  const v = +e.target.value;
+                                  setAllocs(allocs.map(a => a.doc_id === d.doc_id ? { ...a, amount: v } : a));
+                                }} />
+                            ) : <Button type="button" size="sm" variant="outline" className="h-8">Select</Button>}
+                          </div>
                         </div>
-                        {picked && (
-                          <Input type="number" className="w-24 h-8 ml-2" value={picked.amount}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              const v = +e.target.value;
-                              setAllocs(allocs.map(a => a.doc_id === d.doc_id ? { ...a, amount: v } : a));
-                            }} />
-                        )}
                       </div>
                     );
                   })}

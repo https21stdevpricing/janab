@@ -202,38 +202,47 @@ function ProductsPage() {
         <Tile label="Low stock" value={String(summary.low)} tone={summary.low > 0 ? "bad" : undefined} />
       </div>
 
-      <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <TabsList>
-            <TabsTrigger value="stocked">Stocked <Badge variant="secondary" className="ml-1.5">{counts.stocked}</Badge></TabsTrigger>
-            <TabsTrigger value="order">On-order only <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge></TabsTrigger>
-          </TabsList>
-          <Input placeholder="Search code / name / HSN…" className="max-w-xs" value={q} onChange={e => setQ(e.target.value)} />
-          <Button size="sm" variant="ghost" className="ml-auto" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
+      <section className="rounded-md border bg-card p-3 mb-3 space-y-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold">Inventory control</h2>
+            <p className="text-xs text-muted-foreground">
+              {tab === "stocked"
+                ? "Stocked items affect inventory value, stock movement, and low-stock alerts."
+                : "On-order items are sold directly against orders and do not hold yard stock."}
+            </p>
+          </div>
+          <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
             <Plus className="h-4 w-4" /> Add {tab === "order" ? "on-order item" : "inventory item"}
           </Button>
         </div>
-        <p className="text-[11px] text-muted-foreground mt-2">
-          {tab === "stocked"
-            ? "Items you hold in your yard. Inventory value and low-stock alerts are computed here."
-            : "Items you sell on order — no opening stock, no movements. They don't affect inventory value or stock movements."}
-        </p>
-      </Tabs>
+        <Tabs value={tab} onValueChange={v => setTab(v as any)}>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <TabsList className="w-full sm:w-auto">
+              <TabsTrigger value="stocked" className="flex-1 sm:flex-none"><Boxes className="h-3.5 w-3.5 mr-1" /> Stocked <Badge variant="secondary" className="ml-1.5">{counts.stocked}</Badge></TabsTrigger>
+              <TabsTrigger value="order" className="flex-1 sm:flex-none"><ClipboardList className="h-3.5 w-3.5 mr-1" /> On-order <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge></TabsTrigger>
+            </TabsList>
+            <Input placeholder="Search code, product, category or HSN…" className="sm:max-w-sm" value={q} onChange={e => setQ(e.target.value)} />
+            <div className="text-xs text-muted-foreground sm:ml-auto">{filtered.length} shown</div>
+          </div>
+        </Tabs>
+      </section>
 
       {filtered.length === 0 ? (
         <Empty>No products yet — add your first SKU.</Empty>
       ) : (
-        <div className="rounded-md border bg-card">
+        <>
+        <div className="hidden md:block rounded-md border bg-card overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Code</TableHead><TableHead>Name</TableHead><TableHead>Unit</TableHead><TableHead>HSN</TableHead>
+                <TableHead>Product</TableHead><TableHead>Category</TableHead><TableHead>Unit</TableHead><TableHead>HSN</TableHead>
                 <TableHead className="text-right">Purchase ₹</TableHead><TableHead className="text-right">Sale ₹</TableHead>
                 {tab === "stocked" && <>
                   <TableHead className="text-right">On hand</TableHead>
                   <TableHead className="text-right">Value (cost)</TableHead>
                 </>}
-                <TableHead></TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -243,8 +252,8 @@ function ProductsPage() {
                 const cost = oh * Number(r.purchase_rate ?? 0);
                 return (
                 <TableRow key={r.id} className="cursor-pointer hover:bg-muted/40" onClick={() => startEdit(r)}>
-                  <TableCell className="font-mono text-xs">{r.code}</TableCell>
-                  <TableCell className="font-medium">{r.name}</TableCell>
+                  <TableCell><div className="font-medium">{r.name}</div><div className="font-mono text-xs text-muted-foreground">{r.code || "Auto code"}</div></TableCell>
+                  <TableCell>{r.category || "—"}</TableCell>
                   <TableCell>{r.unit}</TableCell>
                   <TableCell className="font-mono text-xs">{r.hsn}</TableCell>
                   <TableCell className="text-right tabular-nums">{fmt(r.purchase_rate)}</TableCell>
@@ -265,6 +274,38 @@ function ProductsPage() {
             </TableBody>
           </Table>
         </div>
+        <div className="md:hidden space-y-2">
+          {filtered.map((r) => {
+            const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
+            const low = oh <= Number(r.reorder_level ?? 0);
+            const cost = oh * Number(r.purchase_rate ?? 0);
+            return (
+              <div key={r.id} className="rounded-md border bg-card p-3 space-y-3">
+                <button type="button" className="w-full text-left" onClick={() => startEdit(r)}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-medium leading-snug">{r.name}</div>
+                      <div className="font-mono text-xs text-muted-foreground">{r.code || "Auto code"} · {r.unit || "unit"}{r.hsn ? ` · HSN ${r.hsn}` : ""}</div>
+                    </div>
+                    {tab === "stocked" && low && <Badge variant="destructive" className="text-[10px] shrink-0">Low</Badge>}
+                  </div>
+                </button>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <MiniStat label="Buy" value={inr(r.purchase_rate ?? 0)} />
+                  <MiniStat label="Sell" value={inr(r.sale_rate ?? 0)} />
+                  <MiniStat label={tab === "stocked" ? "On hand" : "Type"} value={tab === "stocked" ? fmt(oh) : "Order"} />
+                  {tab === "stocked" && <MiniStat label="Cost value" value={inr(cost)} />}
+                  <MiniStat label="Category" value={r.category || "—"} />
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" className="flex-1" onClick={() => startEdit(r)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
+                  <Button variant="outline" size="sm" className="flex-1 text-destructive hover:text-destructive" onClick={() => del(r.id)}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        </>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -366,6 +407,15 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "go
     <div className="rounded-md border bg-card p-3">
       <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
       <div className={`text-base font-semibold tabular-nums ${tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : ""}`}>{value}</div>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md bg-muted/40 p-2 min-w-0">
+      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
+      <div className="font-medium truncate tabular-nums">{value}</div>
     </div>
   );
 }

@@ -39,6 +39,8 @@ export async function seedDemoData() {
   await supabase.from("quotations").delete().eq("user_id", uid);
   await supabase.from("payments").delete().eq("user_id", uid);
   await supabase.from("expenses").delete().eq("user_id", uid);
+  await supabase.rpc("clear_my_deliveries" as never);
+  await supabase.rpc("clear_my_notifications" as never);
 
   const d = (offset: number) => {
     const dt = new Date(); dt.setDate(dt.getDate() - offset);
@@ -177,6 +179,8 @@ export async function clearAllData() {
   // Delete in dependency-safe order. Item tables and allocations cascade from headers.
   await supabase.from("payments").delete().eq("user_id", uid);
   await supabase.from("expenses").delete().eq("user_id", uid);
+  await supabase.rpc("clear_my_deliveries" as never);
+  await supabase.rpc("clear_my_notifications" as never);
   await supabase.from("sales").delete().eq("user_id", uid);
   await supabase.from("purchases").delete().eq("user_id", uid);
   await supabase.from("third_party").delete().eq("user_id", uid);

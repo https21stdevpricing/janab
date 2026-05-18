@@ -34,6 +34,7 @@ type Row = {
 };
 
 const sideOf = (k: Row["doc_kind"]) => (k === "sale" || k === "tp" ? "receivable" : "payable");
+const docKindLabel = (k: Row["doc_kind"]) => k === "sale" ? "Invoice" : k === "purchase" ? "Purchase" : k === "tp" ? "TP sale" : "TP purchase";
 
 function ageDays(iso: string) {
   return Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
@@ -73,6 +74,9 @@ function BillsPage() {
     const ch = supabase.channel("bills-live")
       .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchases" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "third_party" }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, []);
@@ -132,23 +136,27 @@ function BillsPage() {
         <Tile label="90+ d" value={inr(totals.b4)} tone="bad" />
       </div>
 
-      <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <TabsList>
-            <TabsTrigger value="receivable"><ArrowDownLeft className="h-3.5 w-3.5 mr-1" /> Receivable (from buyers)</TabsTrigger>
-            <TabsTrigger value="payable"><ArrowUpRight className="h-3.5 w-3.5 mr-1" /> Payable (to suppliers)</TabsTrigger>
+      <section className="rounded-md border bg-card p-3 mb-3 space-y-3">
+        <Tabs value={tab} onValueChange={v => setTab(v as any)}>
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="receivable" className="flex-1 sm:flex-none"><ArrowDownLeft className="h-3.5 w-3.5 mr-1" /> Receivable</TabsTrigger>
+            <TabsTrigger value="payable" className="flex-1 sm:flex-none"><ArrowUpRight className="h-3.5 w-3.5 mr-1" /> Payable</TabsTrigger>
           </TabsList>
-          <Input placeholder="Search doc / party…" className="max-w-xs" value={q} onChange={e => setQ(e.target.value)} />
-          <div className="flex gap-1 ml-auto text-xs">
+          <Input placeholder="Search document or party…" className="lg:max-w-xs" value={q} onChange={e => setQ(e.target.value)} />
+          <div className="flex flex-wrap gap-1 lg:ml-auto text-xs">
             {(["all", "0–30", "31–60", "61–90", "90+"] as const).map(b => (
               <Button key={b} size="sm" variant={bucketFilter === b ? "default" : "outline"} onClick={() => setBucketFilter(b)}>{b}</Button>
             ))}
           </div>
         </div>
       </Tabs>
+      <p className="text-xs text-muted-foreground">{tab === "receivable" ? "Money buyers owe you from invoices and TP sales." : "Money you owe suppliers from purchases and TP purchase side."}</p>
+      </section>
 
       {filtered.length === 0 ? <Empty>No outstanding {tab === "receivable" ? "receivables" : "payables"}.</Empty> : (
-        <div className="rounded-md border bg-card overflow-x-auto">
+        <>
+        <div className="hidden md:block rounded-md border bg-card overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-muted/40 text-xs uppercase">
               <tr>
@@ -167,7 +175,7 @@ function BillsPage() {
                 const d = ageDays(r.date); const b = bucket(d);
                 return (
                   <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t">
-                    <td className="p-2"><button onClick={() => openPreview(r.doc_no)} className="font-mono text-primary hover:underline">{r.doc_no}</button></td>
+                    <td className="p-2"><button onClick={() => openPreview(r.doc_no)} className="font-mono text-primary hover:underline">{r.doc_no}</button><div><Badge variant="outline" className="mt-1 text-[10px]">{docKindLabel(r.doc_kind)}</Badge></div></td>
                     <td className="p-2">{fmtDate(r.date)}</td>
                     <td className="p-2 truncate max-w-[200px]">{r.party_name ?? "—"}</td>
                     <td className="p-2 text-right tabular-nums">{inr(r.total)}</td>
@@ -188,6 +196,40 @@ function BillsPage() {
             </tbody>
           </table>
         </div>
+        <div className="md:hidden space-y-2">
+          {filtered.map(r => {
+            const d = ageDays(r.date); const b = bucket(d);
+            return (
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="rounded-md border bg-card p-3 space-y-3">
+                <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-mono text-sm font-medium text-primary">{r.doc_no}</div>
+                      <div className="text-sm truncate">{r.party_name ?? "—"}</div>
+                    </div>
+                    <Badge variant={bucketTone(b) as any} className="shrink-0">{b}</Badge>
+                  </div>
+                </button>
+                <div className="grid grid-cols-3 gap-2 text-xs">
+                  <BillStat label="Type" value={docKindLabel(r.doc_kind)} />
+                  <BillStat label="Paid" value={inr(r.paid)} />
+                  <BillStat label="Balance" value={inr(r.balance)} strong />
+                </div>
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{fmtDate(r.date)} · {d} days old</span>
+                  <span>Total {inr(r.total)}</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button size="sm" variant="outline" onClick={() => openPreview(r.doc_no)}><Eye className="h-3.5 w-3.5" /> Preview</Button>
+                  <Button size="sm" asChild>
+                    <Link to="/app/payments" search={{ ref: r.doc_no, dir: tab === "receivable" ? "in" : "out" } as any}>{tab === "receivable" ? "Receive" : "Pay"}</Link>
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        </>
       )}
       <Dialog open={!!preview} onOpenChange={o => !o && setPreview(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
@@ -209,6 +251,15 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "go
     <div className="rounded-md border bg-card p-3">
       <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
       <div className={`text-base sm:text-lg font-semibold tabular-nums ${tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : ""}`}>{value}</div>
+    </div>
+  );
+}
+
+function BillStat({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="rounded-md bg-muted/40 p-2 min-w-0">
+      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
+      <div className={`${strong ? "font-semibold text-primary" : "font-medium"} truncate tabular-nums`}>{value}</div>
     </div>
   );
 }

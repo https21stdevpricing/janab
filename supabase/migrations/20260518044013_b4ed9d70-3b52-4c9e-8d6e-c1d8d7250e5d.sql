@@ -1,0 +1,15 @@
+REVOKE EXECUTE ON FUNCTION public._next_code(uuid, text, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.next_doc_no(uuid, text, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.handle_new_user() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.notify(uuid, text, text, text, text, text) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.post_journal_sale(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.post_journal_purchase(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.post_journal_tp(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.post_journal_expense(uuid) FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_notify_sale() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_notify_purchase() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_notify_tp() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_notify_payment() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_notify_delivery() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_sale_item_to_delivery() FROM PUBLIC, anon, authenticated;
+REVOKE EXECUTE ON FUNCTION public.tg_sale_make_delivery() FROM PUBLIC, anon, authenticated;
