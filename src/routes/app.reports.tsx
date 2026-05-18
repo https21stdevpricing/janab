@@ -12,7 +12,49 @@ export const Route = createFileRoute("/app/reports")({ component: ReportsPage })
 
 function ReportsPage() {
   const [rows, setRows] = useState<any[]>([]);
-  useEffect(() => { supabase.from("ledger_view").select("*").then(({ data }) => setRows(data ?? [])); }, []);
+  const [products, setProducts] = useState<any[]>([]);
+  const [saleItems, setSaleItems] = useState<any[]>([]);
+  const [purchaseItems, setPurchaseItems] = useState<any[]>([]);
+  useEffect(() => {
+    supabase.from("ledger_view").select("*").then(({ data }) => setRows(data ?? []));
+    supabase.from("products").select("id,name,kind,opening_stock,purchase_rate,sale_rate").then(({ data }) => setProducts(data ?? []));
+    supabase.from("sale_items").select("product_id,qty").then(({ data }) => setSaleItems(data ?? []));
+    supabase.from("purchase_items").select("product_id,qty,rate").then(({ data }) => setPurchaseItems(data ?? []));
+  }, []);
+
+  // ---------- AS 2: Inventory valuation (lower of cost or NRV) ----------
+  // Closing stock qty = opening + purchased − sold (TP doesn't touch own stock).
+  // Valued at weighted-avg cost (or purchase_rate fallback), capped at sale_rate as a simple NRV proxy.
+  const inventory = useMemo(() => {
+    const soldByP: Record<string, number> = {};
+    for (const s of saleItems) if (s.product_id) soldByP[s.product_id] = (soldByP[s.product_id] ?? 0) + Number(s.qty ?? 0);
+    const purByP: Record<string, { qty: number; val: number }> = {};
+    for (const p of purchaseItems) {
+      if (!p.product_id) continue;
+      const q = Number(p.qty ?? 0); const r = Number(p.rate ?? 0);
+      purByP[p.product_id] ??= { qty: 0, val: 0 };
+      purByP[p.product_id].qty += q;
+      purByP[p.product_id].val += q * r;
+    }
+    let closingQty = 0, closingValue = 0, openingValue = 0, purchasesValue = 0;
+    for (const pr of products) {
+      if (pr.kind && pr.kind !== "stocked") continue;
+      const opQty = Number(pr.opening_stock ?? 0);
+      const pur = purByP[pr.id] ?? { qty: 0, val: 0 };
+      const sold = soldByP[pr.id] ?? 0;
+      const onHand = Math.max(0, opQty + pur.qty - sold);
+      const avgCost = (opQty + pur.qty) > 0
+        ? (opQty * Number(pr.purchase_rate ?? 0) + pur.val) / (opQty + pur.qty)
+        : Number(pr.purchase_rate ?? 0);
+      const nrv = Number(pr.sale_rate ?? 0) || avgCost;
+      const unitVal = Math.min(avgCost, nrv); // AS 2: lower of cost or NRV
+      closingQty += onHand;
+      closingValue += onHand * unitVal;
+      openingValue += opQty * Number(pr.purchase_rate ?? 0);
+      purchasesValue += pur.val;
+    }
+    return { closingQty, closingValue, openingValue, purchasesValue };
+  }, [products, saleItems, purchaseItems]);
 
   const sums = useMemo(() => {
     const out: Record<string, { d: number; c: number }> = {};
@@ -35,7 +77,10 @@ function ReportsPage() {
   const tpSales = sums["TP Sales Revenue"]?.c ?? 0;
   const directCogs = sums["Purchases"]?.d ?? 0;
   const tpCogs = sums["TP Purchases"]?.d ?? 0;
-  const cogs = directCogs + tpCogs;
+  // AS 2 COGS: Opening Stock + Purchases − Closing Stock (for own stock).
+  // TP COGS stays as-is (drop-ship, no inventory held).
+  const directCogs_AS2 = inventory.openingValue + directCogs - inventory.closingValue;
+  const cogs = directCogs_AS2 + tpCogs;
   const grossProfit = revenue - cogs;
   const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
   const expenseKeys = Object.keys(sums).filter(k => k.startsWith("Expenses:"));
@@ -58,7 +103,8 @@ function ReportsPage() {
   const tbTotalC = tbAll.reduce((a, r) => a + r.credit, 0);
   const tbBalanced = Math.abs(tbTotalD - tbTotalC) < 0.01;
 
-  const totalAssets = cash + bank + ar + Math.max(0, gstIn);
+  const inventoryAsset = inventory.closingValue;
+  const totalAssets = cash + bank + ar + inventoryAsset + Math.max(0, gstIn);
   const totalLiab = ap + Math.max(0, gstOut);
   const equity = netProfit;
   const balanceCheck = Math.abs(totalAssets - (totalLiab + equity)) < 1;
@@ -176,8 +222,11 @@ function ReportsPage() {
               <Row label="Total Revenue" value={revenue} bold />
               <Sep />
               <Section title="Cost of Goods Sold (AS 2)" />
-              <Row label="Purchases (COGS)" value={-directCogs} hint="Cost of stock sold from your inventory." />
-              <Row label="TP Purchases" value={-tpCogs} hint="Cost paid to supplier in third-party trades." />
+              <Row label="Opening Stock" value={-inventory.openingValue} hint="Inventory carried in at the start (at cost, AS 2)." />
+              <Row label="Add: Purchases" value={-directCogs} hint="All stock bought during the period." />
+              <Row label="Less: Closing Stock" value={inventory.closingValue} hint="Unsold inventory at period end (AS 2: lower of cost or NRV). Reduces COGS." />
+              <Row label="Direct COGS" value={-directCogs_AS2} bold hint="Opening + Purchases − Closing. The true cost of goods actually sold." />
+              <Row label="TP Purchases (drop-ship cost)" value={-tpCogs} hint="Cost paid to supplier in third-party trades — no inventory held." />
               <Row label="Gross Profit" value={grossProfit} bold positive
                 hint={`Gross Margin: ${fmt(grossMarginPct, 1)}%. This is what you earn before paying salaries, rent, etc.`} />
               <Sep />
@@ -198,6 +247,7 @@ function ReportsPage() {
               <Row label="Cash in Hand" value={cash} hint="Physical cash with the business." />
               <Row label="Bank Balance" value={bank} hint="Funds in current/savings accounts." />
               <Row label="Accounts Receivable" value={ar} hint="Money buyers owe you against invoices raised." />
+              <Row label="Inventory (Closing Stock)" value={inventoryAsset} hint={`AS 2 — valued at lower of cost or NRV. ${fmt(inventory.closingQty, 2)} units on hand across all stocked SKUs.`} />
               <Row label="GST Input Credit" value={Math.max(0, gstIn)} hint="GST paid on purchases — recoverable by setoff against Output GST." />
               <Sep /><Row label="Total Assets" value={totalAssets} bold />
             </CardContent></Card>
