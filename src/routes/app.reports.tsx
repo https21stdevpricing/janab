@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { inr, fmt } from "@/lib/format";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Info, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Minus } from "lucide-react";
 
 export const Route = createFileRoute("/app/reports")({ component: ReportsPage });
@@ -102,7 +102,7 @@ function ReportsPage() {
   });
 
   return (
-    <TooltipProvider delayDuration={150}>
+    <>
       <PageHeader title="Financial Reports" description="Built from the ledger per StoneWorld Accounting Standards (AS 2 · AS 9 · GST 2017)" />
       <Tabs defaultValue="outlook">
         <TabsList className="flex-wrap h-auto">
@@ -247,7 +247,7 @@ function ReportsPage() {
           </CardContent></Card>
         </TabsContent>
       </Tabs>
-    </TooltipProvider>
+    </>
   );
 }
 
@@ -255,12 +255,7 @@ function Row({ label, value, bold, positive, hint }: { label: string; value: num
   return <div className={`flex items-center justify-between py-1.5 ${bold ? "border-t font-semibold" : ""}`}>
     <span className="flex items-center gap-1.5">
       {label}
-      {hint && (
-        <Tooltip>
-          <TooltipTrigger asChild><Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" /></TooltipTrigger>
-          <TooltipContent className="max-w-xs text-xs">{hint}</TooltipContent>
-        </Tooltip>
-      )}
+      {hint && <HintTip text={hint} />}
     </span>
     <span className={`tabular-nums ${positive ? (value >= 0 ? "text-primary" : "text-destructive") : ""}`}>{inr(value)}</span>
   </div>;
@@ -277,10 +272,7 @@ function Kpi({ label, value, hint, tone }: { label: string; value: string; hint:
       <CardContent className="p-3">
         <div className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
           {label}
-          <Tooltip>
-            <TooltipTrigger asChild><Info className="h-3 w-3 cursor-help" /></TooltipTrigger>
-            <TooltipContent className="max-w-xs text-xs">{hint}</TooltipContent>
-          </Tooltip>
+          <HintTip text={hint} small />
         </div>
         <div className={`text-xl font-semibold tabular-nums mt-1 ${toneCls}`}>{value}</div>
       </CardContent>
