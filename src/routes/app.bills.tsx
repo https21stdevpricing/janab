@@ -254,3 +254,12 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "go
     </div>
   );
 }
+
+function BillStat({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className="rounded-md bg-muted/40 p-2 min-w-0">
+      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
+      <div className={`${strong ? "font-semibold text-primary" : "font-medium"} truncate tabular-nums`}>{value}</div>
+    </div>
+  );
+}
