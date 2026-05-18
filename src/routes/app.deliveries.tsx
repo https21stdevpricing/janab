@@ -293,3 +293,12 @@ function DeliveriesPage() {
     </div>
   );
 }
+
+function DeliveryTile({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
+      <div className="text-base font-semibold tabular-nums">{value}</div>
+    </div>
+  );
+}
