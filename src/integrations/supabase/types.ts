@@ -1384,6 +1384,8 @@ export type Database = {
       }
       _refresh_payment_narration: { Args: { _pid: string }; Returns: undefined }
       auto_allocate_payment: { Args: { _pid: string }; Returns: undefined }
+      clear_my_deliveries: { Args: never; Returns: undefined }
+      clear_my_notifications: { Args: never; Returns: undefined }
       next_doc_no: {
         Args: { _col: string; _prefix: string; _table: string; _user: string }
         Returns: string
