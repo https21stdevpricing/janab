@@ -6,7 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { inr, fmt } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Info, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2, Minus } from "lucide-react";
+import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/reports")({ component: ReportsPage });
 
@@ -15,16 +17,31 @@ function ReportsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [saleItems, setSaleItems] = useState<any[]>([]);
   const [purchaseItems, setPurchaseItems] = useState<any[]>([]);
+  const [purchaseHdr, setPurchaseHdr] = useState<any[]>([]);
+  const [fixedAssets, setFixedAssets] = useState<any[]>([]);
+  const [cogsMethod, setCogsMethod] = useState<"weighted_average" | "fifo">("weighted_average");
+
   useEffect(() => {
     supabase.from("ledger_view").select("*").then(({ data }) => setRows(data ?? []));
     supabase.from("products").select("id,name,kind,opening_stock,purchase_rate,sale_rate").then(({ data }) => setProducts(data ?? []));
     supabase.from("sale_items").select("product_id,qty").then(({ data }) => setSaleItems(data ?? []));
     supabase.from("purchase_items").select("product_id,qty,rate").then(({ data }) => setPurchaseItems(data ?? []));
+    (supabase as any).from("purchase_items").select("product_id,qty,rate,purchases!inner(date)").then(({ data }: any) => setPurchaseHdr(data ?? []));
+    (supabase as any).from("fixed_assets").select("*").then(({ data }: any) => setFixedAssets(data ?? []));
+    (supabase as any).from("settings").select("cogs_method").maybeSingle().then(({ data }: any) => {
+      if (data?.cogs_method) setCogsMethod(data.cogs_method);
+    });
   }, []);
 
+  const saveCogsMethod = async (m: "weighted_average" | "fifo") => {
+    setCogsMethod(m);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { error } = await (supabase as any).from("settings").update({ cogs_method: m }).eq("user_id", user.id);
+    if (error) toast.error(error.message); else toast.success(`COGS method: ${m === "fifo" ? "FIFO" : "Weighted Average"}`);
+  };
+
   // ---------- AS 2: Inventory valuation (lower of cost or NRV) ----------
-  // Closing stock qty = opening + purchased − sold (TP doesn't touch own stock).
-  // Valued at weighted-avg cost (or purchase_rate fallback), capped at sale_rate as a simple NRV proxy.
   const inventory = useMemo(() => {
     const soldByP: Record<string, number> = {};
     for (const s of saleItems) if (s.product_id) soldByP[s.product_id] = (soldByP[s.product_id] ?? 0) + Number(s.qty ?? 0);
@@ -36,6 +53,13 @@ function ReportsPage() {
       purByP[p.product_id].qty += q;
       purByP[p.product_id].val += q * r;
     }
+    // FIFO lots, sorted by date
+    const lotsByP: Record<string, { qty: number; rate: number; date: string }[]> = {};
+    for (const p of purchaseHdr) {
+      if (!p.product_id) continue;
+      (lotsByP[p.product_id] ??= []).push({ qty: Number(p.qty ?? 0), rate: Number(p.rate ?? 0), date: p.purchases?.date ?? "" });
+    }
+
     let closingQty = 0, closingValue = 0, openingValue = 0, purchasesValue = 0;
     for (const pr of products) {
       if (pr.kind && pr.kind !== "stocked") continue;
@@ -43,18 +67,37 @@ function ReportsPage() {
       const pur = purByP[pr.id] ?? { qty: 0, val: 0 };
       const sold = soldByP[pr.id] ?? 0;
       const onHand = Math.max(0, opQty + pur.qty - sold);
-      const avgCost = (opQty + pur.qty) > 0
-        ? (opQty * Number(pr.purchase_rate ?? 0) + pur.val) / (opQty + pur.qty)
-        : Number(pr.purchase_rate ?? 0);
-      const nrv = Number(pr.sale_rate ?? 0) || avgCost;
-      const unitVal = Math.min(avgCost, nrv); // AS 2: lower of cost or NRV
+
+      let unitVal: number;
+      if (cogsMethod === "fifo") {
+        // FIFO: oldest goes out first → newest lots remain as closing stock.
+        let remaining = onHand;
+        let value = 0;
+        const lots = (lotsByP[pr.id] ?? []).slice().sort((a, b) => (a.date < b.date ? 1 : -1)); // newest first
+        const openingLot = { qty: opQty, rate: Number(pr.purchase_rate ?? 0) };
+        for (const l of [...lots, openingLot]) {
+          if (remaining <= 0) break;
+          const take = Math.min(remaining, l.qty);
+          value += take * l.rate;
+          remaining -= take;
+        }
+        const unit = onHand > 0 ? value / onHand : 0;
+        const nrv = Number(pr.sale_rate ?? 0) || unit;
+        unitVal = Math.min(unit, nrv);
+      } else {
+        const avgCost = (opQty + pur.qty) > 0
+          ? (opQty * Number(pr.purchase_rate ?? 0) + pur.val) / (opQty + pur.qty)
+          : Number(pr.purchase_rate ?? 0);
+        const nrv = Number(pr.sale_rate ?? 0) || avgCost;
+        unitVal = Math.min(avgCost, nrv);
+      }
       closingQty += onHand;
       closingValue += onHand * unitVal;
       openingValue += opQty * Number(pr.purchase_rate ?? 0);
       purchasesValue += pur.val;
     }
     return { closingQty, closingValue, openingValue, purchasesValue };
-  }, [products, saleItems, purchaseItems]);
+  }, [products, saleItems, purchaseItems, purchaseHdr, cogsMethod]);
 
   const sums = useMemo(() => {
     const out: Record<string, { d: number; c: number }> = {};
@@ -72,26 +115,40 @@ function ReportsPage() {
   const sumAcc = (names: string[], side: "d" | "c") =>
     names.reduce((a, n) => a + (sums[n]?.[side] ?? 0), 0);
 
+  // Fixed assets summary
+  const faSummary = useMemo(() => {
+    const byCat: Record<string, { gross: number; accDep: number }> = {};
+    let gross = 0, accDep = 0;
+    for (const a of fixedAssets) {
+      if (a.disposed_at) continue;
+      const cat = a.category || "Other";
+      byCat[cat] ??= { gross: 0, accDep: 0 };
+      byCat[cat].gross += Number(a.cost ?? 0);
+      byCat[cat].accDep += Number(a.accumulated_depreciation ?? 0);
+      gross += Number(a.cost ?? 0);
+      accDep += Number(a.accumulated_depreciation ?? 0);
+    }
+    return { byCat, gross, accDep, netBlock: gross - accDep };
+  }, [fixedAssets]);
+
   const revenue = (sums["Sales Revenue"]?.c ?? 0) + (sums["TP Sales Revenue"]?.c ?? 0);
   const directSales = sums["Sales Revenue"]?.c ?? 0;
   const tpSales = sums["TP Sales Revenue"]?.c ?? 0;
   const directCogs = sums["Purchases"]?.d ?? 0;
   const tpCogs = sums["TP Purchases"]?.d ?? 0;
-  // AS 2 COGS: Opening Stock + Purchases − Closing Stock (for own stock).
-  // TP COGS stays as-is (drop-ship, no inventory held).
   const directCogs_AS2 = inventory.openingValue + directCogs - inventory.closingValue;
   const cogs = directCogs_AS2 + tpCogs;
   const grossProfit = revenue - cogs;
   const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
   const expenseKeys = Object.keys(sums).filter(k => k.startsWith("Expenses:"));
   const expenses = expenseKeys.reduce((a, k) => a + sums[k].d - sums[k].c, 0);
+  const depreciationExp = sums["Expenses: Depreciation"] ? sums["Expenses: Depreciation"].d - sums["Expenses: Depreciation"].c : 0;
   const netProfit = revenue - cogs - expenses;
   const netMarginPct = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
   const ar = bal("Accounts Receivable");
   const ap = balCr("Accounts Payable");
   const cash = bal("Cash"); const bank = bal("Bank");
-  // Per StoneWorld standards (AS-compliant split): Input CGST/SGST/IGST are assets, Output CGST/SGST/IGST are liabilities.
   const gstInputAccts = ["Input CGST", "Input SGST", "Input IGST", "GST Input"];
   const gstOutputAccts = ["Output CGST", "Output SGST", "Output IGST", "GST Output"];
   const gstIn = sumAcc(gstInputAccts, "d") - sumAcc(gstInputAccts, "c");
@@ -104,16 +161,16 @@ function ReportsPage() {
   const tbBalanced = Math.abs(tbTotalD - tbTotalC) < 0.01;
 
   const inventoryAsset = inventory.closingValue;
-  const totalAssets = cash + bank + ar + inventoryAsset + Math.max(0, gstIn);
-  const totalLiab = ap + Math.max(0, gstOut);
+  const currentAssets = cash + bank + ar + inventoryAsset + Math.max(0, gstIn);
+  const nonCurrentAssets = faSummary.netBlock;
+  const totalAssets = currentAssets + nonCurrentAssets;
+  const currentLiab = ap + Math.max(0, gstOut);
+  const totalLiab = currentLiab;
   const equity = netProfit;
   const balanceCheck = Math.abs(totalAssets - (totalLiab + equity)) < 1;
 
-  // ---------- Position & Outlook ----------
   const today = new Date();
-  const dCutoff = (days: number) => {
-    const d = new Date(today); d.setDate(d.getDate() - days); return d.toISOString().slice(0, 10);
-  };
+  const dCutoff = (days: number) => { const d = new Date(today); d.setDate(d.getDate() - days); return d.toISOString().slice(0, 10); };
   const last90 = dCutoff(90);
   const prev90 = dCutoff(180);
 
@@ -132,10 +189,15 @@ function ReportsPage() {
   const liquid = cash + bank;
   const runwayMonths = monthlyOpex > 0 ? liquid / monthlyOpex : Infinity;
 
-  const currentRatio = totalLiab > 0 ? totalAssets / totalLiab : Infinity;
-  const quickRatio = totalLiab > 0 ? (liquid + ar) / totalLiab : Infinity;
-  const workingCapital = totalAssets - totalLiab;
+  const currentRatio = currentLiab > 0 ? currentAssets / currentLiab : Infinity;
+  const quickRatio = currentLiab > 0 ? (liquid + ar) / currentLiab : Infinity;
+  const workingCapital = currentAssets - currentLiab;
   const arApDelta = ar - ap;
+  const annualRev = rev90 * 4;
+  const dso = annualRev > 0 ? (ar / annualRev) * 365 : 0;
+  const dpo = cogs > 0 ? (ap / cogs) * 365 : 0;
+  const dio = cogs > 0 ? (inventoryAsset / cogs) * 365 : 0;
+  const ccc = dso + dio - dpo;
 
   const topExpense = expenseKeys
     .map(k => ({ k: k.replace("Expenses: ", ""), v: sums[k].d - sums[k].c }))
@@ -149,39 +211,39 @@ function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Financial Reports" description="Built from the ledger per StoneWorld Accounting Standards (AS 2 · AS 9 · GST 2017)" />
+      <PageHeader title="Financial Reports" description="Built from the ledger per StoneWorld Accounting Standards (AS 2 · AS 9 · AS 10 · GST 2017)" />
+
+      <div className="flex flex-wrap items-center gap-2 mb-3 rounded-md border bg-card p-2">
+        <span className="text-xs text-muted-foreground">Inventory valuation:</span>
+        <Select value={cogsMethod} onValueChange={(v) => saveCogsMethod(v as any)}>
+          <SelectTrigger className="h-8 w-[220px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="weighted_average">Weighted Average (AS 2)</SelectItem>
+            <SelectItem value="fifo">FIFO (First In, First Out)</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-[11px] text-muted-foreground">Affects Closing Stock, COGS &amp; Gross Profit. NRV cap always applied.</span>
+      </div>
+
       <Tabs defaultValue="outlook">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="outlook">Position &amp; Outlook</TabsTrigger>
           <TabsTrigger value="pnl">P&amp;L</TabsTrigger>
           <TabsTrigger value="bs">Balance Sheet</TabsTrigger>
+          <TabsTrigger value="wc">Working Capital</TabsTrigger>
           <TabsTrigger value="tb">Trial Balance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="outlook" className="space-y-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Kpi label="Revenue (all-time)" value={inr(revenue)}
-              hint="Goods & services billed (AS 9 — recognised on invoice)." />
-            <Kpi label="Net Profit" value={inr(netProfit)} tone={netProfit >= 0 ? "good" : "bad"}
-              hint="Revenue − COGS − Operating Expenses. What's actually left for the business." />
-            <Kpi label="Gross Margin" value={`${fmt(grossMarginPct, 1)}%`} tone={grossMarginPct >= 20 ? "good" : grossMarginPct >= 10 ? "warn" : "bad"}
-              hint="(Revenue − COGS) ÷ Revenue. Healthy stone trading: 18–30%." />
-            <Kpi label="Cash Runway" value={isFinite(runwayMonths) ? `${fmt(runwayMonths, 1)} mo` : "∞"}
-              tone={runwayMonths >= 6 ? "good" : runwayMonths >= 3 ? "warn" : "bad"}
-              hint="Liquid cash ÷ avg monthly operating expenses (last 90 days)." />
-            <Kpi label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"}
-              tone={currentRatio >= 1.5 ? "good" : currentRatio >= 1 ? "warn" : "bad"}
-              hint="Current Assets ÷ Current Liabilities. ≥1.5 means short-term obligations are comfortably covered." />
-            <Kpi label="Quick Ratio" value={isFinite(quickRatio) ? fmt(quickRatio, 2) : "∞"}
-              tone={quickRatio >= 1 ? "good" : quickRatio >= 0.7 ? "warn" : "bad"}
-              hint="(Cash + Bank + AR) ÷ Current Liabilities. Liquidity excluding stock." />
-            <Kpi label="Revenue Trend (90d vs prior 90d)"
-              value={`${revGrowthPct >= 0 ? "+" : ""}${fmt(revGrowthPct, 1)}%`}
-              tone={revGrowthPct >= 5 ? "good" : revGrowthPct >= -5 ? "warn" : "bad"}
-              hint="Sales in last 90 days vs the 90 days before that." />
-            <Kpi label="Net GST Payable" value={inr(Math.max(0, netGstPayable))}
-              tone={netGstPayable > 0 ? "warn" : "good"}
-              hint="Output GST − Input GST. Amount payable to the government this period." />
+            <Kpi label="Revenue (all-time)" value={inr(revenue)} hint="Goods & services billed (AS 9 — recognised on invoice)." />
+            <Kpi label="Net Profit" value={inr(netProfit)} tone={netProfit >= 0 ? "good" : "bad"} hint="Revenue − COGS − Operating Expenses." />
+            <Kpi label="Gross Margin" value={`${fmt(grossMarginPct, 1)}%`} tone={grossMarginPct >= 20 ? "good" : grossMarginPct >= 10 ? "warn" : "bad"} hint="(Revenue − COGS) ÷ Revenue. Healthy stone trading: 18–30%." />
+            <Kpi label="Cash Runway" value={isFinite(runwayMonths) ? `${fmt(runwayMonths, 1)} mo` : "∞"} tone={runwayMonths >= 6 ? "good" : runwayMonths >= 3 ? "warn" : "bad"} hint="Liquid cash ÷ avg monthly OPEX (last 90 days)." />
+            <Kpi label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} tone={currentRatio >= 1.5 ? "good" : currentRatio >= 1 ? "warn" : "bad"} hint="Current Assets ÷ Current Liabilities. ≥1.5 = comfortable." />
+            <Kpi label="Quick Ratio" value={isFinite(quickRatio) ? fmt(quickRatio, 2) : "∞"} tone={quickRatio >= 1 ? "good" : quickRatio >= 0.7 ? "warn" : "bad"} hint="(Cash + Bank + AR) ÷ Current Liabilities." />
+            <Kpi label="Revenue Trend (90d vs prior 90d)" value={`${revGrowthPct >= 0 ? "+" : ""}${fmt(revGrowthPct, 1)}%`} tone={revGrowthPct >= 5 ? "good" : revGrowthPct >= -5 ? "warn" : "bad"} hint="Last 90 days vs the 90 before." />
+            <Kpi label="Net GST Payable" value={inr(Math.max(0, netGstPayable))} tone={netGstPayable > 0 ? "warn" : "good"} hint="Output GST − Input GST." />
           </div>
 
           <Card>
@@ -204,9 +266,7 @@ function ReportsPage() {
             <CardContent className="text-sm leading-relaxed space-y-2">
               <p>{outlookNarrative({ revGrowthPct, netProfit, grossMarginPct, runwayMonths, currentRatio, arApDelta, netGstPayable })}</p>
               <p className="text-xs text-muted-foreground">
-                Note: This outlook is a logical reading of the data above (trend, margin, liquidity & working-capital position).
-                It is not a forecast — actuals depend on collections, new orders and disciplined journal posting per the StoneWorld
-                standards (block-rules on negative stock, unbalanced JEs, and GST mismatches).
+                Note: a logical reading of trend, margin and liquidity — not a forecast.
               </p>
             </CardContent>
           </Card>
@@ -217,25 +277,24 @@ function ReportsPage() {
             <CardHeader><CardTitle>Profit &amp; Loss</CardTitle></CardHeader>
             <CardContent>
               <Section title="Revenue (AS 9 — recognised on invoice raise)" />
-              <Row label="Direct Sales Revenue" value={directSales} hint="Sales of your own stock — billed to buyers." />
-              <Row label="Third-Party Sales Revenue" value={tpSales} hint="Drop-ship sales: supplier ships directly to your buyer. Margin only stays with you." />
+              <Row label="Direct Sales Revenue" value={directSales} hint="Sales of your own stock." />
+              <Row label="Third-Party Sales Revenue" value={tpSales} hint="Drop-ship sales — supplier ships directly to your buyer." />
               <Row label="Total Revenue" value={revenue} bold />
               <Sep />
-              <Section title="Cost of Goods Sold (AS 2)" />
+              <Section title={`Cost of Goods Sold (AS 2 · ${cogsMethod === "fifo" ? "FIFO" : "Weighted Avg"})`} />
               <Row label="Opening Stock" value={-inventory.openingValue} hint="Inventory carried in at the start (at cost, AS 2)." />
               <Row label="Add: Purchases" value={-directCogs} hint="All stock bought during the period." />
-              <Row label="Less: Closing Stock" value={inventory.closingValue} hint="Unsold inventory at period end (AS 2: lower of cost or NRV). Reduces COGS." />
-              <Row label="Direct COGS" value={-directCogs_AS2} bold hint="Opening + Purchases − Closing. The true cost of goods actually sold." />
-              <Row label="TP Purchases (drop-ship cost)" value={-tpCogs} hint="Cost paid to supplier in third-party trades — no inventory held." />
-              <Row label="Gross Profit" value={grossProfit} bold positive
-                hint={`Gross Margin: ${fmt(grossMarginPct, 1)}%. This is what you earn before paying salaries, rent, etc.`} />
+              <Row label="Less: Closing Stock" value={inventory.closingValue} hint="Unsold inventory at period end (AS 2: lower of cost or NRV)." />
+              <Row label="Direct COGS" value={-directCogs_AS2} bold hint="Opening + Purchases − Closing." />
+              <Row label="TP Purchases (drop-ship cost)" value={-tpCogs} hint="Cost paid to supplier in third-party trades." />
+              <Row label="Gross Profit" value={grossProfit} bold positive hint={`Gross Margin: ${fmt(grossMarginPct, 1)}%.`} />
               <Sep />
               <Section title="Operating Expenses" />
               {expenseKeys.map(k => <Row key={k} label={k.replace("Expenses: ", "")} value={-(sums[k].d - sums[k].c)} />)}
               <Row label="Total Expenses" value={-expenses} bold />
+              {depreciationExp > 0 && <div className="text-[11px] text-muted-foreground pl-2 mt-1">Includes ₹{fmt(depreciationExp)} depreciation on fixed assets (AS 10).</div>}
               <Sep />
-              <Row label="Net Profit" value={netProfit} bold positive
-                hint={`Net Margin: ${fmt(netMarginPct, 1)}%. The bottom line — what actually accrues to the owner.`} />
+              <Row label="Net Profit" value={netProfit} bold positive hint={`Net Margin: ${fmt(netMarginPct, 1)}%.`} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -246,18 +305,28 @@ function ReportsPage() {
               <Section title="Current Assets" />
               <Row label="Cash in Hand" value={cash} hint="Physical cash with the business." />
               <Row label="Bank Balance" value={bank} hint="Funds in current/savings accounts." />
-              <Row label="Accounts Receivable" value={ar} hint="Money buyers owe you against invoices raised." />
-              <Row label="Inventory (Closing Stock)" value={inventoryAsset} hint={`AS 2 — valued at lower of cost or NRV. ${fmt(inventory.closingQty, 2)} units on hand across all stocked SKUs.`} />
-              <Row label="GST Input Credit" value={Math.max(0, gstIn)} hint="GST paid on purchases — recoverable by setoff against Output GST." />
+              <Row label="Accounts Receivable" value={ar} hint="Money buyers owe you." />
+              <Row label="Inventory (Closing Stock)" value={inventoryAsset} hint={`AS 2 — lower of cost or NRV. ${fmt(inventory.closingQty, 2)} units on hand.`} />
+              <Row label="GST Input Credit" value={Math.max(0, gstIn)} hint="GST paid on purchases — recoverable." />
+              <Row label="Total Current Assets" value={currentAssets} bold />
+              <Sep />
+              <Section title="Non-Current Assets (Fixed Assets — AS 10)" />
+              {Object.entries(faSummary.byCat).length === 0
+                ? <div className="text-xs text-muted-foreground py-1">No fixed assets recorded. Add machinery, vehicles or equipment in the Fixed Assets page.</div>
+                : Object.entries(faSummary.byCat).map(([cat, v]) => (
+                    <Row key={cat} label={cat} value={v.gross - v.accDep} hint={`Gross ₹${fmt(v.gross)} − Accum dep ₹${fmt(v.accDep)}`} />
+                  ))}
+              {faSummary.gross > 0 && <Row label="Net Block (Fixed Assets)" value={faSummary.netBlock} bold />}
               <Sep /><Row label="Total Assets" value={totalAssets} bold />
             </CardContent></Card>
             <Card><CardHeader><CardTitle>Liabilities &amp; Equity</CardTitle></CardHeader><CardContent>
               <Section title="Current Liabilities" />
-              <Row label="Accounts Payable" value={ap} hint="Amount you owe suppliers against their bills." />
-              <Row label="GST Output Payable" value={Math.max(0, gstOut)} hint="GST collected on sales — payable to government (after setoff)." />
+              <Row label="Accounts Payable" value={ap} hint="Owed to suppliers." />
+              <Row label="GST Output Payable" value={Math.max(0, gstOut)} hint="GST collected on sales — payable to government." />
+              <Row label="Total Current Liabilities" value={currentLiab} bold />
               <Sep />
               <Section title="Equity" />
-              <Row label="Retained Earnings (Net Profit)" value={netProfit} hint="Cumulative profit reinvested into the business." />
+              <Row label="Retained Earnings (Net Profit)" value={netProfit} hint="Cumulative profit reinvested." />
               <Sep /><Row label="Total Liabilities + Equity" value={totalLiab + equity} bold />
               <div className={`mt-2 text-xs flex items-center gap-1.5 ${balanceCheck ? "text-primary" : "text-destructive"}`}>
                 {balanceCheck ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
@@ -265,6 +334,73 @@ function ReportsPage() {
               </div>
             </CardContent></Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="wc" className="space-y-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Kpi label="Working Capital" value={inr(workingCapital)} tone={workingCapital >= 0 ? "good" : "bad"} hint="Current Assets − Current Liabilities." />
+            <Kpi label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} tone={currentRatio >= 1.5 ? "good" : currentRatio >= 1 ? "warn" : "bad"} hint="CA ÷ CL." />
+            <Kpi label="Quick (Acid Test)" value={isFinite(quickRatio) ? fmt(quickRatio, 2) : "∞"} tone={quickRatio >= 1 ? "good" : quickRatio >= 0.7 ? "warn" : "bad"} hint="(Cash+Bank+AR) ÷ CL." />
+            <Kpi label="Cash Conversion Cycle" value={`${fmt(ccc, 0)} days`} tone={ccc <= 60 ? "good" : ccc <= 90 ? "warn" : "bad"} hint="DSO + DIO − DPO." />
+          </div>
+
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Wallet className="h-4 w-4" /> Working capital composition</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <Section title="Current Assets" />
+                  <Row label="Cash in Hand" value={cash} />
+                  <Row label="Bank Balance" value={bank} />
+                  <Row label="Receivables (AR)" value={ar} />
+                  <Row label="Inventory" value={inventoryAsset} />
+                  <Row label="GST Input Credit" value={Math.max(0, gstIn)} />
+                  <Row label="Total CA" value={currentAssets} bold />
+                </div>
+                <div>
+                  <Section title="Current Liabilities" />
+                  <Row label="Payables (AP)" value={ap} />
+                  <Row label="GST Output Payable" value={Math.max(0, gstOut)} />
+                  <Row label="Total CL" value={currentLiab} bold />
+                  <Sep />
+                  <Section title="Net Working Capital" />
+                  <Row label="CA − CL" value={workingCapital} bold positive />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Activity ratios (cash cycle)</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              <Row label="Days Sales Outstanding (DSO)" value={dso} hint="Average days to collect from buyers. Target: ≤45 days." />
+              <Row label="Days Inventory Outstanding (DIO)" value={dio} hint="Days stock sits before being sold." />
+              <Row label="Days Payable Outstanding (DPO)" value={dpo} hint="Days you take to pay suppliers." />
+              <Row label="Cash Conversion Cycle (CCC)" value={ccc} bold hint="DSO + DIO − DPO. Lower is better." />
+              <div className="text-xs text-muted-foreground pt-2 border-t mt-2">
+                Suggestion: {ccc > 90
+                  ? "Cycle is long — push for advance payments, tighten credit terms, clear slow-moving SKUs."
+                  : ccc > 60
+                  ? "Cycle is moderate — chase invoices >30 days old and negotiate longer supplier terms."
+                  : "Cycle is tight — cash recycles well. Reinvest the freed-up cash into fast-moving inventory."}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Fixed Assets snapshot</CardTitle></CardHeader>
+            <CardContent>
+              {faSummary.gross === 0 ? (
+                <div className="text-sm text-muted-foreground">No fixed assets capitalised yet. Add machinery, vehicles or equipment from the Fixed Assets page.</div>
+              ) : (
+                <div className="grid sm:grid-cols-3 gap-3">
+                  <Kpi label="Gross block" value={inr(faSummary.gross)} hint="Total acquisition cost." />
+                  <Kpi label="Accumulated depreciation" value={inr(faSummary.accDep)} tone="warn" hint="Wear-and-tear booked to date (AS 10)." />
+                  <Kpi label="Net block" value={inr(faSummary.netBlock)} tone="good" hint="Gross − Accumulated dep." />
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="tb">
@@ -292,7 +428,7 @@ function ReportsPage() {
             </table>
             <div className={`px-4 py-2 text-xs flex items-center gap-1.5 ${tbBalanced ? "text-primary" : "text-destructive"}`}>
               {tbBalanced ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-              {tbBalanced ? "Trial balance is in balance — every journal entry posts equal debits and credits." : "Trial balance is OUT of balance. Review recent journal entries (BLOCK rule per Standards §III)."}
+              {tbBalanced ? "Trial balance is in balance." : "Trial balance is OUT of balance. Review recent journal entries."}
             </div>
           </CardContent></Card>
         </TabsContent>
@@ -320,18 +456,11 @@ function HintTip({ text, small }: { text: string; small?: boolean }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button
-          type="button"
-          aria-label="More info"
-          className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground focus:outline-none"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <button type="button" aria-label="More info" className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground focus:outline-none" onClick={(e) => e.stopPropagation()}>
           <Info className={size} />
         </button>
       </PopoverTrigger>
-      <PopoverContent side="top" className="max-w-xs text-xs leading-relaxed">
-        {text}
-      </PopoverContent>
+      <PopoverContent side="top" className="max-w-xs text-xs leading-relaxed">{text}</PopoverContent>
     </Popover>
   );
 }
@@ -367,36 +496,35 @@ function buildInsights(x: {
   topExpense?: { k: string; v: number };
 }): Insight[] {
   const out: Insight[] = [];
+  if (x.grossMarginPct >= 20) out.push({ tone: "good", title: `Healthy gross margin (${fmt(x.grossMarginPct, 1)}%)`, body: "Pricing comfortably covers stock cost." });
+  else if (x.grossMarginPct >= 10) out.push({ tone: "warn", title: `Thin gross margin (${fmt(x.grossMarginPct, 1)}%)`, body: "Stone trading typically runs 18–30%. Review buyer-wise discounts and wastage." });
+  else out.push({ tone: "bad", title: `Critically low margin (${fmt(x.grossMarginPct, 1)}%)`, body: "Audit price lists, purchase rates and TP markups before raising more invoices." });
 
-  if (x.grossMarginPct >= 20) out.push({ tone: "good", title: `Healthy gross margin (${fmt(x.grossMarginPct, 1)}%)`, body: "Pricing comfortably covers stock cost. Each ₹100 of sales produces ₹" + fmt(x.grossMarginPct, 1) + " before operating expenses." });
-  else if (x.grossMarginPct >= 10) out.push({ tone: "warn", title: `Thin gross margin (${fmt(x.grossMarginPct, 1)}%)`, body: "Stone trading typically runs 18–30%. Review buyer-wise rate discounts, transport recovery and wastage accounting (AS 2)." });
-  else out.push({ tone: "bad", title: `Critically low margin (${fmt(x.grossMarginPct, 1)}%)`, body: "Selling close to or below cost. Audit price lists, purchase rates, and third-party markups before raising more invoices." });
+  if (x.netProfit >= 0) out.push({ tone: "good", title: `Profitable: net ${inr(x.netProfit)}`, body: `Net margin ${fmt(x.netMarginPct, 1)}%.` });
+  else out.push({ tone: "bad", title: `Operating at a loss (${inr(x.netProfit)})`, body: "Gross profit isn't covering overheads." });
 
-  if (x.netProfit >= 0) out.push({ tone: "good", title: `Profitable: net ${inr(x.netProfit)}`, body: `Net margin ${fmt(x.netMarginPct, 1)}%. Operating expenses are being absorbed by gross profit.` });
-  else out.push({ tone: "bad", title: `Operating at a loss (${inr(x.netProfit)})`, body: "Gross profit isn't covering overheads. Cut discretionary expenses or push sales volume." });
-
-  if (x.runwayMonths >= 6) out.push({ tone: "good", title: `Strong cash runway (${fmt(x.runwayMonths, 1)} months)`, body: "Liquid cash covers more than six months of operating spend even with zero new collections." });
-  else if (x.runwayMonths >= 3) out.push({ tone: "warn", title: `Moderate runway (${fmt(x.runwayMonths, 1)} months)`, body: "Accelerate receivables collection and avoid large upfront purchases." });
-  else out.push({ tone: "bad", title: `Tight runway (${isFinite(x.runwayMonths) ? fmt(x.runwayMonths, 1) + " months" : "no expense data"})`, body: "Prioritise collecting outstanding invoices and defer non-essential expenses." });
+  if (x.runwayMonths >= 6) out.push({ tone: "good", title: `Strong cash runway (${fmt(x.runwayMonths, 1)} months)`, body: "Liquid cash covers more than six months of OPEX." });
+  else if (x.runwayMonths >= 3) out.push({ tone: "warn", title: `Moderate runway (${fmt(x.runwayMonths, 1)} months)`, body: "Accelerate receivables; avoid large upfront purchases." });
+  else out.push({ tone: "bad", title: `Tight runway`, body: "Prioritise collecting outstanding invoices and defer non-essential expenses." });
 
   if (isFinite(x.currentRatio)) {
-    if (x.currentRatio >= 1.5) out.push({ tone: "good", title: `Liquidity comfortable (current ratio ${fmt(x.currentRatio, 2)})`, body: "Current assets exceed current liabilities by a safe margin." });
-    else if (x.currentRatio >= 1) out.push({ tone: "warn", title: `Liquidity acceptable (${fmt(x.currentRatio, 2)})`, body: "Stay above 1.0; chase older receivables to widen the buffer." });
-    else out.push({ tone: "bad", title: `Liquidity strained (${fmt(x.currentRatio, 2)})`, body: "Current liabilities exceed current assets — short-term solvency risk." });
+    if (x.currentRatio >= 1.5) out.push({ tone: "good", title: `Liquidity comfortable (CR ${fmt(x.currentRatio, 2)})`, body: "Current assets safely exceed current liabilities." });
+    else if (x.currentRatio >= 1) out.push({ tone: "warn", title: `Liquidity acceptable (${fmt(x.currentRatio, 2)})`, body: "Stay above 1.0; chase older receivables." });
+    else out.push({ tone: "bad", title: `Liquidity strained (${fmt(x.currentRatio, 2)})`, body: "Current liabilities exceed current assets." });
   }
 
   const arApGap = x.ar - x.ap;
-  if (arApGap > 0) out.push({ tone: "info", title: `Buyers owe ${inr(arApGap)} more than you owe suppliers`, body: "Funding suppliers' credit cycle out of your pocket. Tighten buyer payment terms or extend supplier credit." });
-  else if (arApGap < 0) out.push({ tone: "good", title: `Supplier credit funding ${inr(-arApGap)} of working capital`, body: "Suppliers are effectively financing your operations — good leverage as long as bills are paid on time." });
+  if (arApGap > 0) out.push({ tone: "info", title: `Buyers owe ${inr(arApGap)} more than you owe suppliers`, body: "Funding supplier credit out of pocket. Tighten buyer terms." });
+  else if (arApGap < 0) out.push({ tone: "good", title: `Supplier credit funding ${inr(-arApGap)} of WC`, body: "Suppliers are financing operations — good leverage." });
 
-  if (x.revGrowthPct >= 10) out.push({ tone: "good", title: `Revenue growing ${fmt(x.revGrowthPct, 1)}% QoQ`, body: "Last 90 days are tracking meaningfully above the prior 90 — sales engine is working." });
-  else if (x.revGrowthPct <= -10) out.push({ tone: "bad", title: `Revenue declining ${fmt(Math.abs(x.revGrowthPct), 1)}% QoQ`, body: "Sales softening. Review buyer concentration, quote-to-order conversion, and price list discounts." });
+  if (x.revGrowthPct >= 10) out.push({ tone: "good", title: `Revenue growing ${fmt(x.revGrowthPct, 1)}% QoQ`, body: "Sales engine working." });
+  else if (x.revGrowthPct <= -10) out.push({ tone: "bad", title: `Revenue declining ${fmt(Math.abs(x.revGrowthPct), 1)}% QoQ`, body: "Review buyer concentration and quote-conversion." });
 
-  if (x.netGstPayable > 0) out.push({ tone: "info", title: `Net GST payable: ${inr(x.netGstPayable)}`, body: "Set aside this amount before the 20th of next month (GSTR-3B). Output GST > Input GST after setoff." });
-  if (x.topExpense && x.topExpense.v > 0) out.push({ tone: "info", title: `Largest expense head: ${x.topExpense.k} (${inr(x.topExpense.v)})`, body: "Biggest controllable cost — first place to look for savings." });
+  if (x.netGstPayable > 0) out.push({ tone: "info", title: `Net GST payable: ${inr(x.netGstPayable)}`, body: "Set aside before the 20th of next month (GSTR-3B)." });
+  if (x.topExpense && x.topExpense.v > 0) out.push({ tone: "info", title: `Largest expense head: ${x.topExpense.k} (${inr(x.topExpense.v)})`, body: "First place to look for cost savings." });
 
-  if (!x.tbBalanced) out.push({ tone: "bad", title: "Trial balance not balanced", body: "Per StoneWorld Standards Part III, every journal must post equal Dr/Cr. Review the most recent entries." });
-  if (!x.balanceCheck) out.push({ tone: "warn", title: "Balance sheet equation drifting", body: "Assets ≠ Liabilities + Equity. Usually caused by un-posted inventory or GST entries." });
+  if (!x.tbBalanced) out.push({ tone: "bad", title: "Trial balance not balanced", body: "Every journal must post equal Dr/Cr." });
+  if (!x.balanceCheck) out.push({ tone: "warn", title: "Balance sheet equation drifting", body: "Usually caused by un-posted inventory or GST entries." });
 
   return out;
 }
@@ -405,23 +533,15 @@ function outlookNarrative(x: {
   revGrowthPct: number; netProfit: number; grossMarginPct: number; runwayMonths: number;
   currentRatio: number; arApDelta: number; netGstPayable: number;
 }): string {
-  const trend =
-    x.revGrowthPct >= 10 ? "expanding"
-      : x.revGrowthPct >= 0 ? "stable"
-        : x.revGrowthPct >= -10 ? "softening"
-          : "contracting";
+  const trend = x.revGrowthPct >= 10 ? "expanding" : x.revGrowthPct >= 0 ? "stable" : x.revGrowthPct >= -10 ? "softening" : "contracting";
   const profitability = x.netProfit >= 0 && x.grossMarginPct >= 15 ? "profitable" : x.netProfit >= 0 ? "marginally profitable" : "loss-making";
-  const liquidity =
-    isFinite(x.currentRatio) && x.currentRatio >= 1.5 ? "liquid and well-funded"
-      : isFinite(x.currentRatio) && x.currentRatio >= 1 ? "adequately funded"
-        : "liquidity-constrained";
-  const direction =
-    (x.revGrowthPct >= 0 && x.netProfit >= 0 && x.runwayMonths >= 3)
-      ? "trending positively — compound the gains by reinvesting in inventory of fast-moving SKUs and tightening collection on Accounts Receivable"
-      : (x.netProfit < 0 || x.runwayMonths < 3)
-        ? "heading into a stress zone — focus the next 30 days on collections, cost cuts in the largest expense head, and pausing low-margin third-party deals"
-        : "broadly sideways — protect cash, renegotiate supplier credit, and avoid new fixed overheads until margin improves";
+  const liquidity = isFinite(x.currentRatio) && x.currentRatio >= 1.5 ? "liquid and well-funded" : isFinite(x.currentRatio) && x.currentRatio >= 1 ? "adequately funded" : "liquidity-constrained";
+  const direction = (x.revGrowthPct >= 0 && x.netProfit >= 0 && x.runwayMonths >= 3)
+    ? "trending positively — compound the gains by reinvesting in fast-moving SKUs and tightening AR collection"
+    : (x.netProfit < 0 || x.runwayMonths < 3)
+      ? "heading into a stress zone — focus the next 30 days on collections, cost cuts and pausing low-margin TP deals"
+      : "broadly sideways — protect cash and avoid new fixed overheads until margin improves";
   const wc = x.arApDelta > 0 ? `Working capital is tied up in buyer credit (${inr(x.arApDelta)} more in AR than AP). ` : "";
-  const gst = x.netGstPayable > 0 ? `Reserve ${inr(x.netGstPayable)} for the upcoming GST payment cycle. ` : "";
+  const gst = x.netGstPayable > 0 ? `Reserve ${inr(x.netGstPayable)} for the upcoming GST cycle. ` : "";
   return `The business is currently ${profitability}, ${liquidity}, with revenue ${trend} over the last quarter. ${wc}${gst}On this trajectory the business is ${direction}.`;
 }
