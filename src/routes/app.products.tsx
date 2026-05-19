@@ -9,10 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Info, Search, Package, Wallet, AlertTriangle, Tag } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
@@ -44,6 +45,10 @@ function ProductsPage() {
   const [stock, setStock] = useState<Record<string, StockMeta>>({});
   const [tab, setTab] = useState<"stocked" | "order">("stocked");
   const [q, setQ] = useState("");
+  const [category, setCategory] = useState<string>("all");
+  const [sort, setSort] = useState<"name" | "code" | "on_hand_desc" | "value_desc" | "low_first">("name");
+  const [valuation, setValuation] = useState<"cost" | "sale">("cost");
+  const [cogsMethod, setCogsMethod] = useState<"weighted_average" | "fifo">("weighted_average");
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Row | null>(null);
   const [form, setForm] = useState<Omit<Row, "id">>(empty);
@@ -51,30 +56,48 @@ function ProductsPage() {
   const [dim, setDim] = useState<{ l: number; b: number; pieces: number; unit: "in" | "cm" | "mm" | "ft" | "m" }>({ l: 0, b: 0, pieces: 1, unit: "in" });
 
   const load = async () => {
-    const [{ data, error }, { data: sv }] = await Promise.all([
+    const [{ data, error }, { data: sv }, { data: st }] = await Promise.all([
       supabase.from("products").select("*").order("code"),
       supabase.from("stock_view").select("product_id,on_hand,purchased,sold") as any,
+      supabase.from("settings").select("cogs_method").maybeSingle(),
     ]);
     if (error) toast.error(error.message); else setRows((data ?? []) as Row[]);
     const m: Record<string, StockMeta> = {};
     for (const r of (sv ?? []) as any[]) m[r.product_id] = { product_id: r.product_id, on_hand: Number(r.on_hand ?? 0), purchased: Number(r.purchased ?? 0), sold: Number(r.sold ?? 0) };
     setStock(m);
+    if ((st as any)?.cogs_method === "fifo" || (st as any)?.cogs_method === "weighted_average") setCogsMethod((st as any).cogs_method);
   };
   useEffect(() => { load(); }, []);
 
   // Classification is now explicit via the `kind` column.
   const isOrderBasis = (r: Row) => r.kind === "order_basis";
 
+  const categories = useMemo(() => {
+    const s = new Set<string>();
+    for (const r of rows) if (r.category) s.add(r.category);
+    return ["all", ...Array.from(s).sort()];
+  }, [rows]);
+
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
-    return rows.filter(r => {
+    const list = rows.filter(r => {
       const ob = isOrderBasis(r);
       if (tab === "stocked" && ob) return false;
       if (tab === "order" && !ob) return false;
+      if (category !== "all" && (r.category ?? "") !== category) return false;
       if (ql && !`${r.code} ${r.name} ${r.hsn ?? ""}`.toLowerCase().includes(ql)) return false;
       return true;
     });
-  }, [rows, stock, tab, q]);
+    const rateOf = (r: Row) => valuation === "cost" ? Number(r.purchase_rate ?? 0) : Number(r.sale_rate ?? 0);
+    const ohOf = (r: Row) => Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
+    const sorted = [...list];
+    if (sort === "name") sorted.sort((a, b) => a.name.localeCompare(b.name));
+    else if (sort === "code") sorted.sort((a, b) => (a.code || "").localeCompare(b.code || ""));
+    else if (sort === "on_hand_desc") sorted.sort((a, b) => ohOf(b) - ohOf(a));
+    else if (sort === "value_desc") sorted.sort((a, b) => ohOf(b) * rateOf(b) - ohOf(a) * rateOf(a));
+    else if (sort === "low_first") sorted.sort((a, b) => (ohOf(a) - Number(a.reorder_level ?? 0)) - (ohOf(b) - Number(b.reorder_level ?? 0)));
+    return sorted;
+  }, [rows, stock, tab, q, category, sort, valuation]);
 
   const counts = useMemo(() => {
     let stocked = 0, order = 0;
@@ -83,16 +106,33 @@ function ProductsPage() {
   }, [rows, stock]);
 
   const summary = useMemo(() => {
-    let onHand = 0, valueCost = 0, valueSale = 0, low = 0, skus = rows.length;
-    for (const r of rows) {
+    // KPIs reflect the currently selected tab so users trust what they see.
+    const inScope = rows.filter(r => tab === "stocked" ? !isOrderBasis(r) : isOrderBasis(r));
+    let onHand = 0, valueCost = 0, valueSale = 0, low = 0, zero = 0;
+    const skus = inScope.length;
+    for (const r of inScope) {
       const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
       onHand += oh;
       valueCost += oh * Number(r.purchase_rate ?? 0);
       valueSale += oh * Number(r.sale_rate ?? 0);
-      if (!isOrderBasis(r) && oh <= Number(r.reorder_level ?? 0)) low++;
+      if (!isOrderBasis(r)) {
+        if (oh <= 0) zero++;
+        else if (oh <= Number(r.reorder_level ?? 0)) low++;
+      }
     }
-    return { onHand, valueCost, valueSale, low, skus };
-  }, [rows, stock]);
+    return { onHand, valueCost, valueSale, low, zero, skus };
+  }, [rows, stock, tab]);
+
+  const totals = useMemo(() => {
+    let oh = 0, valC = 0, valS = 0;
+    for (const r of filtered) {
+      const q = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
+      oh += q;
+      valC += q * Number(r.purchase_rate ?? 0);
+      valS += q * Number(r.sale_rate ?? 0);
+    }
+    return { oh, valC, valS };
+  }, [filtered, stock]);
 
   const startNew = (kind: "stocked" | "order_basis") => {
     setEdit(null); setForm({ ...empty, kind }); setDim({ l: 0, b: 0, pieces: 1, unit: "in" }); setOpen(true);
@@ -180,52 +220,86 @@ function ProductsPage() {
     <div>
       <PageHeader
         title="Products"
-        description="Stones / slabs / SKUs. Split between items you stock in your yard and items you sell on order."
+        description="Master catalogue of every SKU you buy, stock, or sell — split between yard-held inventory and on-order items."
         actions={
           <>
           <ExcelBar onExport={onExport} onImport={onImport} />
           <Button size="sm" variant="outline" onClick={() => startNew("stocked")} title="Add an item you keep in your yard">
-            <Boxes className="h-4 w-4" /> <span className="hidden sm:inline">Inventory</span>
+            <Boxes className="h-4 w-4" /> <span className="hidden sm:inline">Add stocked</span>
           </Button>
           <Button size="sm" onClick={() => startNew("order_basis")} title="Add an item you sell only on order">
-            <ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">On-order</span>
+            <ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">Add on-order</span>
           </Button>
           </>
         }
       />
 
+      {/* KPI tiles */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
-        <Tile label="SKUs" value={String(summary.skus)} />
-        <Tile label="Units on hand" value={fmt(summary.onHand)} />
-        <Tile label="Inventory value (cost)" value={inr(summary.valueCost)} />
-        <Tile label="Inventory value (sale)" value={inr(summary.valueSale)} tone="good" />
-        <Tile label="Low stock" value={String(summary.low)} tone={summary.low > 0 ? "bad" : undefined} />
+        <Kpi icon={Package} label={tab === "stocked" ? "Stocked SKUs" : "On-order SKUs"} value={String(summary.skus)} sub={`${rows.length} total in catalogue`} />
+        <Kpi icon={Boxes} label="Units on hand" value={fmt(summary.onHand)} sub={tab === "stocked" ? "Across all stocked items" : "On-order items hold no stock"} />
+        <Kpi icon={Wallet} label="Value at cost" value={inr(summary.valueCost)} sub="AS 2: lower of cost or NRV" />
+        <Kpi icon={Tag} label="Value at sale" value={inr(summary.valueSale)} sub="Indicative sell-through value" tone="good" />
+        <Kpi icon={AlertTriangle} label="Need attention" value={String(summary.low + summary.zero)} sub={`${summary.zero} out of stock · ${summary.low} low`} tone={(summary.low + summary.zero) > 0 ? "bad" : undefined} />
       </div>
 
-      <section className="rounded-md border bg-card p-3 mb-3 space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-sm font-semibold">Inventory control</h2>
-            <p className="text-xs text-muted-foreground">
-              {tab === "stocked"
-                ? "Stocked items affect inventory value, stock movement, and low-stock alerts."
-                : "On-order items are sold directly against orders and do not hold yard stock."}
-            </p>
-          </div>
-          <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
-            <Plus className="h-4 w-4" /> Add {tab === "order" ? "on-order item" : "inventory item"}
-          </Button>
-        </div>
+      {/* How these numbers are calculated */}
+      <Accordion type="single" collapsible className="mb-3">
+        <AccordionItem value="calc" className="rounded-md border bg-card px-3">
+          <AccordionTrigger className="text-sm py-2.5 hover:no-underline">
+            <span className="flex items-center gap-2"><Info className="h-3.5 w-3.5 text-primary" /> How these numbers are calculated</span>
+          </AccordionTrigger>
+          <AccordionContent className="text-xs space-y-2.5 pb-3 leading-relaxed">
+            <Calc title="Stocked vs On-order" formula="Stocked = items physically in your yard (movement tracked). On-order = bought-to-order items that never hold yard stock; their Opening / Reorder are forced to 0." />
+            <Calc title="On hand" formula="Opening Stock + Σ Purchase quantity − Σ Sale quantity (from stock_view)." />
+            <Calc title="Value at cost" formula={`Σ (On hand × Purchase rate). Valuation method in use: ${cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}, applied with the AS 2 lower-of-cost-or-NRV rule on the Reports page.`} />
+            <Calc title="Value at sale" formula="Σ (On hand × Sale rate). Indicative only — not booked to accounts until a Sale invoice is raised." />
+            <Calc title="Need attention" formula="Zero = On hand ≤ 0. Low = 0 < On hand ≤ Reorder level. On-order items are excluded." />
+            <Calc title="Slab → sqft" formula="Area = Length × Breadth (both converted to feet) × Pieces. Conversions: in ÷ 12, cm ÷ 30.48, mm ÷ 304.8, m × 3.28084." />
+            <p className="pt-1 text-muted-foreground">Standards followed: <b>AS 2</b> (inventory valuation), <b>HSN</b> codes for GST classification. KPI scope follows the currently selected tab.</p>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+
+      {/* Toolbar */}
+      <section className="rounded-md border bg-card p-3 mb-3 space-y-2.5">
         <Tabs value={tab} onValueChange={v => setTab(v as any)}>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <TabsList className="w-full sm:w-auto">
-              <TabsTrigger value="stocked" className="flex-1 sm:flex-none"><Boxes className="h-3.5 w-3.5 mr-1" /> Stocked <Badge variant="secondary" className="ml-1.5">{counts.stocked}</Badge></TabsTrigger>
-              <TabsTrigger value="order" className="flex-1 sm:flex-none"><ClipboardList className="h-3.5 w-3.5 mr-1" /> On-order <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge></TabsTrigger>
-            </TabsList>
-            <Input placeholder="Search code, product, category or HSN…" className="sm:max-w-sm" value={q} onChange={e => setQ(e.target.value)} />
-            <div className="text-xs text-muted-foreground sm:ml-auto">{filtered.length} shown</div>
-          </div>
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="stocked" className="flex-1 sm:flex-none"><Boxes className="h-3.5 w-3.5 mr-1" /> Stocked <Badge variant="secondary" className="ml-1.5">{counts.stocked}</Badge></TabsTrigger>
+            <TabsTrigger value="order" className="flex-1 sm:flex-none"><ClipboardList className="h-3.5 w-3.5 mr-1" /> On-order <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge></TabsTrigger>
+          </TabsList>
         </Tabs>
+        <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+          <div className="sm:col-span-5 relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input placeholder="Search by name, code or HSN…" className="pl-7" value={q} onChange={e => setQ(e.target.value)} />
+          </div>
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="sm:col-span-3"><SelectValue placeholder="Category" /></SelectTrigger>
+            <SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c === "all" ? "All categories" : c}</SelectItem>)}</SelectContent>
+          </Select>
+          <Select value={sort} onValueChange={v => setSort(v as any)}>
+            <SelectTrigger className="sm:col-span-2"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Sort: Name</SelectItem>
+              <SelectItem value="code">Sort: Code</SelectItem>
+              <SelectItem value="on_hand_desc">Sort: Stock ↓</SelectItem>
+              <SelectItem value="value_desc">Sort: Value ↓</SelectItem>
+              <SelectItem value="low_first">Sort: Low first</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={valuation} onValueChange={v => setValuation(v as any)}>
+            <SelectTrigger className="sm:col-span-2"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="cost">Show: Cost</SelectItem>
+              <SelectItem value="sale">Show: Sale</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span>{filtered.length} of {tab === "stocked" ? counts.stocked : counts.order} shown</span>
+          <span>Valuing at <b className="text-foreground">{valuation === "cost" ? "purchase" : "sale"}</b> rate · COGS method: <b className="text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Avg"}</b></span>
+        </div>
       </section>
 
       {filtered.length === 0 ? (
@@ -237,10 +311,10 @@ function ProductsPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead><TableHead>Category</TableHead><TableHead>Unit</TableHead><TableHead>HSN</TableHead>
-                <TableHead className="text-right">Purchase ₹</TableHead><TableHead className="text-right">Sale ₹</TableHead>
+                <TableHead className="text-right">Buy ₹</TableHead><TableHead className="text-right">Sell ₹</TableHead>
                 {tab === "stocked" && <>
                   <TableHead className="text-right">On hand</TableHead>
-                  <TableHead className="text-right">Value (cost)</TableHead>
+                  <TableHead className="text-right">Value ({valuation})</TableHead>
                 </>}
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -248,8 +322,11 @@ function ProductsPage() {
             <TableBody>
               {filtered.map((r) => {
                 const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
-                const low = oh <= Number(r.reorder_level ?? 0);
-                const cost = oh * Number(r.purchase_rate ?? 0);
+                const reorder = Number(r.reorder_level ?? 0);
+                const zero = oh <= 0;
+                const low = !zero && oh <= reorder;
+                const rate = valuation === "cost" ? Number(r.purchase_rate ?? 0) : Number(r.sale_rate ?? 0);
+                const lineVal = oh * rate;
                 return (
                 <TableRow key={r.id} className="cursor-pointer hover:bg-muted/40" onClick={() => startEdit(r)}>
                   <TableCell><div className="font-medium">{r.name}</div><div className="font-mono text-xs text-muted-foreground">{r.code || "Auto code"}</div></TableCell>
@@ -260,9 +337,12 @@ function ProductsPage() {
                   <TableCell className="text-right tabular-nums">{fmt(r.sale_rate)}</TableCell>
                   {tab === "stocked" && <>
                     <TableCell className="text-right tabular-nums font-medium">
-                      {fmt(oh)} {low && <Badge variant="destructive" className="ml-1 text-[10px]">Low</Badge>}
+                      {fmt(oh)}{" "}
+                      {zero ? <Badge variant="destructive" className="ml-1 text-[10px]">Zero</Badge>
+                        : low ? <Badge variant="outline" className="ml-1 text-[10px] border-amber-500 text-amber-600">Low</Badge>
+                        : null}
                     </TableCell>
-                    <TableCell className="text-right tabular-nums">{inr(cost)}</TableCell>
+                    <TableCell className="text-right tabular-nums">{inr(lineVal)}</TableCell>
                   </>}
                   <TableCell className="text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <Button variant="ghost" size="sm" onClick={() => startEdit(r)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
@@ -272,13 +352,28 @@ function ProductsPage() {
                 );
               })}
             </TableBody>
+            {tab === "stocked" && (
+              <tfoot>
+                <tr className="border-t bg-muted/30 text-xs font-medium">
+                  <td colSpan={4} className="px-4 py-2">Totals (filtered)</td>
+                  <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                  <td className="px-4 py-2 text-right tabular-nums text-muted-foreground">—</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{fmt(totals.oh)}</td>
+                  <td className="px-4 py-2 text-right tabular-nums">{inr(valuation === "cost" ? totals.valC : totals.valS)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            )}
           </Table>
         </div>
         <div className="md:hidden space-y-2">
           {filtered.map((r) => {
             const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
-            const low = oh <= Number(r.reorder_level ?? 0);
-            const cost = oh * Number(r.purchase_rate ?? 0);
+            const reorder = Number(r.reorder_level ?? 0);
+            const zero = oh <= 0;
+            const low = !zero && oh <= reorder;
+            const rate = valuation === "cost" ? Number(r.purchase_rate ?? 0) : Number(r.sale_rate ?? 0);
+            const lineVal = oh * rate;
             return (
               <div key={r.id} className="rounded-md border bg-card p-3 space-y-3">
                 <button type="button" className="w-full text-left" onClick={() => startEdit(r)}>
@@ -287,14 +382,17 @@ function ProductsPage() {
                       <div className="font-medium leading-snug">{r.name}</div>
                       <div className="font-mono text-xs text-muted-foreground">{r.code || "Auto code"} · {r.unit || "unit"}{r.hsn ? ` · HSN ${r.hsn}` : ""}</div>
                     </div>
-                    {tab === "stocked" && low && <Badge variant="destructive" className="text-[10px] shrink-0">Low</Badge>}
+                    {tab === "stocked" && (zero
+                      ? <Badge variant="destructive" className="text-[10px] shrink-0">Zero</Badge>
+                      : low ? <Badge variant="outline" className="text-[10px] shrink-0 border-amber-500 text-amber-600">Low</Badge>
+                      : null)}
                   </div>
                 </button>
                 <div className="grid grid-cols-3 gap-2 text-xs">
                   <MiniStat label="Buy" value={inr(r.purchase_rate ?? 0)} />
                   <MiniStat label="Sell" value={inr(r.sale_rate ?? 0)} />
                   <MiniStat label={tab === "stocked" ? "On hand" : "Type"} value={tab === "stocked" ? fmt(oh) : "Order"} />
-                  {tab === "stocked" && <MiniStat label="Cost value" value={inr(cost)} />}
+                  {tab === "stocked" && <MiniStat label={`Value (${valuation})`} value={inr(lineVal)} />}
                   <MiniStat label="Category" value={r.category || "—"} />
                 </div>
                 <div className="flex gap-2">
@@ -407,6 +505,27 @@ function Tile({ label, value, tone }: { label: string; value: string; tone?: "go
     <div className="rounded-md border bg-card p-3">
       <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
       <div className={`text-base font-semibold tabular-nums ${tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : ""}`}>{value}</div>
+    </div>
+  );
+}
+
+function Kpi({ icon: Icon, label, value, sub, tone }: { icon: any; label: string; value: string; sub?: string; tone?: "good" | "bad" }) {
+  return (
+    <div className="rounded-md border bg-card p-3">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+        <Icon className="h-3 w-3" /> {label}
+      </div>
+      <div className={`mt-0.5 text-lg font-semibold tabular-nums ${tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : ""}`}>{value}</div>
+      {sub && <div className="text-[10px] text-muted-foreground leading-tight mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+function Calc({ title, formula }: { title: string; formula: string }) {
+  return (
+    <div className="rounded border bg-muted/30 p-2">
+      <div className="font-medium text-foreground">{title}</div>
+      <div className="text-muted-foreground">{formula}</div>
     </div>
   );
 }
