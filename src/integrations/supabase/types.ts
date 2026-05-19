@@ -244,6 +244,72 @@ export type Database = {
         }
         Relationships: []
       }
+      fixed_assets: {
+        Row: {
+          accumulated_depreciation: number
+          asset_no: string
+          category: string
+          cost: number
+          created_at: string
+          depreciation_method: string
+          disposal_value: number | null
+          disposed_at: string | null
+          id: string
+          name: string
+          notes: string | null
+          paid_via: string
+          purchase_date: string
+          salvage_value: number
+          supplier_id: string | null
+          supplier_name: string | null
+          useful_life_years: number
+          user_id: string
+          wdv_rate_pct: number
+        }
+        Insert: {
+          accumulated_depreciation?: number
+          asset_no: string
+          category?: string
+          cost?: number
+          created_at?: string
+          depreciation_method?: string
+          disposal_value?: number | null
+          disposed_at?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          paid_via?: string
+          purchase_date?: string
+          salvage_value?: number
+          supplier_id?: string | null
+          supplier_name?: string | null
+          useful_life_years?: number
+          user_id: string
+          wdv_rate_pct?: number
+        }
+        Update: {
+          accumulated_depreciation?: number
+          asset_no?: string
+          category?: string
+          cost?: number
+          created_at?: string
+          depreciation_method?: string
+          disposal_value?: number | null
+          disposed_at?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          paid_via?: string
+          purchase_date?: string
+          salvage_value?: number
+          supplier_id?: string | null
+          supplier_name?: string | null
+          useful_life_years?: number
+          user_id?: string
+          wdv_rate_pct?: number
+        }
+        Relationships: []
+      }
       journal_entries: {
         Row: {
           created_at: string
@@ -994,8 +1060,10 @@ export type Database = {
       settings: {
         Row: {
           address: string | null
+          cogs_method: string
           company_name: string
           currency: string | null
+          depreciation_auto: boolean
           email: string | null
           fy_start: string | null
           gstin: string | null
@@ -1007,8 +1075,10 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          cogs_method?: string
           company_name?: string
           currency?: string | null
+          depreciation_auto?: boolean
           email?: string | null
           fy_start?: string | null
           gstin?: string | null
@@ -1020,8 +1090,10 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          cogs_method?: string
           company_name?: string
           currency?: string | null
+          depreciation_auto?: boolean
           email?: string | null
           fy_start?: string | null
           gstin?: string | null
@@ -1375,6 +1447,20 @@ export type Database = {
         }
         Relationships: []
       }
+      working_capital_view: {
+        Row: {
+          accumulated_depreciation: number | null
+          bank: number | null
+          cash: number | null
+          gross_fixed_assets: number | null
+          gst_input: number | null
+          gst_output: number | null
+          payable: number | null
+          receivable: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       _co_state: { Args: { _user: string }; Returns: string }
@@ -1384,6 +1470,7 @@ export type Database = {
       }
       _refresh_payment_narration: { Args: { _pid: string }; Returns: undefined }
       auto_allocate_payment: { Args: { _pid: string }; Returns: undefined }
+      book_depreciation: { Args: { _period_end: string }; Returns: number }
       clear_my_deliveries: { Args: never; Returns: undefined }
       clear_my_notifications: { Args: never; Returns: undefined }
       next_doc_no: {
@@ -1402,6 +1489,7 @@ export type Database = {
         Returns: undefined
       }
       post_journal_expense: { Args: { _id: string }; Returns: undefined }
+      post_journal_fixed_asset: { Args: { _id: string }; Returns: undefined }
       post_journal_payment: { Args: { _id: string }; Returns: undefined }
       post_journal_purchase: { Args: { _id: string }; Returns: undefined }
       post_journal_sale: { Args: { _id: string }; Returns: undefined }
