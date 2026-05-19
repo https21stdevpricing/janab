@@ -507,6 +507,47 @@ function Kpi({ label, value, hint, tone }: { label: string; value: string; hint:
   );
 }
 
+function Headline({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "warn" | "bad" }) {
+  const toneCls = tone === "good" ? "text-primary" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : tone === "bad" ? "text-destructive" : "";
+  return (
+    <div>
+      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`text-2xl font-semibold tabular-nums mt-1 ${toneCls}`}>{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+function MeterCard({ label, value, status, meaning }: { label: string; value: string; status: "good" | "warn" | "bad"; meaning: string }) {
+  const ring = status === "good" ? "border-l-primary" : status === "warn" ? "border-l-amber-500" : "border-l-destructive";
+  const valueTone = status === "good" ? "text-primary" : status === "warn" ? "text-amber-600 dark:text-amber-400" : "text-destructive";
+  return (
+    <Card className={`border-l-4 ${ring}`}>
+      <CardContent className="p-3">
+        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className={`text-xl font-semibold tabular-nums mt-1 ${valueTone}`}>{value}</div>
+        <div className="text-xs text-muted-foreground mt-1 leading-snug">{meaning}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function statusFor(v: number, goodAt: number, warnAt: number): "good" | "warn" | "bad" {
+  if (!isFinite(v)) return "good";
+  if (v >= goodAt) return "good";
+  if (v >= warnAt) return "warn";
+  return "bad";
+}
+
+function IntegrityBadge({ ok, okLabel, badLabel }: { ok: boolean; okLabel: string; badLabel: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 ${ok ? "text-primary" : "text-destructive"}`}>
+      {ok ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
+      <span className="font-medium">{ok ? okLabel : badLabel}</span>
+    </span>
+  );
+}
+
 function ToneIcon({ tone }: { tone: "good" | "warn" | "bad" | "info" }) {
   if (tone === "good") return <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />;
   if (tone === "warn") return <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />;
