@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   LayoutDashboard, Package, Users, ShoppingCart, Truck, Repeat,
-  Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Menu, Percent, UserCheck, UserCog, LineChart, Tags,
+  Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Menu, Percent, UserCheck, UserCog, LineChart, Tags, Building2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { History, PackageCheck, FileSpreadsheet, Keyboard } from "lucide-react";
@@ -40,6 +40,7 @@ const nav: NavItem[] = [
   { to: "/app/expenses", label: "Expenses", icon: Receipt },
   { group: "Inventory & Books" },
   { to: "/app/stock", label: "Stock Movements", icon: Boxes },
+  { to: "/app/fixed-assets", label: "Fixed Assets", icon: Building2 },
   { to: "/app/ledger", label: "General Ledger", icon: BookOpen },
   { to: "/app/reports", label: "Reports", icon: BarChart3 },
   { to: "/app/analytics", label: "Analytics", icon: LineChart },
