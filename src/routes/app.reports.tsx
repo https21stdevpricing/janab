@@ -211,63 +211,90 @@ function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Financial Reports" description="Built from the ledger per StoneWorld Accounting Standards (AS 2 · AS 9 · AS 10 · GST 2017)" />
+      <PageHeader title="Financial Reports" description="Auto-built from your ledger. Every figure is traceable to a journal entry." />
 
-      <div className="flex flex-wrap items-center gap-2 mb-3 rounded-md border bg-card p-2">
-        <span className="text-xs text-muted-foreground">Inventory valuation:</span>
-        <Select value={cogsMethod} onValueChange={(v) => saveCogsMethod(v as any)}>
-          <SelectTrigger className="h-8 w-[220px]"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="weighted_average">Weighted Average (AS 2)</SelectItem>
-            <SelectItem value="fifo">FIFO (First In, First Out)</SelectItem>
-          </SelectContent>
-        </Select>
-        <span className="text-[11px] text-muted-foreground">Affects Closing Stock, COGS &amp; Gross Profit. NRV cap always applied.</span>
+      {/* Trust strip — show data integrity at a glance */}
+      <div className="mb-4 rounded-lg border bg-card overflow-hidden">
+        <div className="flex flex-wrap gap-3 p-3 items-center justify-between border-b">
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <IntegrityBadge ok={tbBalanced} okLabel="Trial balance matches" badLabel="Trial balance OFF" />
+            <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet balances (A = L + E)" badLabel="Balance sheet drift" />
+            <span className="text-muted-foreground">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground">Inventory method:</span>
+            <Select value={cogsMethod} onValueChange={(v) => saveCogsMethod(v as any)}>
+              <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="weighted_average">Weighted Average</SelectItem>
+                <SelectItem value="fifo">FIFO</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="px-3 py-2 text-[11px] text-muted-foreground bg-muted/30">
+          Closing stock is valued at the lower of cost or net realisable value (AS 2). Changing the method instantly recomputes COGS and Gross Profit.
+        </div>
       </div>
 
       <Tabs defaultValue="outlook">
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="outlook">Position &amp; Outlook</TabsTrigger>
-          <TabsTrigger value="pnl">P&amp;L</TabsTrigger>
+          <TabsTrigger value="outlook">Overview</TabsTrigger>
+          <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
           <TabsTrigger value="bs">Balance Sheet</TabsTrigger>
           <TabsTrigger value="wc">Working Capital</TabsTrigger>
           <TabsTrigger value="tb">Trial Balance</TabsTrigger>
         </TabsList>
 
         <TabsContent value="outlook" className="space-y-4">
+          {/* Headline card — single source of truth */}
+          <Card>
+            <CardContent className="p-5">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+                <Headline label="Revenue" value={inr(revenue)} sub="Total billed to date" />
+                <Headline label="Net Profit" value={inr(netProfit)} sub={`Margin ${fmt(netMarginPct, 1)}%`} tone={netProfit >= 0 ? "good" : "bad"} />
+                <Headline label="Cash + Bank" value={inr(liquid)} sub={isFinite(runwayMonths) ? `${fmt(runwayMonths, 1)} months runway` : "No recent OPEX"} tone={runwayMonths >= 3 ? "good" : "bad"} />
+                <Headline label="You're owed − you owe" value={inr(arApDelta)} sub={arApDelta >= 0 ? "Net cash inflow expected" : "Net cash outflow expected"} tone={arApDelta >= 0 ? "good" : "warn"} />
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Health meters — plain language under each */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Kpi label="Revenue (all-time)" value={inr(revenue)} hint="Goods & services billed (AS 9 — recognised on invoice)." />
-            <Kpi label="Net Profit" value={inr(netProfit)} tone={netProfit >= 0 ? "good" : "bad"} hint="Revenue − COGS − Operating Expenses." />
-            <Kpi label="Gross Margin" value={`${fmt(grossMarginPct, 1)}%`} tone={grossMarginPct >= 20 ? "good" : grossMarginPct >= 10 ? "warn" : "bad"} hint="(Revenue − COGS) ÷ Revenue. Healthy stone trading: 18–30%." />
-            <Kpi label="Cash Runway" value={isFinite(runwayMonths) ? `${fmt(runwayMonths, 1)} mo` : "∞"} tone={runwayMonths >= 6 ? "good" : runwayMonths >= 3 ? "warn" : "bad"} hint="Liquid cash ÷ avg monthly OPEX (last 90 days)." />
-            <Kpi label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} tone={currentRatio >= 1.5 ? "good" : currentRatio >= 1 ? "warn" : "bad"} hint="Current Assets ÷ Current Liabilities. ≥1.5 = comfortable." />
-            <Kpi label="Quick Ratio" value={isFinite(quickRatio) ? fmt(quickRatio, 2) : "∞"} tone={quickRatio >= 1 ? "good" : quickRatio >= 0.7 ? "warn" : "bad"} hint="(Cash + Bank + AR) ÷ Current Liabilities." />
-            <Kpi label="Revenue Trend (90d vs prior 90d)" value={`${revGrowthPct >= 0 ? "+" : ""}${fmt(revGrowthPct, 1)}%`} tone={revGrowthPct >= 5 ? "good" : revGrowthPct >= -5 ? "warn" : "bad"} hint="Last 90 days vs the 90 before." />
-            <Kpi label="Net GST Payable" value={inr(Math.max(0, netGstPayable))} tone={netGstPayable > 0 ? "warn" : "good"} hint="Output GST − Input GST." />
+            <MeterCard label="Gross Margin" value={`${fmt(grossMarginPct, 1)}%`} status={statusFor(grossMarginPct, 20, 10)}
+              meaning={grossMarginPct >= 20 ? "Pricing safely above stock cost." : grossMarginPct >= 10 ? "Margins thin — review pricing." : "Selling near or below cost."} />
+            <MeterCard label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} status={statusFor(currentRatio, 1.5, 1)}
+              meaning={currentRatio >= 1.5 ? "Plenty of cushion to pay dues." : currentRatio >= 1 ? "Can just about meet dues." : "Short-term dues exceed cash + receivables."} />
+            <MeterCard label="Revenue Trend (90d)" value={`${revGrowthPct >= 0 ? "+" : ""}${fmt(revGrowthPct, 1)}%`} status={statusFor(revGrowthPct, 5, -5)}
+              meaning={revGrowthPct >= 5 ? "Sales growing quarter-on-quarter." : revGrowthPct >= -5 ? "Sales roughly flat." : "Sales declining — investigate."} />
+            <MeterCard label="GST Payable" value={inr(Math.max(0, netGstPayable))} status={netGstPayable <= 0 ? "good" : "warn"}
+              meaning={netGstPayable <= 0 ? "Input credit covers liability." : "Reserve before GSTR-3B due date."} />
           </div>
 
+          {/* What to do — prioritized action list */}
           <Card>
-            <CardHeader><CardTitle>What this means for your business</CardTitle></CardHeader>
-            <CardContent className="space-y-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">What to do next</CardTitle>
+              <div className="text-xs text-muted-foreground">Ranked by impact on your cash and profit.</div>
+            </CardHeader>
+            <CardContent className="divide-y">
               {insights.map((it, i) => (
-                <div key={i} className="flex gap-3 items-start py-1.5 border-b last:border-0">
+                <div key={i} className="flex gap-3 items-start py-3">
                   <ToneIcon tone={it.tone} />
-                  <div className="flex-1">
+                  <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{it.title}</div>
-                    <div className="text-xs text-muted-foreground leading-relaxed">{it.body}</div>
+                    <div className="text-xs text-muted-foreground leading-relaxed mt-0.5">{it.body}</div>
                   </div>
                 </div>
               ))}
             </CardContent>
           </Card>
 
+          {/* Plain-English summary */}
           <Card>
-            <CardHeader><CardTitle>Where the business is heading</CardTitle></CardHeader>
-            <CardContent className="text-sm leading-relaxed space-y-2">
-              <p>{outlookNarrative({ revGrowthPct, netProfit, grossMarginPct, runwayMonths, currentRatio, arApDelta, netGstPayable })}</p>
-              <p className="text-xs text-muted-foreground">
-                Note: a logical reading of trend, margin and liquidity — not a forecast.
-              </p>
+            <CardHeader className="pb-2"><CardTitle className="text-base">In one paragraph</CardTitle></CardHeader>
+            <CardContent className="text-sm leading-relaxed text-muted-foreground">
+              {outlookNarrative({ revGrowthPct, netProfit, grossMarginPct, runwayMonths, currentRatio, arApDelta, netGstPayable })}
             </CardContent>
           </Card>
         </TabsContent>
