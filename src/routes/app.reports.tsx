@@ -644,6 +644,35 @@ function statusFor(v: number, goodAt: number, warnAt: number): "good" | "warn" |
   return "bad";
 }
 
+function MethodCard({ active, onClick, title, tagline, bullets, result, resultLabel }: {
+  active: boolean; onClick: () => void; title: string; tagline: string;
+  bullets: string[]; result: string; resultLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left rounded-lg border p-4 transition-all ${active ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "bg-card hover:bg-muted/40"}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-semibold flex items-center gap-2">{title}{active && <span className="inline-flex items-center gap-1 text-[10px] text-primary"><Check className="h-3 w-3" /> in use</span>}</div>
+          <div className="text-xs text-muted-foreground">{tagline}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{resultLabel}</div>
+          <div className="text-lg font-semibold tabular-nums">{result}</div>
+        </div>
+      </div>
+      <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+        {bullets.map((b, i) => (
+          <li key={i} className="flex gap-2 leading-relaxed"><span className="text-primary mt-1">•</span><span>{b}</span></li>
+        ))}
+      </ul>
+    </button>
+  );
+}
+
 function IntegrityBadge({ ok, okLabel, badLabel }: { ok: boolean; okLabel: string; badLabel: string }) {
   return (
     <span className={`inline-flex items-center gap-1.5 ${ok ? "text-primary" : "text-destructive"}`}>
