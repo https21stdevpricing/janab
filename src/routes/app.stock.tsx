@@ -13,6 +13,7 @@ import { exportToExcel } from "@/lib/excel";
 import { ArrowDownToLine, ArrowUpFromLine, Boxes, X, History } from "lucide-react";
 import { lookupDoc, type DocLookupResult } from "@/lib/doc-lookup";
 import { DocDetail } from "@/routes/app.lookup";
+import { CollapseFilters } from "@/components/collapse-filters";
 
 export const Route = createFileRoute("/app/stock")({ component: StockPage });
 
@@ -119,10 +120,16 @@ function StockPage() {
         <Tile label="Low-stock items" value={String(summary.lowCount)} tone={summary.lowCount > 0 ? "bad" : undefined} />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 mb-3">
-        <Input placeholder="Search code or name…" value={q} onChange={e => setQ(e.target.value)} className="max-w-xs" />
-        <Button variant={showLow ? "default" : "outline"} size="sm" onClick={() => setShowLow(v => !v)}>Only low-stock</Button>
-      </div>
+      <CollapseFilters
+        summary={`${filtered.length} of ${rows.length} SKUs`}
+        active={(q ? 1 : 0) + (showLow ? 1 : 0)}
+        onClear={() => { setQ(""); setShowLow(false); }}
+      >
+        <div className="flex flex-wrap items-center gap-2">
+          <Input placeholder="Search code or name…" value={q} onChange={e => setQ(e.target.value)} className="max-w-xs" />
+          <Button variant={showLow ? "default" : "outline"} size="sm" onClick={() => setShowLow(v => !v)}>Only low-stock</Button>
+        </div>
+      </CollapseFilters>
 
       {filtered.length === 0 ? <Empty>No products match.</Empty> : (
         <div className="rounded-md border bg-card overflow-x-auto">
