@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   ChevronLeft, ChevronRight, ShoppingCart, Truck, FileSpreadsheet,
   Search, BookOpen, Boxes, ArrowRight, Sparkles, Check, ArrowDown,
-  LineChart, Layers, Lightbulb, Play, Pause,
+  LineChart, Layers, Lightbulb, Play, Pause, RotateCcw,
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/guide")({ component: GuidePage });
