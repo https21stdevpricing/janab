@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
-  LayoutDashboard, Package, Users, ShoppingCart, Truck, Repeat,
-  Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Menu, Percent, UserCheck, UserCog, LineChart, Tags, Building2,
-  Home, ChevronDown, MoreHorizontal, FileSpreadsheet as FileSpreadsheetIcon,
+  Package, Users, ShoppingCart, Truck, Repeat,
+  Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Percent, UserCheck, UserCog, LineChart, Tags, Building2,
+  Home, ChevronDown, MoreHorizontal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { History, PackageCheck, FileSpreadsheet, Keyboard } from "lucide-react";
