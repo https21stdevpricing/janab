@@ -9,6 +9,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
+import { CollapseFilters } from "@/components/collapse-filters";
 import { inr, fmtDate } from "@/lib/format";
 import { Kbd } from "@/components/kbd";
 import { ArrowDownLeft, ArrowUpRight, FileSpreadsheet } from "lucide-react";
@@ -136,23 +137,31 @@ function BillsPage() {
         <Tile label="90+ d" value={inr(totals.b4)} tone="bad" />
       </div>
 
-      <section className="rounded-md border bg-card p-3 mb-3 space-y-3">
-        <Tabs value={tab} onValueChange={v => setTab(v as any)}>
-          <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="receivable" className="flex-1 sm:flex-none"><ArrowDownLeft className="h-3.5 w-3.5 mr-1" /> Receivable</TabsTrigger>
-            <TabsTrigger value="payable" className="flex-1 sm:flex-none"><ArrowUpRight className="h-3.5 w-3.5 mr-1" /> Payable</TabsTrigger>
-          </TabsList>
-          <Input placeholder="Search document or party…" className="lg:max-w-xs" value={q} onChange={e => setQ(e.target.value)} />
-          <div className="flex flex-wrap gap-1 lg:ml-auto text-xs">
-            {(["all", "0–30", "31–60", "61–90", "90+"] as const).map(b => (
-              <Button key={b} size="sm" variant={bucketFilter === b ? "default" : "outline"} onClick={() => setBucketFilter(b)}>{b}</Button>
-            ))}
-          </div>
-        </div>
+      <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="receivable" className="flex-1 sm:flex-none"><ArrowDownLeft className="h-3.5 w-3.5 mr-1" /> Receivable</TabsTrigger>
+          <TabsTrigger value="payable" className="flex-1 sm:flex-none"><ArrowUpRight className="h-3.5 w-3.5 mr-1" /> Payable</TabsTrigger>
+        </TabsList>
       </Tabs>
-      <p className="text-xs text-muted-foreground">{tab === "receivable" ? "Money buyers owe you from invoices and TP sales." : "Money you owe suppliers from purchases and TP purchase side."}</p>
-      </section>
+
+      <CollapseFilters
+        summary={`${filtered.length} of ${sideRows.length} ${tab}`}
+        active={(q ? 1 : 0) + (bucketFilter !== "all" ? 1 : 0)}
+        onClear={() => { setQ(""); setBucketFilter("all"); }}
+      >
+        <div className="space-y-3">
+          <Input placeholder="Search document or party…" value={q} onChange={e => setQ(e.target.value)} />
+          <div>
+            <div className="text-[10px] uppercase text-muted-foreground mb-1">Aging bucket</div>
+            <div className="flex flex-wrap gap-1">
+              {(["all", "0–30", "31–60", "61–90", "90+"] as const).map(b => (
+                <Button key={b} size="sm" variant={bucketFilter === b ? "default" : "outline"} onClick={() => setBucketFilter(b)}>{b}</Button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">{tab === "receivable" ? "Money buyers owe you from invoices and TP sales." : "Money you owe suppliers from purchases and TP purchase side."}</p>
+        </div>
+      </CollapseFilters>
 
       {filtered.length === 0 ? <Empty>No outstanding {tab === "receivable" ? "receivables" : "payables"}.</Empty> : (
         <>

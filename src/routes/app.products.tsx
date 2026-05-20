@@ -16,6 +16,7 @@ import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertT
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
+import { CollapseFilters } from "@/components/collapse-filters";
 
 export const Route = createFileRoute("/app/products")({ component: ProductsPage });
 
@@ -199,26 +200,30 @@ function ProductsPage() {
         <StatTile icon={AlertTriangle} label="Low stock alerts" value={String(summary.low)} tone={summary.low > 0 ? "bad" : "good"} sub={summary.low > 0 ? "Action needed" : "All SKUs above reorder level"} />
       </div>
 
-      {/* Filter bar */}
-      <section className="rounded-lg border bg-card p-3 mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Tabs value={tab} onValueChange={v => setTab(v as any)} className="w-full sm:w-auto">
-          <TabsList className="w-full sm:w-auto">
-            <TabsTrigger value="stocked" className="flex-1 sm:flex-none">
-              <Boxes className="h-3.5 w-3.5 mr-1" /> Stocked
-              <Badge variant="secondary" className="ml-1.5">{counts.stocked}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="order" className="flex-1 sm:flex-none">
-              <ClipboardList className="h-3.5 w-3.5 mr-1" /> On-order
-              <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <div className="relative flex-1 sm:max-w-sm">
+      {/* Kind tabs — primary selector kept visible */}
+      <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="stocked" className="flex-1 sm:flex-none">
+            <Boxes className="h-3.5 w-3.5 mr-1" /> Stocked
+            <Badge variant="secondary" className="ml-1.5">{counts.stocked}</Badge>
+          </TabsTrigger>
+          <TabsTrigger value="order" className="flex-1 sm:flex-none">
+            <ClipboardList className="h-3.5 w-3.5 mr-1" /> On-order
+            <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      <CollapseFilters
+        summary={`${filtered.length} shown`}
+        active={q ? 1 : 0}
+        onClear={() => setQ("")}
+      >
+        <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
           <Input placeholder="Search name, code, category or HSN…" className="pl-8" value={q} onChange={e => setQ(e.target.value)} />
         </div>
-        <div className="text-xs text-muted-foreground sm:ml-auto">{filtered.length} shown</div>
-      </section>
+      </CollapseFilters>
 
       {/* Context strip — short explanation of current tab */}
       <div className="text-xs text-muted-foreground mb-3 px-1">
