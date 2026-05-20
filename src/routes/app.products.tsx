@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
@@ -180,53 +180,52 @@ function ProductsPage() {
     <div>
       <PageHeader
         title="Products"
-        description="Stones / slabs / SKUs. Split between items you stock in your yard and items you sell on order."
+        description="Your catalog of stones, slabs and SKUs — both items you stock and items you sell on order."
         actions={
           <>
-          <ExcelBar onExport={onExport} onImport={onImport} />
-          <Button size="sm" variant="outline" onClick={() => startNew("stocked")} title="Add an item you keep in your yard">
-            <Boxes className="h-4 w-4" /> <span className="hidden sm:inline">Inventory</span>
-          </Button>
-          <Button size="sm" onClick={() => startNew("order_basis")} title="Add an item you sell only on order">
-            <ClipboardList className="h-4 w-4" /> <span className="hidden sm:inline">On-order</span>
-          </Button>
+            <ExcelBar onExport={onExport} onImport={onImport} />
+            <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
+              <Plus className="h-4 w-4" /> New product
+            </Button>
           </>
         }
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2 mb-3">
-        <Tile label="SKUs" value={String(summary.skus)} />
-        <Tile label="Units on hand" value={fmt(summary.onHand)} />
-        <Tile label="Inventory value (cost)" value={inr(summary.valueCost)} />
-        <Tile label="Inventory value (sale)" value={inr(summary.valueSale)} tone="good" />
-        <Tile label="Low stock" value={String(summary.low)} tone={summary.low > 0 ? "bad" : undefined} />
+      {/* Top summary — cleaner 4-up with icons */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
+        <StatTile icon={Package} label="Total SKUs" value={String(summary.skus)} sub={`${counts.stocked} stocked · ${counts.order} on-order`} />
+        <StatTile icon={Boxes} label="Units on hand" value={fmt(summary.onHand)} sub="Across all stocked items" />
+        <StatTile icon={Calculator} label="Inventory value (cost)" value={inr(summary.valueCost)} sub={`Sale value: ${inr(summary.valueSale)}`} />
+        <StatTile icon={AlertTriangle} label="Low stock alerts" value={String(summary.low)} tone={summary.low > 0 ? "bad" : "good"} sub={summary.low > 0 ? "Action needed" : "All SKUs above reorder level"} />
       </div>
 
-      <section className="rounded-md border bg-card p-3 mb-3 space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-sm font-semibold">Inventory control</h2>
-            <p className="text-xs text-muted-foreground">
-              {tab === "stocked"
-                ? "Stocked items affect inventory value, stock movement, and low-stock alerts."
-                : "On-order items are sold directly against orders and do not hold yard stock."}
-            </p>
-          </div>
-          <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
-            <Plus className="h-4 w-4" /> Add {tab === "order" ? "on-order item" : "inventory item"}
-          </Button>
-        </div>
-        <Tabs value={tab} onValueChange={v => setTab(v as any)}>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <TabsList className="w-full sm:w-auto">
-              <TabsTrigger value="stocked" className="flex-1 sm:flex-none"><Boxes className="h-3.5 w-3.5 mr-1" /> Stocked <Badge variant="secondary" className="ml-1.5">{counts.stocked}</Badge></TabsTrigger>
-              <TabsTrigger value="order" className="flex-1 sm:flex-none"><ClipboardList className="h-3.5 w-3.5 mr-1" /> On-order <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge></TabsTrigger>
-            </TabsList>
-            <Input placeholder="Search code, product, category or HSN…" className="sm:max-w-sm" value={q} onChange={e => setQ(e.target.value)} />
-            <div className="text-xs text-muted-foreground sm:ml-auto">{filtered.length} shown</div>
-          </div>
+      {/* Filter bar */}
+      <section className="rounded-lg border bg-card p-3 mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+        <Tabs value={tab} onValueChange={v => setTab(v as any)} className="w-full sm:w-auto">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="stocked" className="flex-1 sm:flex-none">
+              <Boxes className="h-3.5 w-3.5 mr-1" /> Stocked
+              <Badge variant="secondary" className="ml-1.5">{counts.stocked}</Badge>
+            </TabsTrigger>
+            <TabsTrigger value="order" className="flex-1 sm:flex-none">
+              <ClipboardList className="h-3.5 w-3.5 mr-1" /> On-order
+              <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge>
+            </TabsTrigger>
+          </TabsList>
         </Tabs>
+        <div className="relative flex-1 sm:max-w-sm">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input placeholder="Search name, code, category or HSN…" className="pl-8" value={q} onChange={e => setQ(e.target.value)} />
+        </div>
+        <div className="text-xs text-muted-foreground sm:ml-auto">{filtered.length} shown</div>
       </section>
+
+      {/* Context strip — short explanation of current tab */}
+      <div className="text-xs text-muted-foreground mb-3 px-1">
+        {tab === "stocked"
+          ? "Stocked items live in your yard. They affect inventory value, stock movement reports and low-stock alerts."
+          : "On-order items are billed directly from supplier to buyer (drop-ship). They do not hold any yard stock."}
+      </div>
 
       {filtered.length === 0 ? (
         <Empty>No products yet — add your first SKU.</Empty>
@@ -402,11 +401,19 @@ function Field({ label, children, wide }: { label: string; children: React.React
   );
 }
 
-function Tile({ label, value, tone }: { label: string; value: string; tone?: "good" | "bad" }) {
+function StatTile({ icon: Icon, label, value, sub, tone }: { icon: any; label: string; value: string; sub?: string; tone?: "good" | "bad" }) {
+  const valueTone = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "";
+  const iconTone = tone === "bad" ? "text-destructive bg-destructive/10" : tone === "good" ? "text-primary bg-primary/10" : "text-muted-foreground bg-muted";
   return (
-    <div className="rounded-md border bg-card p-3">
-      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
-      <div className={`text-base font-semibold tabular-nums ${tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : ""}`}>{value}</div>
+    <div className="rounded-lg border bg-card p-3 flex gap-3 items-start">
+      <div className={`h-8 w-8 rounded-md grid place-items-center shrink-0 ${iconTone}`}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className={`text-lg font-semibold tabular-nums leading-tight ${valueTone}`}>{value}</div>
+        {sub && <div className="text-[11px] text-muted-foreground truncate mt-0.5">{sub}</div>}
+      </div>
     </div>
   );
 }
