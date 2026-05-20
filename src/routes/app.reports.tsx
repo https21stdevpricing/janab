@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { inr, fmt } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert, Layers, Calculator, Check } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/reports")({ component: ReportsPage });
@@ -61,6 +60,8 @@ function ReportsPage() {
     }
 
     let closingQty = 0, closingValue = 0, openingValue = 0, purchasesValue = 0;
+    let altClosingValue = 0; // value under the OTHER method, for side-by-side comparison
+    const perSku: { id: string; name: string; onHand: number; unitVal: number; value: number; altUnitVal: number; altValue: number; nrvFloor: boolean }[] = [];
     for (const pr of products) {
       if (pr.kind && pr.kind !== "stocked") continue;
       const opQty = Number(pr.opening_stock ?? 0);
@@ -68,12 +69,12 @@ function ReportsPage() {
       const sold = soldByP[pr.id] ?? 0;
       const onHand = Math.max(0, opQty + pur.qty - sold);
 
-      let unitVal: number;
-      if (cogsMethod === "fifo") {
-        // FIFO: oldest goes out first → newest lots remain as closing stock.
+      // FIFO unit cost — newest lots remain as closing stock
+      let fifoUnit = 0;
+      {
         let remaining = onHand;
         let value = 0;
-        const lots = (lotsByP[pr.id] ?? []).slice().sort((a, b) => (a.date < b.date ? 1 : -1)); // newest first
+        const lots = (lotsByP[pr.id] ?? []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
         const openingLot = { qty: opQty, rate: Number(pr.purchase_rate ?? 0) };
         for (const l of [...lots, openingLot]) {
           if (remaining <= 0) break;
@@ -81,22 +82,28 @@ function ReportsPage() {
           value += take * l.rate;
           remaining -= take;
         }
-        const unit = onHand > 0 ? value / onHand : 0;
-        const nrv = Number(pr.sale_rate ?? 0) || unit;
-        unitVal = Math.min(unit, nrv);
-      } else {
-        const avgCost = (opQty + pur.qty) > 0
-          ? (opQty * Number(pr.purchase_rate ?? 0) + pur.val) / (opQty + pur.qty)
-          : Number(pr.purchase_rate ?? 0);
-        const nrv = Number(pr.sale_rate ?? 0) || avgCost;
-        unitVal = Math.min(avgCost, nrv);
+        fifoUnit = onHand > 0 ? value / onHand : 0;
       }
+      // Weighted average unit cost
+      const avgUnit = (opQty + pur.qty) > 0
+        ? (opQty * Number(pr.purchase_rate ?? 0) + pur.val) / (opQty + pur.qty)
+        : Number(pr.purchase_rate ?? 0);
+      const nrv = Number(pr.sale_rate ?? 0);
+      const applyNRV = (cost: number) => (nrv > 0 ? Math.min(cost, nrv) : cost);
+      const fifoFinal = applyNRV(fifoUnit);
+      const avgFinal = applyNRV(avgUnit);
+      const unitVal = cogsMethod === "fifo" ? fifoFinal : avgFinal;
+      const altUnitVal = cogsMethod === "fifo" ? avgFinal : fifoFinal;
+      const nrvFloor = nrv > 0 && (cogsMethod === "fifo" ? fifoUnit > nrv : avgUnit > nrv);
       closingQty += onHand;
       closingValue += onHand * unitVal;
+      altClosingValue += onHand * altUnitVal;
       openingValue += opQty * Number(pr.purchase_rate ?? 0);
       purchasesValue += pur.val;
+      if (onHand > 0) perSku.push({ id: pr.id, name: pr.name, onHand, unitVal, value: onHand * unitVal, altUnitVal, altValue: onHand * altUnitVal, nrvFloor });
     }
-    return { closingQty, closingValue, openingValue, purchasesValue };
+    perSku.sort((a, b) => b.value - a.value);
+    return { closingQty, closingValue, openingValue, purchasesValue, altClosingValue, perSku };
   }, [products, saleItems, purchaseItems, purchaseHdr, cogsMethod]);
 
   const sums = useMemo(() => {
@@ -213,28 +220,12 @@ function ReportsPage() {
     <>
       <PageHeader title="Financial Reports" description="Auto-built from your ledger. Every figure is traceable to a journal entry." />
 
-      {/* Trust strip — show data integrity at a glance */}
-      <div className="mb-4 rounded-lg border bg-card overflow-hidden">
-        <div className="flex flex-wrap gap-3 p-3 items-center justify-between border-b">
-          <div className="flex flex-wrap items-center gap-4 text-xs">
-            <IntegrityBadge ok={tbBalanced} okLabel="Trial balance matches" badLabel="Trial balance OFF" />
-            <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet balances (A = L + E)" badLabel="Balance sheet drift" />
-            <span className="text-muted-foreground">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Inventory method:</span>
-            <Select value={cogsMethod} onValueChange={(v) => saveCogsMethod(v as any)}>
-              <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="weighted_average">Weighted Average</SelectItem>
-                <SelectItem value="fifo">FIFO</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="px-3 py-2 text-[11px] text-muted-foreground bg-muted/30">
-          Closing stock is valued at the lower of cost or net realisable value (AS 2). Changing the method instantly recomputes COGS and Gross Profit.
-        </div>
+      {/* Trust strip — integrity at a glance, no jargon */}
+      <div className="mb-4 rounded-lg border bg-card p-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+        <IntegrityBadge ok={tbBalanced} okLabel="Books are balanced" badLabel="Books not balanced" />
+        <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet ties out" badLabel="Balance sheet drift" />
+        <span className="text-muted-foreground">Method in use: <span className="font-medium text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span> · change it in the Inventory tab</span>
+        <span className="ml-auto text-muted-foreground">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
       </div>
 
       <Tabs defaultValue="outlook">
@@ -243,6 +234,7 @@ function ReportsPage() {
           <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
           <TabsTrigger value="bs">Balance Sheet</TabsTrigger>
           <TabsTrigger value="wc">Working Capital</TabsTrigger>
+          <TabsTrigger value="inv">Inventory Valuation</TabsTrigger>
           <TabsTrigger value="tb">Trial Balance</TabsTrigger>
         </TabsList>
 
@@ -430,6 +422,119 @@ function ReportsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="inv" className="space-y-4">
+          {/* Plain-English intro */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base"><Layers className="h-4 w-4" /> How should your unsold stock be valued?</CardTitle>
+              <div className="text-xs text-muted-foreground">Pick the method that fits how stone moves through your yard. Reports recompute instantly.</div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-3">
+                <MethodCard
+                  active={cogsMethod === "weighted_average"}
+                  onClick={() => saveCogsMethod("weighted_average")}
+                  title="Weighted Average"
+                  tagline="Simple, smooths price swings"
+                  bullets={[
+                    "Every unit is valued at the average cost of all purchases so far.",
+                    "Best when stones of one SKU are mixed in the yard and you can't tell which lot was sold.",
+                    "Margins look stable even when supplier rates fluctuate week to week.",
+                  ]}
+                  result={inr(cogsMethod === "weighted_average" ? inventory.closingValue : inventory.altClosingValue)}
+                  resultLabel="Closing stock value"
+                />
+                <MethodCard
+                  active={cogsMethod === "fifo"}
+                  onClick={() => saveCogsMethod("fifo")}
+                  title="FIFO (First In, First Out)"
+                  tagline="Oldest slabs leave first"
+                  bullets={[
+                    "Assumes the slabs you bought first are the ones you sold first.",
+                    "Best when stock is rotated (older lots dispatched before newer ones).",
+                    "Closing stock reflects the most recent purchase prices — closer to today's market.",
+                  ]}
+                  result={inr(cogsMethod === "fifo" ? inventory.closingValue : inventory.altClosingValue)}
+                  resultLabel="Closing stock value"
+                />
+              </div>
+              <div className="mt-3 text-[11px] text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+                <span className="font-medium text-foreground">AS 2 rule:</span> closing stock is always valued at the <span className="font-medium">lower of cost or net realisable value</span>. If a SKU's sale rate drops below its cost, we automatically write it down so your profit isn't overstated.
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Side-by-side comparison */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base"><Calculator className="h-4 w-4" /> Method comparison</CardTitle>
+              <div className="text-xs text-muted-foreground">Same stock, different valuation lens. Bigger gap = more sensitive to which method you choose.</div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <Kpi label="Units on hand" value={fmt(inventory.closingQty, 2)} hint="Total stocked-item units across all SKUs." />
+                <Kpi label={`Closing — ${cogsMethod === "fifo" ? "FIFO" : "Weighted Avg"} (in use)`} value={inr(inventory.closingValue)} tone="good" hint="What your books currently use." />
+                <Kpi label={`Closing — ${cogsMethod === "fifo" ? "Weighted Avg" : "FIFO"} (alt)`} value={inr(inventory.altClosingValue)} hint="What the other method would show." />
+              </div>
+              <div className="text-xs text-muted-foreground mt-3">
+                Difference: <span className="font-medium text-foreground tabular-nums">{inr(Math.abs(inventory.closingValue - inventory.altClosingValue))}</span>
+                {" — "}
+                {Math.abs(inventory.closingValue - inventory.altClosingValue) < 1
+                  ? "Both methods give the same number; choose whichever is easier to explain."
+                  : inventory.closingValue > inventory.altClosingValue
+                    ? "The method in use values stock higher → reports a higher gross profit this period."
+                    : "The method in use values stock lower → reports a lower (more conservative) gross profit."}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Per-SKU breakdown */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Per-SKU valuation</CardTitle>
+              <div className="text-xs text-muted-foreground">Every stocked item, valued at its unit cost (after the NRV floor). Sorted by value.</div>
+            </CardHeader>
+            <CardContent className="p-0 overflow-x-auto">
+              {inventory.perSku.length === 0 ? (
+                <div className="p-4 text-sm text-muted-foreground">No stock on hand yet. Add purchases or opening stock to see valuation.</div>
+              ) : (
+                <table className="w-full text-sm min-w-[640px]">
+                  <thead className="bg-muted/50 text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="text-left p-2">Product</th>
+                      <th className="text-right p-2">On hand</th>
+                      <th className="text-right p-2">Unit cost</th>
+                      <th className="text-right p-2">Value</th>
+                      <th className="text-right p-2">Alt method</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inventory.perSku.map((r) => (
+                      <tr key={r.id} className="border-t">
+                        <td className="p-2">
+                          {r.name}
+                          {r.nrvFloor && <span className="ml-2 text-[10px] text-amber-600 dark:text-amber-400">NRV write-down applied</span>}
+                        </td>
+                        <td className="p-2 text-right tabular-nums">{fmt(r.onHand, 2)}</td>
+                        <td className="p-2 text-right tabular-nums">{inr(r.unitVal)}</td>
+                        <td className="p-2 text-right tabular-nums font-medium">{inr(r.value)}</td>
+                        <td className="p-2 text-right tabular-nums text-muted-foreground">{inr(r.altValue)}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t bg-muted/30 font-semibold">
+                      <td className="p-2">Total</td>
+                      <td className="p-2 text-right tabular-nums">{fmt(inventory.closingQty, 2)}</td>
+                      <td className="p-2"></td>
+                      <td className="p-2 text-right tabular-nums">{inr(inventory.closingValue)}</td>
+                      <td className="p-2 text-right tabular-nums text-muted-foreground">{inr(inventory.altClosingValue)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="tb">
           <Card><CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-sm min-w-[520px]">
@@ -537,6 +642,35 @@ function statusFor(v: number, goodAt: number, warnAt: number): "good" | "warn" |
   if (v >= goodAt) return "good";
   if (v >= warnAt) return "warn";
   return "bad";
+}
+
+function MethodCard({ active, onClick, title, tagline, bullets, result, resultLabel }: {
+  active: boolean; onClick: () => void; title: string; tagline: string;
+  bullets: string[]; result: string; resultLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`text-left rounded-lg border p-4 transition-all ${active ? "border-primary bg-primary/5 ring-1 ring-primary/40" : "bg-card hover:bg-muted/40"}`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-semibold flex items-center gap-2">{title}{active && <span className="inline-flex items-center gap-1 text-[10px] text-primary"><Check className="h-3 w-3" /> in use</span>}</div>
+          <div className="text-xs text-muted-foreground">{tagline}</div>
+        </div>
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{resultLabel}</div>
+          <div className="text-lg font-semibold tabular-nums">{result}</div>
+        </div>
+      </div>
+      <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
+        {bullets.map((b, i) => (
+          <li key={i} className="flex gap-2 leading-relaxed"><span className="text-primary mt-1">•</span><span>{b}</span></li>
+        ))}
+      </ul>
+    </button>
+  );
 }
 
 function IntegrityBadge({ ok, okLabel, badLabel }: { ok: boolean; okLabel: string; badLabel: string }) {

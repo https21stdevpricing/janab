@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  ChevronLeft, ChevronRight, ShoppingCart, Truck, Wallet, FileSpreadsheet,
+  ChevronLeft, ChevronRight, ShoppingCart, Truck, FileSpreadsheet,
   Search, BookOpen, Boxes, ArrowRight, Sparkles, Check, ArrowDown,
+  LineChart, Layers, Lightbulb, Play, Pause,
 } from "lucide-react";
 
 export const Route = createFileRoute("/app/guide")({ component: GuidePage });
@@ -256,29 +257,148 @@ function MockHome() {
   );
 }
 
+function MockReports() {
+  const bars = [38, 52, 47, 61, 58, 73, 80];
+  return (
+    <div className="relative aspect-[16/10] rounded-xl bg-gradient-to-br from-muted/40 to-muted/10 border border-border/60 overflow-hidden p-4">
+      <div className="flex items-center justify-between">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Revenue · last 7 weeks</div>
+        <div className="text-[10px] inline-flex items-center gap-1 text-emerald-600"><LineChart className="h-3 w-3" /> +18%</div>
+      </div>
+      <div className="mt-3 flex items-end gap-1.5 h-20">
+        {bars.map((h, i) => (
+          <div key={i} className="flex-1 rounded-t-sm bg-primary/80" style={{ height: `${h}%`, animation: `riseBar 700ms ${i * 80}ms ease-out backwards` }} />
+        ))}
+      </div>
+      <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
+        <div className="rounded-md border border-border/60 bg-background p-1.5"><div className="text-muted-foreground">Gross margin</div><div className="font-semibold tabular-nums">26.4%</div></div>
+        <div className="rounded-md border border-border/60 bg-background p-1.5"><div className="text-muted-foreground">Cash runway</div><div className="font-semibold tabular-nums">5.2 mo</div></div>
+        <div className="rounded-md border border-border/60 bg-background p-1.5"><div className="text-muted-foreground">Current ratio</div><div className="font-semibold tabular-nums">1.84</div></div>
+      </div>
+      <style>{`@keyframes riseBar { from { height: 0%; } }`}</style>
+    </div>
+  );
+}
+
+function MockValuation() {
+  return (
+    <div className="relative aspect-[16/10] rounded-xl bg-gradient-to-br from-muted/40 to-muted/10 border border-border/60 overflow-hidden p-4">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Same stock, two valuation lenses</div>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        {[
+          { name: "Weighted Average", val: "₹4,82,000", tag: "Smooth" },
+          { name: "FIFO", val: "₹5,14,200", tag: "Market-fresh" },
+        ].map((m, i) => (
+          <div
+            key={m.name}
+            className="rounded-md border border-border/60 bg-background p-2.5 animate-in fade-in slide-in-from-bottom-2"
+            style={{ animationDelay: `${i * 250}ms`, animationDuration: "500ms", animationFillMode: "both" }}
+          >
+            <div className="text-[10px] text-muted-foreground">{m.tag}</div>
+            <div className="text-sm font-semibold">{m.name}</div>
+            <div className="mt-1 text-lg font-semibold tabular-nums text-primary">{m.val}</div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 text-[10px] text-muted-foreground bg-muted/60 rounded px-2 py-1.5 inline-flex items-center gap-1.5">
+        <Layers className="h-3 w-3" /> AS 2: always the <span className="font-semibold text-foreground">lower of cost or market</span>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- Slide deck ---------------- */
 
 type Slide = {
   title: string;
   body: string;
+  bullets?: string[];
+  why?: string;
+  tip?: string;
   visual: React.ReactNode;
   cta?: { label: string; to: string };
 };
 
 const slides: Slide[] = [
-  { title: "Welcome", body: "Most billing apps make accounting feel scary. StoneWorld doesn't. Every screen is built so a non-accountant can run the books with confidence.", visual: <MockHome /> },
-  { title: "Save a sale", body: "Pick a buyer, add line items, hit Save. Stock decreases, a delivery challan is created, the ledger posts, GST is computed, and the bill appears under receivables — all from one tap.", visual: <MockSale />, cta: { label: "Open Sales", to: "/app/sales" } },
-  { title: "Everything stays in sync", body: "You never touch the books directly. Behind every save we post a balanced journal so your reports are always trustworthy.", visual: <MockFlow /> },
-  { title: "Track every delivery", body: "Each sale auto-creates a challan with vehicle, driver and status. Move it from Pending → Dispatched → Delivered with one tap.", visual: <MockDelivery />, cta: { label: "Open Deliveries", to: "/app/deliveries" } },
-  { title: "Get paid faster", body: "Receive money against one or many bills. We FIFO-allocate to the oldest dues, update aging buckets, and post the receipt to the ledger.", visual: <MockPayment />, cta: { label: "Open Payments", to: "/app/payments" } },
-  { title: "See who owes you", body: "Bills are bucketed by age. Chase the 60+ day reds first. Tap a row to preview, settle, or print.", visual: <MockBills />, cta: { label: "Open Bills", to: "/app/bills" } },
-  { title: "Find anything fast", body: "Press / from anywhere. Live results across invoices, POs, parties and products. No more digging.", visual: <MockSearch />, cta: { label: "Try Lookup", to: "/app/lookup" } },
-  { title: "Books that balance", body: "Every transaction writes a debit-equals-credit journal automatically. Open the ledger and the numbers will always tie.", visual: <MockLedger />, cta: { label: "Open Ledger", to: "/app/ledger" } },
-  { title: "Live stock", body: "On-hand updates the instant you save. See every movement, in and out, per product.", visual: <MockStock />, cta: { label: "Open Stock", to: "/app/stock" } },
+  {
+    title: "Welcome",
+    body: "Most billing apps make accounting feel scary. StoneWorld doesn't. Every screen is built so a non-accountant can run the books with confidence.",
+    bullets: ["Designed for stone traders, not CAs", "Bookkeeping happens silently in the background", "Reports you can actually act on"],
+    tip: "Use ← → arrow keys, or press the Play button to auto-advance.",
+    visual: <MockHome />,
+  },
+  {
+    title: "Save a sale",
+    body: "Pick a buyer, add line items, hit Save. One tap creates the bill, drops stock, posts the journal, computes GST and prepares a delivery challan.",
+    bullets: ["Smart suggestions for buyer, rate and HSN", "Slab → sqft calculator built in", "GST split into CGST/SGST/IGST automatically"],
+    why: "You don't have to remember six screens — saving the sale takes care of all of them.",
+    visual: <MockSale />, cta: { label: "Open Sales", to: "/app/sales" },
+  },
+  {
+    title: "Everything stays in sync",
+    body: "You never touch the books directly. Behind every save we post a balanced journal so your reports are always trustworthy.",
+    bullets: ["Stock, Ledger, Bills and Deliveries update from one event", "Edit or delete the source → downstream entries clean up", "Trial balance and Balance Sheet always tie out"],
+    why: "No more 'fixing the books at month-end'. There's nothing to fix.",
+    visual: <MockFlow />,
+  },
+  {
+    title: "Track every delivery",
+    body: "Each sale auto-creates a challan with vehicle, driver and status. Move it from Pending → Dispatched → Delivered with one tap.",
+    bullets: ["Status changes timestamp themselves for audit", "Third-party drop-ship deliveries flagged separately", "Print a PDF challan in one click"],
+    visual: <MockDelivery />, cta: { label: "Open Deliveries", to: "/app/deliveries" },
+  },
+  {
+    title: "Get paid faster",
+    body: "Receive money against one or many bills. We FIFO-allocate to the oldest dues, update aging buckets, and post the receipt to the ledger.",
+    bullets: ["One receipt can settle many invoices", "Advance payments park as 'on account'", "Bank vs cash receipts tracked separately"],
+    why: "Cash on hand stops being a guess. You see exactly who paid, when and against what.",
+    visual: <MockPayment />, cta: { label: "Open Payments", to: "/app/payments" },
+  },
+  {
+    title: "See who owes you",
+    body: "Bills are bucketed by age. Chase the 60+ day reds first. Tap a row to preview, settle, or print.",
+    bullets: ["Color-coded aging: 0-30 / 31-60 / 61-90 / 90+", "Filter by buyer or branch", "Send reminder PDFs straight from the row"],
+    tip: "Sort by 'Most overdue' once a week — your cash flow will thank you.",
+    visual: <MockBills />, cta: { label: "Open Bills", to: "/app/bills" },
+  },
+  {
+    title: "Find anything fast",
+    body: "Press / from anywhere. Live results across invoices, POs, parties and products. No more digging.",
+    bullets: ["Searches doc numbers, party names and products together", "Keyboard-first: ↑ ↓ to move, ↵ to open", "Recent items pinned for one-tap return"],
+    visual: <MockSearch />, cta: { label: "Try Lookup", to: "/app/lookup" },
+  },
+  {
+    title: "Books that balance",
+    body: "Every transaction writes a debit-equals-credit journal automatically. Open the ledger and the numbers will always tie.",
+    bullets: ["Auto-posted entries for sales, purchases, payments, GST", "Drill from any report figure down to the source bill", "Full audit trail with timestamps"],
+    why: "When your CA asks 'where did this number come from?', the answer is one click away.",
+    visual: <MockLedger />, cta: { label: "Open Ledger", to: "/app/ledger" },
+  },
+  {
+    title: "Live stock",
+    body: "On-hand updates the instant you save. See every movement, in and out, per product.",
+    bullets: ["Reorder alerts when stock dips below your minimum", "Per-SKU history of every in/out movement", "Separate yard stock vs on-order items"],
+    visual: <MockStock />, cta: { label: "Open Stock", to: "/app/stock" },
+  },
+  {
+    title: "Value stock the right way",
+    body: "Choose FIFO or Weighted Average from a plain-English picker. We always apply the AS 2 'lower of cost or market' rule so profit isn't overstated.",
+    bullets: ["Side-by-side comparison: see what each method would say", "Per-SKU breakdown with NRV write-down flags", "Switch methods anytime — every report recomputes instantly"],
+    why: "Stop guessing what your unsold stock is worth. The number you see is the number your CA will sign off on.",
+    visual: <MockValuation />, cta: { label: "Open Reports", to: "/app/reports" },
+  },
+  {
+    title: "Reports that tell the story",
+    body: "P&L, Balance Sheet, Working Capital and a plain-English Overview — all built live from your ledger. No exports, no spreadsheets.",
+    bullets: ["Trust badges show whether books are balanced before you read a number", "Health meters explain each ratio in one sentence", "'What to do next' ranks suggestions by impact on cash and profit"],
+    why: "You don't need an accounting degree to know whether the business is healthy this month.",
+    visual: <MockReports />, cta: { label: "Open Reports", to: "/app/reports" },
+  },
 ];
 
 function GuidePage() {
   const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(false);
   const navigate = useNavigate();
   const s = slides[i];
   const prev = () => setI((v) => Math.max(0, v - 1));
@@ -288,24 +408,36 @@ function GuidePage() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") next();
       if (e.key === "ArrowLeft") prev();
+      if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  useEffect(() => {
+    if (!playing) return;
+    if (i >= slides.length - 1) { setPlaying(false); return; }
+    const t = setTimeout(() => setI((v) => v + 1), 5500);
+    return () => clearTimeout(t);
+  }, [playing, i]);
+
   return (
     <div className="max-w-3xl mx-auto">
-      {/* Progress */}
+      {/* Progress + auto-play */}
       <div className="flex items-center gap-2 mb-6">
         <span className="text-[11px] text-muted-foreground tabular-nums">{String(i + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span>
         <div className="flex-1 h-0.5 bg-muted rounded-full overflow-hidden">
           <div className="h-full bg-primary transition-all duration-500" style={{ width: `${((i + 1) / slides.length) * 100}%` }} />
         </div>
+        <Button variant="ghost" size="sm" className="rounded-full h-7 px-2" onClick={() => setPlaying((p) => !p)}>
+          {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+          <span className="text-[11px] ml-1">{playing ? "Pause" : "Auto-play"}</span>
+        </Button>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-center">
+      <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-start">
         {/* Visual */}
-        <div key={`v-${i}`} className="animate-in fade-in zoom-in-95 duration-300 order-1 md:order-2">
+        <div key={`v-${i}`} className="animate-in fade-in zoom-in-95 duration-300 order-1 md:order-2 md:sticky md:top-4">
           {s.visual}
         </div>
         {/* Copy */}
@@ -313,6 +445,28 @@ function GuidePage() {
           <div className="text-[10px] uppercase tracking-[0.12em] text-primary mb-3">Step {i + 1}</div>
           <h1 className="text-3xl md:text-4xl font-semibold tracking-tight leading-[1.05]">{s.title}</h1>
           <p className="text-[15px] text-muted-foreground mt-4 leading-relaxed">{s.body}</p>
+          {s.bullets && (
+            <ul className="mt-4 space-y-1.5">
+              {s.bullets.map((b, idx) => (
+                <li key={idx} className="flex gap-2 text-sm text-foreground/90">
+                  <Check className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                  <span>{b}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {s.why && (
+            <div className="mt-4 rounded-lg border bg-muted/40 p-3 text-xs leading-relaxed">
+              <div className="font-medium text-foreground mb-0.5">Why it matters</div>
+              <div className="text-muted-foreground">{s.why}</div>
+            </div>
+          )}
+          {s.tip && (
+            <div className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
+              <Lightbulb className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+              <span>{s.tip}</span>
+            </div>
+          )}
           {s.cta && (
             <Button size="sm" variant="secondary" className="mt-5 rounded-full" onClick={() => navigate({ to: s.cta!.to as any })}>
               {s.cta.label} <ArrowRight className="h-3.5 w-3.5" />
@@ -326,7 +480,7 @@ function GuidePage() {
         <Button variant="ghost" size="sm" onClick={prev} disabled={i === 0} className="rounded-full">
           <ChevronLeft className="h-4 w-4" /> Back
         </Button>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 flex-wrap justify-center max-w-[60%]">
           {slides.map((_, idx) => (
             <button
               key={idx}
@@ -350,9 +504,8 @@ function GuidePage() {
         )}
       </div>
 
-      {/* Subtle hint */}
       <div className="mt-10 text-center text-[11px] text-muted-foreground inline-flex items-center gap-1.5 justify-center w-full">
-        <ArrowDown className="h-3 w-3" /> You can revisit this guide anytime from More → Tools → Quick guide
+        <ArrowDown className="h-3 w-3" /> Revisit anytime from More → Tools → Quick guide
       </div>
     </div>
   );
