@@ -140,5 +140,16 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Segoe UI", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: "ss01", "cv11";
+    letter-spacing: -0.011em;
   }
+  h1, h2, h3, h4 { letter-spacing: -0.022em; }
+}
+
+/* Mobile bottom tab safe-area padding */
+@layer utilities {
+  .pb-safe-tabs { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
 }
