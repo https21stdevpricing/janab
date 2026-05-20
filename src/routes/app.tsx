@@ -3,9 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
-  Home, ShoppingCart, Wallet, MoreHorizontal, Search, LogOut, Menu, Keyboard,
+  Home, ShoppingCart, Wallet, MoreHorizontal, Search, LogOut, Keyboard,
   Package, Tags, Users, UserCheck, UserCog, Truck, Repeat, FileText, PackageCheck,
   FileSpreadsheet, Receipt, Boxes, Building2, BookOpen, BarChart3, LineChart, Percent,
   Printer, History, BookOpenCheck, Settings, X, ChevronRight,
