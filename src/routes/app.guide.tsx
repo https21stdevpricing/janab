@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -162,7 +162,7 @@ type Slide = {
   kicker: string;
   title: string;
   body: string;
-  demo?: () => JSX.Element;
+  demo?: () => ReactElement;
   tip?: string;
   cta?: { label: string; to: string };
 };
