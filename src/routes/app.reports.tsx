@@ -221,22 +221,30 @@ function ReportsPage() {
       <PageHeader title="Financial Reports" description="Auto-built from your ledger. Every figure is traceable to a journal entry." />
 
       {/* Trust strip — integrity at a glance, no jargon */}
-      <div className="mb-4 rounded-lg border bg-card p-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-        <IntegrityBadge ok={tbBalanced} okLabel="Books are balanced" badLabel="Books not balanced" />
-        <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet ties out" badLabel="Balance sheet drift" />
-        <span className="text-muted-foreground">Method in use: <span className="font-medium text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span> · change it in the Inventory tab</span>
-        <span className="ml-auto text-muted-foreground">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
+      <div className="mb-4 rounded-xl border border-border/70 bg-card p-3 sm:p-4 space-y-2 text-xs">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <IntegrityBadge ok={tbBalanced} okLabel="Books are balanced" badLabel="Books not balanced" />
+          <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet ties out" badLabel="Balance sheet drift" />
+        </div>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
+          <span>Method: <span className="font-medium text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span></span>
+          <span className="hidden sm:inline">·</span>
+          <span>Change in Inventory tab</span>
+          <span className="sm:ml-auto">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
+        </div>
       </div>
 
       <Tabs defaultValue="outlook">
-        <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="outlook">Overview</TabsTrigger>
-          <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
-          <TabsTrigger value="bs">Balance Sheet</TabsTrigger>
-          <TabsTrigger value="wc">Working Capital</TabsTrigger>
-          <TabsTrigger value="inv">Inventory Valuation</TabsTrigger>
-          <TabsTrigger value="tb">Trial Balance</TabsTrigger>
-        </TabsList>
+        <div className="-mx-1 px-1 mb-3">
+          <TabsList className="scroll-tabs w-full justify-start gap-0 bg-muted p-1 rounded-lg">
+            <TabsTrigger value="outlook">Overview</TabsTrigger>
+            <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
+            <TabsTrigger value="bs">Balance Sheet</TabsTrigger>
+            <TabsTrigger value="wc">Working Capital</TabsTrigger>
+            <TabsTrigger value="inv">Inventory Valuation</TabsTrigger>
+            <TabsTrigger value="tb">Trial Balance</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="outlook" className="space-y-4">
           {/* Headline card — single source of truth */}
