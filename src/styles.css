@@ -152,4 +152,16 @@
 /* Mobile bottom tab safe-area padding */
 @layer utilities {
   .pb-safe-tabs { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  /* Horizontally scrollable tab strip — used to prevent wrap on small screens */
+  .scroll-tabs {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .scroll-tabs::-webkit-scrollbar { display: none; }
+  .scroll-tabs > * { flex: 0 0 auto; white-space: nowrap; }
 }
