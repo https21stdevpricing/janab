@@ -6,8 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { inr, fmt } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert, Layers, Calculator, Check } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/reports")({ component: ReportsPage });
@@ -61,6 +60,8 @@ function ReportsPage() {
     }
 
     let closingQty = 0, closingValue = 0, openingValue = 0, purchasesValue = 0;
+    let altClosingValue = 0; // value under the OTHER method, for side-by-side comparison
+    const perSku: { id: string; name: string; onHand: number; unitVal: number; value: number; altUnitVal: number; altValue: number; nrvFloor: boolean }[] = [];
     for (const pr of products) {
       if (pr.kind && pr.kind !== "stocked") continue;
       const opQty = Number(pr.opening_stock ?? 0);
@@ -68,12 +69,12 @@ function ReportsPage() {
       const sold = soldByP[pr.id] ?? 0;
       const onHand = Math.max(0, opQty + pur.qty - sold);
 
-      let unitVal: number;
-      if (cogsMethod === "fifo") {
-        // FIFO: oldest goes out first → newest lots remain as closing stock.
+      // FIFO unit cost — newest lots remain as closing stock
+      let fifoUnit = 0;
+      {
         let remaining = onHand;
         let value = 0;
-        const lots = (lotsByP[pr.id] ?? []).slice().sort((a, b) => (a.date < b.date ? 1 : -1)); // newest first
+        const lots = (lotsByP[pr.id] ?? []).slice().sort((a, b) => (a.date < b.date ? 1 : -1));
         const openingLot = { qty: opQty, rate: Number(pr.purchase_rate ?? 0) };
         for (const l of [...lots, openingLot]) {
           if (remaining <= 0) break;
@@ -81,22 +82,28 @@ function ReportsPage() {
           value += take * l.rate;
           remaining -= take;
         }
-        const unit = onHand > 0 ? value / onHand : 0;
-        const nrv = Number(pr.sale_rate ?? 0) || unit;
-        unitVal = Math.min(unit, nrv);
-      } else {
-        const avgCost = (opQty + pur.qty) > 0
-          ? (opQty * Number(pr.purchase_rate ?? 0) + pur.val) / (opQty + pur.qty)
-          : Number(pr.purchase_rate ?? 0);
-        const nrv = Number(pr.sale_rate ?? 0) || avgCost;
-        unitVal = Math.min(avgCost, nrv);
+        fifoUnit = onHand > 0 ? value / onHand : 0;
       }
+      // Weighted average unit cost
+      const avgUnit = (opQty + pur.qty) > 0
+        ? (opQty * Number(pr.purchase_rate ?? 0) + pur.val) / (opQty + pur.qty)
+        : Number(pr.purchase_rate ?? 0);
+      const nrv = Number(pr.sale_rate ?? 0);
+      const applyNRV = (cost: number) => (nrv > 0 ? Math.min(cost, nrv) : cost);
+      const fifoFinal = applyNRV(fifoUnit);
+      const avgFinal = applyNRV(avgUnit);
+      const unitVal = cogsMethod === "fifo" ? fifoFinal : avgFinal;
+      const altUnitVal = cogsMethod === "fifo" ? avgFinal : fifoFinal;
+      const nrvFloor = nrv > 0 && (cogsMethod === "fifo" ? fifoUnit > nrv : avgUnit > nrv);
       closingQty += onHand;
       closingValue += onHand * unitVal;
+      altClosingValue += onHand * altUnitVal;
       openingValue += opQty * Number(pr.purchase_rate ?? 0);
       purchasesValue += pur.val;
+      if (onHand > 0) perSku.push({ id: pr.id, name: pr.name, onHand, unitVal, value: onHand * unitVal, altUnitVal, altValue: onHand * altUnitVal, nrvFloor });
     }
-    return { closingQty, closingValue, openingValue, purchasesValue };
+    perSku.sort((a, b) => b.value - a.value);
+    return { closingQty, closingValue, openingValue, purchasesValue, altClosingValue, perSku };
   }, [products, saleItems, purchaseItems, purchaseHdr, cogsMethod]);
 
   const sums = useMemo(() => {
@@ -213,28 +220,12 @@ function ReportsPage() {
     <>
       <PageHeader title="Financial Reports" description="Auto-built from your ledger. Every figure is traceable to a journal entry." />
 
-      {/* Trust strip — show data integrity at a glance */}
-      <div className="mb-4 rounded-lg border bg-card overflow-hidden">
-        <div className="flex flex-wrap gap-3 p-3 items-center justify-between border-b">
-          <div className="flex flex-wrap items-center gap-4 text-xs">
-            <IntegrityBadge ok={tbBalanced} okLabel="Trial balance matches" badLabel="Trial balance OFF" />
-            <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet balances (A = L + E)" badLabel="Balance sheet drift" />
-            <span className="text-muted-foreground">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground">Inventory method:</span>
-            <Select value={cogsMethod} onValueChange={(v) => saveCogsMethod(v as any)}>
-              <SelectTrigger className="h-8 w-[200px]"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="weighted_average">Weighted Average</SelectItem>
-                <SelectItem value="fifo">FIFO</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <div className="px-3 py-2 text-[11px] text-muted-foreground bg-muted/30">
-          Closing stock is valued at the lower of cost or net realisable value (AS 2). Changing the method instantly recomputes COGS and Gross Profit.
-        </div>
+      {/* Trust strip — integrity at a glance, no jargon */}
+      <div className="mb-4 rounded-lg border bg-card p-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+        <IntegrityBadge ok={tbBalanced} okLabel="Books are balanced" badLabel="Books not balanced" />
+        <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet ties out" badLabel="Balance sheet drift" />
+        <span className="text-muted-foreground">Method in use: <span className="font-medium text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span> · change it in the Inventory tab</span>
+        <span className="ml-auto text-muted-foreground">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
       </div>
 
       <Tabs defaultValue="outlook">
@@ -243,6 +234,7 @@ function ReportsPage() {
           <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
           <TabsTrigger value="bs">Balance Sheet</TabsTrigger>
           <TabsTrigger value="wc">Working Capital</TabsTrigger>
+          <TabsTrigger value="inv">Inventory Valuation</TabsTrigger>
           <TabsTrigger value="tb">Trial Balance</TabsTrigger>
         </TabsList>
 
