@@ -399,16 +399,19 @@ const slides: Slide[] = [
 function GuidePage() {
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(false);
+  const [replay, setReplay] = useState(0);
   const navigate = useNavigate();
   const s = slides[i];
   const prev = () => setI((v) => Math.max(0, v - 1));
   const next = () => setI((v) => Math.min(slides.length - 1, v + 1));
+  const replayNow = () => setReplay((r) => r + 1);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") next();
       if (e.key === "ArrowLeft") prev();
       if (e.key === " ") { e.preventDefault(); setPlaying((p) => !p); }
+      if (e.key.toLowerCase() === "r") replayNow();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -420,6 +423,13 @@ function GuidePage() {
     const t = setTimeout(() => setI((v) => v + 1), 5500);
     return () => clearTimeout(t);
   }, [playing, i]);
+
+  // Auto-loop the active slide's animation every 4.5s so the mockup feels alive.
+  useEffect(() => {
+    setReplay(0);
+    const id = setInterval(() => setReplay((r) => r + 1), 4500);
+    return () => clearInterval(id);
+  }, [i]);
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -437,8 +447,30 @@ function GuidePage() {
 
       <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-start">
         {/* Visual */}
-        <div key={`v-${i}`} className="animate-in fade-in zoom-in-95 duration-300 order-1 md:order-2 md:sticky md:top-4">
-          {s.visual}
+        <div className="order-1 md:order-2 md:sticky md:top-4">
+          <div className="relative group">
+            <div key={`v-${i}-${replay}`} className="animate-in fade-in zoom-in-95 duration-300">
+              {s.visual}
+            </div>
+            <button
+              type="button"
+              onClick={replayNow}
+              className="absolute top-2 right-2 inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-background/85 backdrop-blur border border-border/70 text-muted-foreground hover:text-foreground hover:bg-background opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+              aria-label="Replay animation"
+              title="Replay animation (R)"
+            >
+              <RotateCcw className="h-3 w-3" /> Replay
+            </button>
+            {s.cta && (
+              <button
+                type="button"
+                onClick={() => navigate({ to: s.cta!.to as any })}
+                className="absolute bottom-2 left-2 inline-flex items-center gap-1 text-[10px] px-2 py-1 rounded-full bg-primary/90 text-primary-foreground hover:bg-primary transition-colors shadow-sm"
+              >
+                Try it live <ArrowRight className="h-3 w-3" />
+              </button>
+            )}
+          </div>
         </div>
         {/* Copy */}
         <div key={`t-${i}`} className="animate-in fade-in slide-in-from-bottom-2 duration-300 order-2 md:order-1">
