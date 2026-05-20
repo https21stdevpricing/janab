@@ -147,9 +147,9 @@ function AnalyticsPage() {
 
 function Tile({ label, value, tone, icon }: { label: string; value: string; tone?: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-md border bg-card p-3">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1">{icon}{label}</div>
-      <div className={`text-base sm:text-lg font-semibold tabular-nums mt-1 break-words ${tone ?? ""}`}>{value}</div>
+    <div className="rounded-xl border border-border/70 bg-card p-3 sm:p-4 min-w-0">
+      <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground flex items-center gap-1 truncate">{icon}{label}</div>
+      <div className={`text-[15px] sm:text-lg font-semibold tabular-nums mt-1 leading-tight break-words ${tone ?? ""}`}>{value}</div>
     </div>
   );
 }

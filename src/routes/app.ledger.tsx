@@ -153,10 +153,10 @@ function LedgerPage() {
       )}
 
       {/* Totals */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="rounded-md border bg-card p-3"><div className="text-[10px] uppercase text-muted-foreground">Debit</div><div className="text-base font-semibold tabular-nums">{fmt(totals.d)}</div></div>
-        <div className="rounded-md border bg-card p-3"><div className="text-[10px] uppercase text-muted-foreground">Credit</div><div className="text-base font-semibold tabular-nums">{fmt(totals.c)}</div></div>
-        <div className="rounded-md border bg-card p-3"><div className="text-[10px] uppercase text-muted-foreground">Net</div><div className={`text-base font-semibold tabular-nums ${totals.net >= 0 ? "text-primary" : "text-destructive"}`}>{fmt(totals.net)}</div></div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+        <div className="rounded-xl border border-border/70 bg-card p-3 min-w-0"><div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Debit</div><div className="text-[15px] sm:text-base font-semibold tabular-nums truncate">{fmt(totals.d)}</div></div>
+        <div className="rounded-xl border border-border/70 bg-card p-3 min-w-0"><div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Credit</div><div className="text-[15px] sm:text-base font-semibold tabular-nums truncate">{fmt(totals.c)}</div></div>
+        <div className="col-span-2 sm:col-span-1 rounded-xl border border-border/70 bg-card p-3 min-w-0"><div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Net</div><div className={`text-[15px] sm:text-base font-semibold tabular-nums truncate ${totals.net >= 0 ? "text-primary" : "text-destructive"}`}>{fmt(totals.net)}</div></div>
       </div>
 
       {filtered.length === 0 ? <Empty>No postings yet.</Empty> : (

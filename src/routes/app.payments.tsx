@@ -306,22 +306,22 @@ function PaymentsPage() {
 
       {/* Tabs + search */}
       <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <TabsList>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+          <TabsList className="self-start">
             <TabsTrigger value="all">All</TabsTrigger>
             <TabsTrigger value="in">Receipts ↙</TabsTrigger>
             <TabsTrigger value="out">Payments ↗</TabsTrigger>
           </TabsList>
-          <Input className="max-w-xs" placeholder="Search no / party…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <div className="ml-auto text-xs text-muted-foreground">{filtered.length} entries</div>
+          <Input className="sm:max-w-xs" placeholder="Search no / party…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="sm:ml-auto text-xs text-muted-foreground">{filtered.length} entries</div>
         </div>
       </Tabs>
 
       {/* Summary tiles */}
-      <div className="grid grid-cols-3 gap-2 mb-3">
-        <div className="rounded-md border bg-card p-3"><div className="text-[10px] uppercase text-muted-foreground">Received</div><div className="text-base sm:text-lg font-semibold text-primary tabular-nums">{inr(totals.inSum)}</div></div>
-        <div className="rounded-md border bg-card p-3"><div className="text-[10px] uppercase text-muted-foreground">Paid</div><div className="text-base sm:text-lg font-semibold text-destructive tabular-nums">{inr(totals.outSum)}</div></div>
-        <div className="rounded-md border bg-card p-3"><div className="text-[10px] uppercase text-muted-foreground">Net</div><div className={`text-base sm:text-lg font-semibold tabular-nums ${totals.net >= 0 ? "text-primary" : "text-destructive"}`}>{inr(totals.net)}</div></div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+        <div className="rounded-xl border border-border/70 bg-card p-3 min-w-0"><div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Received</div><div className="text-[15px] sm:text-lg font-semibold text-primary tabular-nums truncate">{inr(totals.inSum)}</div></div>
+        <div className="rounded-xl border border-border/70 bg-card p-3 min-w-0"><div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Paid</div><div className="text-[15px] sm:text-lg font-semibold text-destructive tabular-nums truncate">{inr(totals.outSum)}</div></div>
+        <div className="col-span-2 sm:col-span-1 rounded-xl border border-border/70 bg-card p-3 min-w-0"><div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">Net</div><div className={`text-[15px] sm:text-lg font-semibold tabular-nums truncate ${totals.net >= 0 ? "text-primary" : "text-destructive"}`}>{inr(totals.net)}</div></div>
       </div>
 
       {filtered.length === 0 ? <Empty>No payments match.</Empty> : (

@@ -124,10 +124,12 @@ export function PartyPage({ role }: { role: PartyRole }) {
         </>
       } />
 
-      <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 mb-4">
         <Tile label={role === "buyer" ? "Receivable" : "Payable"} value={inr(totals.bal)} tone={role === "buyer" ? "text-primary" : "text-destructive"} />
         <Tile label={role === "buyer" ? "Total Sales" : "Total Purchases"} value={inr(totals.txn)} />
-        <Tile label="Open Docs" value={String(totals.opens)} />
+        <div className="col-span-2 sm:col-span-1">
+          <Tile label="Open Docs" value={String(totals.opens)} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-3">
@@ -209,9 +211,9 @@ export function PartyPage({ role }: { role: PartyRole }) {
 
 function Tile({ label, value, tone }: { label: string; value: string; tone?: string }) {
   return (
-    <div className="rounded-md border bg-card p-3">
-      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`text-base sm:text-lg font-semibold tabular-nums mt-1 ${tone ?? ""}`}>{value}</div>
+    <div className="rounded-xl border border-border/70 bg-card p-3 sm:p-4 min-w-0">
+      <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground truncate">{label}</div>
+      <div className={`text-[15px] sm:text-lg font-semibold tabular-nums mt-1 truncate ${tone ?? ""}`}>{value}</div>
     </div>
   );
 }
