@@ -28,7 +28,6 @@ import { Route as AppPriceListsRouteImport } from './routes/app.price-lists'
 import { Route as AppPaymentsRouteImport } from './routes/app.payments'
 import { Route as AppLookupRouteImport } from './routes/app.lookup'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
-import { Route as AppGuideRouteImport } from './routes/app.guide'
 import { Route as AppGstRouteImport } from './routes/app.gst'
 import { Route as AppFixedAssetsRouteImport } from './routes/app.fixed-assets'
 import { Route as AppExpensesRouteImport } from './routes/app.expenses'
@@ -136,11 +135,6 @@ const AppLedgerRoute = AppLedgerRouteImport.update({
   path: '/ledger',
   getParentRoute: () => AppRoute,
 } as any)
-const AppGuideRoute = AppGuideRouteImport.update({
-  id: '/guide',
-  path: '/guide',
-  getParentRoute: () => AppRoute,
-} as any)
 const AppGstRoute = AppGstRouteImport.update({
   id: '/gst',
   path: '/gst',
@@ -211,7 +205,6 @@ export interface FileRoutesByFullPath {
   '/app/expenses': typeof AppExpensesRoute
   '/app/fixed-assets': typeof AppFixedAssetsRoute
   '/app/gst': typeof AppGstRoute
-  '/app/guide': typeof AppGuideRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/payments': typeof AppPaymentsRoute
@@ -243,7 +236,6 @@ export interface FileRoutesByTo {
   '/app/expenses': typeof AppExpensesRoute
   '/app/fixed-assets': typeof AppFixedAssetsRoute
   '/app/gst': typeof AppGstRoute
-  '/app/guide': typeof AppGuideRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/payments': typeof AppPaymentsRoute
@@ -277,7 +269,6 @@ export interface FileRoutesById {
   '/app/expenses': typeof AppExpensesRoute
   '/app/fixed-assets': typeof AppFixedAssetsRoute
   '/app/gst': typeof AppGstRoute
-  '/app/guide': typeof AppGuideRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/payments': typeof AppPaymentsRoute
@@ -312,7 +303,6 @@ export interface FileRouteTypes {
     | '/app/expenses'
     | '/app/fixed-assets'
     | '/app/gst'
-    | '/app/guide'
     | '/app/ledger'
     | '/app/lookup'
     | '/app/payments'
@@ -344,7 +334,6 @@ export interface FileRouteTypes {
     | '/app/expenses'
     | '/app/fixed-assets'
     | '/app/gst'
-    | '/app/guide'
     | '/app/ledger'
     | '/app/lookup'
     | '/app/payments'
@@ -377,7 +366,6 @@ export interface FileRouteTypes {
     | '/app/expenses'
     | '/app/fixed-assets'
     | '/app/gst'
-    | '/app/guide'
     | '/app/ledger'
     | '/app/lookup'
     | '/app/payments'
@@ -539,13 +527,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLedgerRouteImport
       parentRoute: typeof AppRoute
     }
-    '/app/guide': {
-      id: '/app/guide'
-      path: '/guide'
-      fullPath: '/app/guide'
-      preLoaderRoute: typeof AppGuideRouteImport
-      parentRoute: typeof AppRoute
-    }
     '/app/gst': {
       id: '/app/gst'
       path: '/gst'
@@ -650,7 +631,6 @@ interface AppRouteChildren {
   AppExpensesRoute: typeof AppExpensesRoute
   AppFixedAssetsRoute: typeof AppFixedAssetsRoute
   AppGstRoute: typeof AppGstRoute
-  AppGuideRoute: typeof AppGuideRoute
   AppLedgerRoute: typeof AppLedgerRoute
   AppLookupRoute: typeof AppLookupRoute
   AppPaymentsRoute: typeof AppPaymentsRoute
@@ -678,7 +658,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppExpensesRoute: AppExpensesRoute,
   AppFixedAssetsRoute: AppFixedAssetsRoute,
   AppGstRoute: AppGstRoute,
-  AppGuideRoute: AppGuideRoute,
   AppLedgerRoute: AppLedgerRoute,
   AppLookupRoute: AppLookupRoute,
   AppPaymentsRoute: AppPaymentsRoute,
