@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { Truck, ChevronRight, Search, Pencil, MapPin, Phone, FileText } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
+import { CollapseFilters } from "@/components/collapse-filters";
 
 export const Route = createFileRoute("/app/deliveries")({ component: DeliveriesPage });
 
@@ -94,8 +95,23 @@ function DeliveriesPage() {
   const findByInvoice = async () => {
     const t = findInv.trim().toUpperCase();
     if (!t) return;
-    const { data } = await supabase.from("deliveries" as never).select("*").eq("invoice_no" as never, t).maybeSingle() as any;
-    if (!data) { toast.error("No delivery for " + t); return; }
+    // Match either invoice_no OR delivery_no — users may type either
+    const { data } = await supabase
+      .from("deliveries" as never)
+      .select("*")
+      .or(`invoice_no.eq.${t},delivery_no.eq.${t}`)
+      .limit(1)
+      .maybeSingle() as any;
+    if (!data) {
+      // Fallback: search the local list (handles tp_no or partial matches)
+      const hit = rows.find(r =>
+        (r.delivery_no ?? "").toUpperCase() === t ||
+        (r.invoice_no ?? "").toUpperCase() === t
+      );
+      if (hit) { openEdit(hit); return; }
+      toast.error("No delivery for " + t);
+      return;
+    }
     openEdit(data as Delivery);
   };
 
@@ -122,29 +138,42 @@ function DeliveriesPage() {
         <DeliveryTile label="Delivered" value={String(summary.delivered)} />
       </div>
 
-      <section className="rounded-md border bg-card p-3 mb-3 space-y-3">
-        <div className="flex flex-col gap-1">
-          <h2 className="text-sm font-semibold">Find and filter delivery challans</h2>
-          <p className="text-xs text-muted-foreground">Search by delivery no, invoice/TP no, buyer, vehicle, or status.</p>
-        </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Input className="font-mono max-w-xs" placeholder="e.g. INV-0001" value={findInv}
-            onChange={e => setFindInv(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && (e.preventDefault(), findByInvoice())} />
-          <Button variant="outline" onClick={findByInvoice}><Search className="h-4 w-4" /> Open</Button>
-        </div>
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <Input className="sm:max-w-xs" placeholder="Search delivery list…" value={q} onChange={e => setQ(e.target.value)} />
-        <Select value={statusF} onValueChange={setStatusF}>
-          <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {STATUSES.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <div className="ml-auto text-xs text-muted-foreground self-center">{filtered.length} deliveries</div>
+      {/* Quick open — always visible */}
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row">
+        <Input
+          className="font-mono sm:max-w-xs"
+          placeholder="Open by DN- / INV- / TP- no…"
+          value={findInv}
+          onChange={e => setFindInv(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && (e.preventDefault(), findByInvoice())}
+        />
+        <Button variant="outline" onClick={findByInvoice} disabled={!findInv.trim()}>
+          <Search className="h-4 w-4" /> Open
+        </Button>
       </div>
-      </section>
+
+      <CollapseFilters
+        summary={`${filtered.length} of ${rows.length} deliveries`}
+        active={(q ? 1 : 0) + (statusF !== "all" ? 1 : 0)}
+        onClear={() => { setQ(""); setStatusF("all"); }}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div>
+            <Label className="text-[10px] uppercase text-muted-foreground">Search list</Label>
+            <Input placeholder="No, invoice, buyer, vehicle…" value={q} onChange={e => setQ(e.target.value)} />
+          </div>
+          <div>
+            <Label className="text-[10px] uppercase text-muted-foreground">Status</Label>
+            <Select value={statusF} onValueChange={setStatusF}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All statuses</SelectItem>
+                {STATUSES.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </CollapseFilters>
 
       {filtered.length === 0 ? <Empty>No deliveries match.</Empty> : (
         <div className="space-y-2">
