@@ -20,6 +20,7 @@ import { exportToExcel } from "@/lib/excel";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useShortcut } from "@/lib/shortcuts";
 import { exportStoneWorldPayment } from "@/lib/pdf-theme";
+import { CollapseFilters } from "@/components/collapse-filters";
 
 function daysBetween(iso: string) {
   const d = new Date(iso); const now = new Date();
@@ -304,18 +305,22 @@ function PaymentsPage() {
         </div>
       </Link>
 
-      {/* Tabs + search */}
+      {/* Direction tabs — kept visible, fine-grained search is collapsible */}
       <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-3">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-          <TabsList className="self-start">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="in">Receipts ↙</TabsTrigger>
-            <TabsTrigger value="out">Payments ↗</TabsTrigger>
-          </TabsList>
-          <Input className="sm:max-w-xs" placeholder="Search no / party…" value={q} onChange={(e) => setQ(e.target.value)} />
-          <div className="sm:ml-auto text-xs text-muted-foreground">{filtered.length} entries</div>
-        </div>
+        <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="all" className="flex-1 sm:flex-none">All</TabsTrigger>
+          <TabsTrigger value="in" className="flex-1 sm:flex-none">Receipts ↙</TabsTrigger>
+          <TabsTrigger value="out" className="flex-1 sm:flex-none">Payments ↗</TabsTrigger>
+        </TabsList>
       </Tabs>
+
+      <CollapseFilters
+        summary={`${filtered.length} of ${rows.length} entries`}
+        active={q ? 1 : 0}
+        onClear={() => setQ("")}
+      >
+        <Input placeholder="Search no / party…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </CollapseFilters>
 
       {/* Summary tiles */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
