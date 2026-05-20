@@ -422,6 +422,119 @@ function ReportsPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="inv" className="space-y-4">
+          {/* Plain-English intro */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base"><Layers className="h-4 w-4" /> How should your unsold stock be valued?</CardTitle>
+              <div className="text-xs text-muted-foreground">Pick the method that fits how stone moves through your yard. Reports recompute instantly.</div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-3">
+                <MethodCard
+                  active={cogsMethod === "weighted_average"}
+                  onClick={() => saveCogsMethod("weighted_average")}
+                  title="Weighted Average"
+                  tagline="Simple, smooths price swings"
+                  bullets={[
+                    "Every unit is valued at the average cost of all purchases so far.",
+                    "Best when stones of one SKU are mixed in the yard and you can't tell which lot was sold.",
+                    "Margins look stable even when supplier rates fluctuate week to week.",
+                  ]}
+                  result={inr(cogsMethod === "weighted_average" ? inventory.closingValue : inventory.altClosingValue)}
+                  resultLabel="Closing stock value"
+                />
+                <MethodCard
+                  active={cogsMethod === "fifo"}
+                  onClick={() => saveCogsMethod("fifo")}
+                  title="FIFO (First In, First Out)"
+                  tagline="Oldest slabs leave first"
+                  bullets={[
+                    "Assumes the slabs you bought first are the ones you sold first.",
+                    "Best when stock is rotated (older lots dispatched before newer ones).",
+                    "Closing stock reflects the most recent purchase prices — closer to today's market.",
+                  ]}
+                  result={inr(cogsMethod === "fifo" ? inventory.closingValue : inventory.altClosingValue)}
+                  resultLabel="Closing stock value"
+                />
+              </div>
+              <div className="mt-3 text-[11px] text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
+                <span className="font-medium text-foreground">AS 2 rule:</span> closing stock is always valued at the <span className="font-medium">lower of cost or net realisable value</span>. If a SKU's sale rate drops below its cost, we automatically write it down so your profit isn't overstated.
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Side-by-side comparison */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base"><Calculator className="h-4 w-4" /> Method comparison</CardTitle>
+              <div className="text-xs text-muted-foreground">Same stock, different valuation lens. Bigger gap = more sensitive to which method you choose.</div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid sm:grid-cols-3 gap-3">
+                <Kpi label="Units on hand" value={fmt(inventory.closingQty, 2)} hint="Total stocked-item units across all SKUs." />
+                <Kpi label={`Closing — ${cogsMethod === "fifo" ? "FIFO" : "Weighted Avg"} (in use)`} value={inr(inventory.closingValue)} tone="good" hint="What your books currently use." />
+                <Kpi label={`Closing — ${cogsMethod === "fifo" ? "Weighted Avg" : "FIFO"} (alt)`} value={inr(inventory.altClosingValue)} hint="What the other method would show." />
+              </div>
+              <div className="text-xs text-muted-foreground mt-3">
+                Difference: <span className="font-medium text-foreground tabular-nums">{inr(Math.abs(inventory.closingValue - inventory.altClosingValue))}</span>
+                {" — "}
+                {Math.abs(inventory.closingValue - inventory.altClosingValue) < 1
+                  ? "Both methods give the same number; choose whichever is easier to explain."
+                  : inventory.closingValue > inventory.altClosingValue
+                    ? "The method in use values stock higher → reports a higher gross profit this period."
+                    : "The method in use values stock lower → reports a lower (more conservative) gross profit."}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Per-SKU breakdown */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Per-SKU valuation</CardTitle>
+              <div className="text-xs text-muted-foreground">Every stocked item, valued at its unit cost (after the NRV floor). Sorted by value.</div>
+            </CardHeader>
+            <CardContent className="p-0 overflow-x-auto">
+              {inventory.perSku.length === 0 ? (
+                <div className="p-4 text-sm text-muted-foreground">No stock on hand yet. Add purchases or opening stock to see valuation.</div>
+              ) : (
+                <table className="w-full text-sm min-w-[640px]">
+                  <thead className="bg-muted/50 text-xs uppercase tracking-wide">
+                    <tr>
+                      <th className="text-left p-2">Product</th>
+                      <th className="text-right p-2">On hand</th>
+                      <th className="text-right p-2">Unit cost</th>
+                      <th className="text-right p-2">Value</th>
+                      <th className="text-right p-2">Alt method</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inventory.perSku.map((r) => (
+                      <tr key={r.id} className="border-t">
+                        <td className="p-2">
+                          {r.name}
+                          {r.nrvFloor && <span className="ml-2 text-[10px] text-amber-600 dark:text-amber-400">NRV write-down applied</span>}
+                        </td>
+                        <td className="p-2 text-right tabular-nums">{fmt(r.onHand, 2)}</td>
+                        <td className="p-2 text-right tabular-nums">{inr(r.unitVal)}</td>
+                        <td className="p-2 text-right tabular-nums font-medium">{inr(r.value)}</td>
+                        <td className="p-2 text-right tabular-nums text-muted-foreground">{inr(r.altValue)}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t bg-muted/30 font-semibold">
+                      <td className="p-2">Total</td>
+                      <td className="p-2 text-right tabular-nums">{fmt(inventory.closingQty, 2)}</td>
+                      <td className="p-2"></td>
+                      <td className="p-2 text-right tabular-nums">{inr(inventory.closingValue)}</td>
+                      <td className="p-2 text-right tabular-nums text-muted-foreground">{inr(inventory.altClosingValue)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
         <TabsContent value="tb">
           <Card><CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-sm min-w-[520px]">
