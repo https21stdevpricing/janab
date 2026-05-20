@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as Char91indexChar93RouteImport } from './routes/[index]'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as AppRouteImport } from './routes/app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app.index'
 import { Route as AppThirdPartyRouteImport } from './routes/app.third-party'
@@ -51,140 +50,135 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/app',
-  path: '/app',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRoute,
+  id: '/app/',
+  path: '/app/',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppThirdPartyRoute = AppThirdPartyRouteImport.update({
-  id: '/third-party',
-  path: '/third-party',
-  getParentRoute: () => AppRoute,
+  id: '/app/third-party',
+  path: '/app/third-party',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppSuppliersRoute = AppSuppliersRouteImport.update({
-  id: '/suppliers',
-  path: '/suppliers',
-  getParentRoute: () => AppRoute,
+  id: '/app/suppliers',
+  path: '/app/suppliers',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppStockRoute = AppStockRouteImport.update({
-  id: '/stock',
-  path: '/stock',
-  getParentRoute: () => AppRoute,
+  id: '/app/stock',
+  path: '/app/stock',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
+  id: '/app/settings',
+  path: '/app/settings',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppSalesRoute = AppSalesRouteImport.update({
-  id: '/sales',
-  path: '/sales',
-  getParentRoute: () => AppRoute,
+  id: '/app/sales',
+  path: '/app/sales',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppReportsRoute = AppReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => AppRoute,
+  id: '/app/reports',
+  path: '/app/reports',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppQuotationsRoute = AppQuotationsRouteImport.update({
-  id: '/quotations',
-  path: '/quotations',
-  getParentRoute: () => AppRoute,
+  id: '/app/quotations',
+  path: '/app/quotations',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppPurchasesRoute = AppPurchasesRouteImport.update({
-  id: '/purchases',
-  path: '/purchases',
-  getParentRoute: () => AppRoute,
+  id: '/app/purchases',
+  path: '/app/purchases',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppProductsRoute = AppProductsRouteImport.update({
-  id: '/products',
-  path: '/products',
-  getParentRoute: () => AppRoute,
+  id: '/app/products',
+  path: '/app/products',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppPrintRoute = AppPrintRouteImport.update({
-  id: '/print',
-  path: '/print',
-  getParentRoute: () => AppRoute,
+  id: '/app/print',
+  path: '/app/print',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppPriceListsRoute = AppPriceListsRouteImport.update({
-  id: '/price-lists',
-  path: '/price-lists',
-  getParentRoute: () => AppRoute,
+  id: '/app/price-lists',
+  path: '/app/price-lists',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppPaymentsRoute = AppPaymentsRouteImport.update({
-  id: '/payments',
-  path: '/payments',
-  getParentRoute: () => AppRoute,
+  id: '/app/payments',
+  path: '/app/payments',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppLookupRoute = AppLookupRouteImport.update({
-  id: '/lookup',
-  path: '/lookup',
-  getParentRoute: () => AppRoute,
+  id: '/app/lookup',
+  path: '/app/lookup',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppLedgerRoute = AppLedgerRouteImport.update({
-  id: '/ledger',
-  path: '/ledger',
-  getParentRoute: () => AppRoute,
+  id: '/app/ledger',
+  path: '/app/ledger',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppGuideRoute = AppGuideRouteImport.update({
-  id: '/guide',
-  path: '/guide',
-  getParentRoute: () => AppRoute,
+  id: '/app/guide',
+  path: '/app/guide',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppGstRoute = AppGstRouteImport.update({
-  id: '/gst',
-  path: '/gst',
-  getParentRoute: () => AppRoute,
+  id: '/app/gst',
+  path: '/app/gst',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppFixedAssetsRoute = AppFixedAssetsRouteImport.update({
-  id: '/fixed-assets',
-  path: '/fixed-assets',
-  getParentRoute: () => AppRoute,
+  id: '/app/fixed-assets',
+  path: '/app/fixed-assets',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppExpensesRoute = AppExpensesRouteImport.update({
-  id: '/expenses',
-  path: '/expenses',
-  getParentRoute: () => AppRoute,
+  id: '/app/expenses',
+  path: '/app/expenses',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppDeliveriesRoute = AppDeliveriesRouteImport.update({
-  id: '/deliveries',
-  path: '/deliveries',
-  getParentRoute: () => AppRoute,
+  id: '/app/deliveries',
+  path: '/app/deliveries',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppContactsRoute = AppContactsRouteImport.update({
-  id: '/contacts',
-  path: '/contacts',
-  getParentRoute: () => AppRoute,
+  id: '/app/contacts',
+  path: '/app/contacts',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppBuyersRoute = AppBuyersRouteImport.update({
-  id: '/buyers',
-  path: '/buyers',
-  getParentRoute: () => AppRoute,
+  id: '/app/buyers',
+  path: '/app/buyers',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppBillsRoute = AppBillsRouteImport.update({
-  id: '/bills',
-  path: '/bills',
-  getParentRoute: () => AppRoute,
+  id: '/app/bills',
+  path: '/app/bills',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppAuditRoute = AppAuditRouteImport.update({
-  id: '/audit',
-  path: '/audit',
-  getParentRoute: () => AppRoute,
+  id: '/app/audit',
+  path: '/app/audit',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppAnalyticsRoute = AppAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
-  getParentRoute: () => AppRoute,
+  id: '/app/analytics',
+  path: '/app/analytics',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppPrintQuoteIdRoute = AppPrintQuoteIdRouteImport.update({
   id: '/quote/$id',
@@ -199,7 +193,6 @@ const AppPrintInvoiceIdRoute = AppPrintInvoiceIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/app': typeof AppRouteWithChildren
   '/index': typeof Char91indexChar93Route
   '/login': typeof LoginRoute
   '/app/analytics': typeof AppAnalyticsRoute
@@ -265,7 +258,6 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/app': typeof AppRouteWithChildren
   '/index': typeof Char91indexChar93Route
   '/login': typeof LoginRoute
   '/app/analytics': typeof AppAnalyticsRoute
@@ -300,7 +292,6 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/app'
     | '/index'
     | '/login'
     | '/app/analytics'
@@ -365,7 +356,6 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/app'
     | '/index'
     | '/login'
     | '/app/analytics'
@@ -399,9 +389,33 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppRoute: typeof AppRouteWithChildren
   Char91indexChar93Route: typeof Char91indexChar93Route
   LoginRoute: typeof LoginRoute
+  AppAnalyticsRoute: typeof AppAnalyticsRoute
+  AppAuditRoute: typeof AppAuditRoute
+  AppBillsRoute: typeof AppBillsRoute
+  AppBuyersRoute: typeof AppBuyersRoute
+  AppContactsRoute: typeof AppContactsRoute
+  AppDeliveriesRoute: typeof AppDeliveriesRoute
+  AppExpensesRoute: typeof AppExpensesRoute
+  AppFixedAssetsRoute: typeof AppFixedAssetsRoute
+  AppGstRoute: typeof AppGstRoute
+  AppGuideRoute: typeof AppGuideRoute
+  AppLedgerRoute: typeof AppLedgerRoute
+  AppLookupRoute: typeof AppLookupRoute
+  AppPaymentsRoute: typeof AppPaymentsRoute
+  AppPriceListsRoute: typeof AppPriceListsRoute
+  AppPrintRoute: typeof AppPrintRouteWithChildren
+  AppProductsRoute: typeof AppProductsRoute
+  AppPurchasesRoute: typeof AppPurchasesRoute
+  AppQuotationsRoute: typeof AppQuotationsRoute
+  AppReportsRoute: typeof AppReportsRoute
+  AppSalesRoute: typeof AppSalesRoute
+  AppSettingsRoute: typeof AppSettingsRoute
+  AppStockRoute: typeof AppStockRoute
+  AppSuppliersRoute: typeof AppSuppliersRoute
+  AppThirdPartyRoute: typeof AppThirdPartyRoute
+  AppIndexRoute: typeof AppIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -420,13 +434,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -436,178 +443,178 @@ declare module '@tanstack/react-router' {
     }
     '/app/': {
       id: '/app/'
-      path: '/'
+      path: '/app'
       fullPath: '/app/'
       preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/third-party': {
       id: '/app/third-party'
-      path: '/third-party'
+      path: '/app/third-party'
       fullPath: '/app/third-party'
       preLoaderRoute: typeof AppThirdPartyRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/suppliers': {
       id: '/app/suppliers'
-      path: '/suppliers'
+      path: '/app/suppliers'
       fullPath: '/app/suppliers'
       preLoaderRoute: typeof AppSuppliersRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/stock': {
       id: '/app/stock'
-      path: '/stock'
+      path: '/app/stock'
       fullPath: '/app/stock'
       preLoaderRoute: typeof AppStockRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/settings': {
       id: '/app/settings'
-      path: '/settings'
+      path: '/app/settings'
       fullPath: '/app/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/sales': {
       id: '/app/sales'
-      path: '/sales'
+      path: '/app/sales'
       fullPath: '/app/sales'
       preLoaderRoute: typeof AppSalesRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/reports': {
       id: '/app/reports'
-      path: '/reports'
+      path: '/app/reports'
       fullPath: '/app/reports'
       preLoaderRoute: typeof AppReportsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/quotations': {
       id: '/app/quotations'
-      path: '/quotations'
+      path: '/app/quotations'
       fullPath: '/app/quotations'
       preLoaderRoute: typeof AppQuotationsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/purchases': {
       id: '/app/purchases'
-      path: '/purchases'
+      path: '/app/purchases'
       fullPath: '/app/purchases'
       preLoaderRoute: typeof AppPurchasesRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/products': {
       id: '/app/products'
-      path: '/products'
+      path: '/app/products'
       fullPath: '/app/products'
       preLoaderRoute: typeof AppProductsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/print': {
       id: '/app/print'
-      path: '/print'
+      path: '/app/print'
       fullPath: '/app/print'
       preLoaderRoute: typeof AppPrintRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/price-lists': {
       id: '/app/price-lists'
-      path: '/price-lists'
+      path: '/app/price-lists'
       fullPath: '/app/price-lists'
       preLoaderRoute: typeof AppPriceListsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/payments': {
       id: '/app/payments'
-      path: '/payments'
+      path: '/app/payments'
       fullPath: '/app/payments'
       preLoaderRoute: typeof AppPaymentsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/lookup': {
       id: '/app/lookup'
-      path: '/lookup'
+      path: '/app/lookup'
       fullPath: '/app/lookup'
       preLoaderRoute: typeof AppLookupRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/ledger': {
       id: '/app/ledger'
-      path: '/ledger'
+      path: '/app/ledger'
       fullPath: '/app/ledger'
       preLoaderRoute: typeof AppLedgerRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/guide': {
       id: '/app/guide'
-      path: '/guide'
+      path: '/app/guide'
       fullPath: '/app/guide'
       preLoaderRoute: typeof AppGuideRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/gst': {
       id: '/app/gst'
-      path: '/gst'
+      path: '/app/gst'
       fullPath: '/app/gst'
       preLoaderRoute: typeof AppGstRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/fixed-assets': {
       id: '/app/fixed-assets'
-      path: '/fixed-assets'
+      path: '/app/fixed-assets'
       fullPath: '/app/fixed-assets'
       preLoaderRoute: typeof AppFixedAssetsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/expenses': {
       id: '/app/expenses'
-      path: '/expenses'
+      path: '/app/expenses'
       fullPath: '/app/expenses'
       preLoaderRoute: typeof AppExpensesRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/deliveries': {
       id: '/app/deliveries'
-      path: '/deliveries'
+      path: '/app/deliveries'
       fullPath: '/app/deliveries'
       preLoaderRoute: typeof AppDeliveriesRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/contacts': {
       id: '/app/contacts'
-      path: '/contacts'
+      path: '/app/contacts'
       fullPath: '/app/contacts'
       preLoaderRoute: typeof AppContactsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/buyers': {
       id: '/app/buyers'
-      path: '/buyers'
+      path: '/app/buyers'
       fullPath: '/app/buyers'
       preLoaderRoute: typeof AppBuyersRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/bills': {
       id: '/app/bills'
-      path: '/bills'
+      path: '/app/bills'
       fullPath: '/app/bills'
       preLoaderRoute: typeof AppBillsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/audit': {
       id: '/app/audit'
-      path: '/audit'
+      path: '/app/audit'
       fullPath: '/app/audit'
       preLoaderRoute: typeof AppAuditRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/analytics': {
       id: '/app/analytics'
-      path: '/analytics'
+      path: '/app/analytics'
       fullPath: '/app/analytics'
       preLoaderRoute: typeof AppAnalyticsRouteImport
-      parentRoute: typeof AppRoute
+      parentRoute: typeof rootRouteImport
     }
     '/app/print/quote/$id': {
       id: '/app/print/quote/$id'
@@ -640,35 +647,10 @@ const AppPrintRouteWithChildren = AppPrintRoute._addFileChildren(
   AppPrintRouteChildren,
 )
 
-interface AppRouteChildren {
-  AppAnalyticsRoute: typeof AppAnalyticsRoute
-  AppAuditRoute: typeof AppAuditRoute
-  AppBillsRoute: typeof AppBillsRoute
-  AppBuyersRoute: typeof AppBuyersRoute
-  AppContactsRoute: typeof AppContactsRoute
-  AppDeliveriesRoute: typeof AppDeliveriesRoute
-  AppExpensesRoute: typeof AppExpensesRoute
-  AppFixedAssetsRoute: typeof AppFixedAssetsRoute
-  AppGstRoute: typeof AppGstRoute
-  AppGuideRoute: typeof AppGuideRoute
-  AppLedgerRoute: typeof AppLedgerRoute
-  AppLookupRoute: typeof AppLookupRoute
-  AppPaymentsRoute: typeof AppPaymentsRoute
-  AppPriceListsRoute: typeof AppPriceListsRoute
-  AppPrintRoute: typeof AppPrintRouteWithChildren
-  AppProductsRoute: typeof AppProductsRoute
-  AppPurchasesRoute: typeof AppPurchasesRoute
-  AppQuotationsRoute: typeof AppQuotationsRoute
-  AppReportsRoute: typeof AppReportsRoute
-  AppSalesRoute: typeof AppSalesRoute
-  AppSettingsRoute: typeof AppSettingsRoute
-  AppStockRoute: typeof AppStockRoute
-  AppSuppliersRoute: typeof AppSuppliersRoute
-  AppThirdPartyRoute: typeof AppThirdPartyRoute
-  AppIndexRoute: typeof AppIndexRoute
-}
-
-const AppRouteChildren: AppRouteChildren = {
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  Char91indexChar93Route: Char91indexChar93Route,
+  LoginRoute: LoginRoute,
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppAuditRoute: AppAuditRoute,
   AppBillsRoute: AppBillsRoute,
@@ -694,15 +676,6 @@ const AppRouteChildren: AppRouteChildren = {
   AppSuppliersRoute: AppSuppliersRoute,
   AppThirdPartyRoute: AppThirdPartyRoute,
   AppIndexRoute: AppIndexRoute,
-}
-
-const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
-
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AppRoute: AppRouteWithChildren,
-  Char91indexChar93Route: Char91indexChar93Route,
-  LoginRoute: LoginRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
