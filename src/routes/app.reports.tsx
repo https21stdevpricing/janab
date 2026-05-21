@@ -221,6 +221,76 @@ function ReportsPage() {
     tbBalanced, balanceCheck, topExpense,
   });
 
+  // ---------- Reconciliation signals ----------
+  const negativeStockSkus = useMemo(() => {
+    const soldByP: Record<string, number> = {};
+    for (const s of saleItems) if (s.product_id) soldByP[s.product_id] = (soldByP[s.product_id] ?? 0) + Number(s.qty ?? 0);
+    const purByP: Record<string, number> = {};
+    for (const p of purchaseItems) if (p.product_id) purByP[p.product_id] = (purByP[p.product_id] ?? 0) + Number(p.qty ?? 0);
+    let n = 0;
+    for (const pr of products) {
+      if (pr.kind && pr.kind !== "stocked") continue;
+      const onHand = Number(pr.opening_stock ?? 0) + (purByP[pr.id] ?? 0) - (soldByP[pr.id] ?? 0);
+      if (onHand < 0) n++;
+    }
+    return n;
+  }, [products, saleItems, purchaseItems]);
+
+  const productsWithoutOpening = useMemo(
+    () =>
+      products.filter(
+        (p: any) => (!p.kind || p.kind === "stocked") && (p.opening_stock == null || Number(p.opening_stock) === 0),
+      ).length,
+    [products],
+  );
+
+  const missingHsnCount = useMemo(
+    () => products.filter((p: any) => !p.hsn || String(p.hsn).trim() === "").length,
+    [products],
+  );
+
+  const { unallocatedPaymentsAmt, unallocatedPaymentsCount } = useMemo(() => {
+    const allocByPay: Record<string, number> = {};
+    for (const a of allocations) {
+      const k = a.payment_id as string;
+      allocByPay[k] = (allocByPay[k] ?? 0) + Number(a.amount ?? 0);
+    }
+    let count = 0;
+    let amt = 0;
+    for (const p of payments) {
+      const total = Number(p.amount ?? 0);
+      const used = allocByPay[p.id] ?? 0;
+      const remaining = total - used;
+      if (remaining > 0.5) {
+        count++;
+        amt += remaining;
+      }
+    }
+    return { unallocatedPaymentsAmt: amt, unallocatedPaymentsCount: count };
+  }, [payments, allocations]);
+
+  const reconcileSignals = useMemo(
+    () =>
+      buildReconcileSignals({
+        tbDebit: tbTotalD,
+        tbCredit: tbTotalC,
+        assetsTotal: totalAssets,
+        liabilitiesPlusEquity: totalLiab + equity,
+        bookStockValue: inventoryAsset,
+        negativeStockSkus,
+        unallocatedPaymentsAmt,
+        unallocatedPaymentsCount,
+        netGstPayable,
+        missingHsnCount,
+        productsWithoutOpening,
+      }),
+    [
+      tbTotalD, tbTotalC, totalAssets, totalLiab, equity, inventoryAsset,
+      negativeStockSkus, unallocatedPaymentsAmt, unallocatedPaymentsCount,
+      netGstPayable, missingHsnCount, productsWithoutOpening,
+    ],
+  );
+
   return (
     <>
       <PageHeader title="Financial Reports" description="Auto-built from your ledger. Every figure is traceable to a journal entry." />
@@ -248,6 +318,7 @@ function ReportsPage() {
             <TabsTrigger value="wc">Working Capital</TabsTrigger>
             <TabsTrigger value="inv">Inventory Valuation</TabsTrigger>
             <TabsTrigger value="tb">Trial Balance</TabsTrigger>
+            <TabsTrigger value="reconcile">Reconcile</TabsTrigger>
           </TabsList>
         </div>
 
@@ -576,6 +647,10 @@ function ReportsPage() {
               {tbBalanced ? "Trial balance is in balance." : "Trial balance is OUT of balance. Review recent journal entries."}
             </div>
           </CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="reconcile" className="space-y-4">
+          <ReconcileGuide signals={reconcileSignals} />
         </TabsContent>
       </Tabs>
     </>
