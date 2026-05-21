@@ -27,11 +27,13 @@ function useTimeline(steps: number, replayKey: number, intervalMs = 1100) {
   useEffect(() => {
     setT(0);
     const id = setInterval(() => {
-      setT((v) => (v + 1 >= steps ? steps - 1 : v + 1));
+      // Loop continuously: hold on the final frame for one extra beat,
+      // then jump back to 0 so the mockup re-plays end-to-end.
+      setT((v) => (v + 1 > steps ? 0 : v + 1));
     }, intervalMs);
     return () => clearInterval(id);
   }, [steps, replayKey, intervalMs]);
-  return t;
+  return Math.min(t, steps - 1);
 }
 
 function Stage({
