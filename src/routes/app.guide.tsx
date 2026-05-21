@@ -671,7 +671,7 @@ function GuidePage() {
   }, [playing, i, s.steps]);
 
   return (
-    <div className="max-w-3xl mx-auto">
+    <div className="max-w-4xl mx-auto px-1 sm:px-2">
       {isIntro && (
         <div className="mb-5 rounded-2xl border border-border/70 bg-gradient-to-br from-primary/10 via-background to-background p-4 sm:p-5 flex items-start gap-3">
           <div className="h-9 w-9 rounded-xl bg-foreground text-background grid place-items-center shrink-0">
@@ -688,17 +688,27 @@ function GuidePage() {
           </Button>
         </div>
       )}
-      {/* Progress + auto-play */}
-      <div className="flex items-center gap-2 mb-6">
-        <span className="text-[11px] text-muted-foreground tabular-nums">{String(i + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span>
-        <div className="flex-1 h-0.5 bg-muted rounded-full overflow-hidden">
-          <div className="h-full bg-primary transition-all duration-500" style={{ width: `${((i + 1) / slides.length) * 100}%` }} />
+      {/* Header: eyebrow, title, progress */}
+      <header className="mb-8">
+        <div className="text-[10px] uppercase tracking-[0.16em] text-primary font-medium">
+          Quick guide
         </div>
-        <Button variant="ghost" size="sm" className="rounded-full h-7 px-2" onClick={() => setPlaying((p) => !p)}>
-          {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
-          <span className="text-[11px] ml-1">{playing ? "Pause" : "Auto-play"}</span>
-        </Button>
-      </div>
+        <h1 className="mt-1 text-3xl md:text-4xl font-semibold tracking-tight leading-[1.05]">
+          A 90-second tour of every feature
+        </h1>
+        <div className="mt-5 flex items-center gap-3">
+          <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
+            {String(i + 1).padStart(2, "0")} <span className="text-muted-foreground/40">/</span> {String(slides.length).padStart(2, "0")}
+          </span>
+          <div className="flex-1 h-[2px] bg-muted rounded-full overflow-hidden">
+            <div className="h-full bg-foreground transition-all duration-500" style={{ width: `${((i + 1) / slides.length) * 100}%` }} />
+          </div>
+          <Button variant="ghost" size="sm" className="rounded-full h-7 px-2.5" onClick={() => setPlaying((p) => !p)}>
+            {playing ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+            <span className="text-[11px] ml-1.5 font-medium">{playing ? "Pause" : "Auto-play"}</span>
+          </Button>
+        </div>
+      </header>
 
       <div className="grid md:grid-cols-2 gap-6 md:gap-8 items-start">
         {/* Visual */}
@@ -793,6 +803,8 @@ function GuidePage() {
       <div className="mt-10 text-center text-[11px] text-muted-foreground inline-flex items-center gap-1.5 justify-center w-full">
         <ArrowDown className="h-3 w-3" /> Revisit anytime from More → Tools → Quick guide
       </div>
+
+      <GuideFAQ />
     </div>
   );
 }
