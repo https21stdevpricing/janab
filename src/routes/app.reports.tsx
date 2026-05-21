@@ -6,8 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { inr, fmt } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert, Layers, Calculator, Check } from "lucide-react";
+import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert, Layers, Calculator, Check, Wrench } from "lucide-react";
 import { toast } from "sonner";
+import { ReconcileGuide, buildReconcileSignals } from "@/components/reconcile-guide";
 
 export const Route = createFileRoute("/app/reports")({ component: ReportsPage });
 
@@ -19,6 +20,8 @@ function ReportsPage() {
   const [purchaseHdr, setPurchaseHdr] = useState<any[]>([]);
   const [fixedAssets, setFixedAssets] = useState<any[]>([]);
   const [cogsMethod, setCogsMethod] = useState<"weighted_average" | "fifo">("weighted_average");
+  const [payments, setPayments] = useState<any[]>([]);
+  const [allocations, setAllocations] = useState<any[]>([]);
 
   useEffect(() => {
     supabase.from("ledger_view").select("*").then(({ data }) => setRows(data ?? []));
@@ -27,6 +30,8 @@ function ReportsPage() {
     supabase.from("purchase_items").select("product_id,qty,rate").then(({ data }) => setPurchaseItems(data ?? []));
     (supabase as any).from("purchase_items").select("product_id,qty,rate,purchases!inner(date)").then(({ data }: any) => setPurchaseHdr(data ?? []));
     (supabase as any).from("fixed_assets").select("*").then(({ data }: any) => setFixedAssets(data ?? []));
+    supabase.from("payments").select("id,amount,direction").then(({ data }) => setPayments(data ?? []));
+    (supabase as any).from("payment_allocations").select("payment_id,amount").then(({ data }: any) => setAllocations(data ?? []));
     (supabase as any).from("settings").select("cogs_method").maybeSingle().then(({ data }: any) => {
       if (data?.cogs_method) setCogsMethod(data.cogs_method);
     });
