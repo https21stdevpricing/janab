@@ -164,4 +164,28 @@
   }
   .scroll-tabs::-webkit-scrollbar { display: none; }
   .scroll-tabs > * { flex: 0 0 auto; white-space: nowrap; }
+
+  /* ---------- Design system tokens (shared surfaces) ---------- */
+  .surface {
+    background-color: var(--color-card);
+    border: 1px solid color-mix(in oklab, var(--color-border) 85%, transparent);
+    border-radius: var(--radius-xl);
+  }
+  .surface-muted {
+    background-color: color-mix(in oklab, var(--color-muted) 60%, transparent);
+    border: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent);
+    border-radius: var(--radius-lg);
+  }
+  .elev-1 { box-shadow: 0 1px 2px -1px oklch(0 0 0 / 0.06), 0 1px 1px oklch(0 0 0 / 0.04); }
+  .elev-2 { box-shadow: 0 4px 12px -4px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.05); }
+  .hairline { border-bottom: 1px solid color-mix(in oklab, var(--color-border) 70%, transparent); }
+  .eyebrow {
+    font-size: 10px;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--color-muted-foreground);
+    font-weight: 600;
+  }
+  .stat-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; font-weight: 600; }
 }
