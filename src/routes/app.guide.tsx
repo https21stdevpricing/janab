@@ -8,7 +8,12 @@ import {
   LineChart, Layers, Lightbulb, Play, Pause, RotateCcw,
 } from "lucide-react";
 
-export const Route = createFileRoute("/app/guide")({ component: GuidePage });
+export const Route = createFileRoute("/app/guide")({
+  component: GuidePage,
+  validateSearch: (s: Record<string, unknown>) => ({
+    intro: s.intro === "1" || s.intro === 1 ? "1" : undefined,
+  }),
+});
 
 /* ---------------- Multi-step animated prototypes ---------------- *
  *
@@ -630,6 +635,8 @@ const slides: Slide[] = [
 ];
 
 function GuidePage() {
+  const search = Route.useSearch();
+  const isIntro = search.intro === "1";
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [replay, setReplay] = useState(0);
@@ -662,6 +669,22 @@ function GuidePage() {
 
   return (
     <div className="max-w-3xl mx-auto">
+      {isIntro && (
+        <div className="mb-5 rounded-2xl border border-border/70 bg-gradient-to-br from-primary/10 via-background to-background p-4 sm:p-5 flex items-start gap-3">
+          <div className="h-9 w-9 rounded-xl bg-foreground text-background grid place-items-center shrink-0">
+            <Sparkles className="h-4 w-4" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-semibold tracking-tight">Welcome to StoneWorld</div>
+            <div className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+              A 90-second tour of every feature. You'll only see this once — revisit anytime from More → Quick guide.
+            </div>
+          </div>
+          <Button asChild variant="ghost" size="sm" className="rounded-full shrink-0">
+            <Link to="/app">Skip</Link>
+          </Button>
+        </div>
+      )}
       {/* Progress + auto-play */}
       <div className="flex items-center gap-2 mb-6">
         <span className="text-[11px] text-muted-foreground tabular-nums">{String(i + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}</span>
