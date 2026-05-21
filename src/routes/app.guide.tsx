@@ -7,6 +7,7 @@ import {
   Search, BookOpen, Boxes, ArrowRight, Sparkles, Check, ArrowDown,
   LineChart, Layers, Lightbulb, Play, Pause, RotateCcw,
 } from "lucide-react";
+import { GuideFAQ } from "@/components/guide-faq";
 
 export const Route = createFileRoute("/app/guide")({
   component: GuidePage,
