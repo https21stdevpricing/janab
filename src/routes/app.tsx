@@ -411,10 +411,7 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
             </button>
           </div>
         </div>
-        <div
-          ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain"
-        >
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain">
           {[{ label: "Daily", items: [...pinned].slice(1).map((p) => ({ ...p })) }, ...moreGroups].map((g) => (
             <div key={g.label}>
               <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/80 mb-2 px-1">{g.label}</div>
