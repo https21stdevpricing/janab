@@ -618,7 +618,7 @@ function BillsPage() {
 
       {/* Bill preview dialog */}
       <Dialog open={!!preview} onOpenChange={o => !o && setPreview(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-3xl overflow-y-auto overflow-x-hidden rounded-2xl p-0 gap-0 sm:w-full">
           <div className="px-4 py-3 border-b">
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Bill preview</DialogTitle>
           </div>
@@ -628,26 +628,26 @@ function BillsPage() {
 
       {/* Past payment detail dialog */}
       <Dialog open={!!viewPay} onOpenChange={(o) => !o && setViewPay(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Eye className="h-4 w-4" />{viewPay?.direction === "in" ? "Receipt" : "Payment"} · {viewPay?.payment_no}</DialogTitle></DialogHeader>
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-lg overflow-y-auto overflow-x-hidden rounded-2xl sm:w-full">
+          <DialogHeader><DialogTitle className="flex min-w-0 items-center gap-2 pr-6 text-base"><Eye className="h-4 w-4 shrink-0" /><span className="truncate">{viewPay?.direction === "in" ? "Receipt" : "Payment"} · {viewPay?.payment_no}</span></DialogTitle></DialogHeader>
           {viewPay && (
             <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewPay.date)}</div></div>
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewPay.mode ?? "—"}</div></div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Applied as</div>
                   <Badge variant="outline" className="text-[10px]">
                     {viewPay.kind === "advance" ? "Advance payment" : viewPay.kind === "on_account" ? "On account" : "Against invoice"}
                   </Badge>
                 </div>
-                {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} status={viewPay.status} /></div>}
-                <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewPay.contact_name ?? "—"}</div></div>
-                <div className="col-span-2 rounded-md border bg-muted/30 p-3">
+                {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="sm:col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} status={viewPay.status} /></div>}
+                <div className="min-w-0 sm:col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="truncate font-medium">{viewPay.contact_name ?? "—"}</div></div>
+                <div className="min-w-0 rounded-xl border bg-muted/30 p-3 sm:col-span-2">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Amount</div>
-                  <div className={`text-2xl font-semibold tabular-nums ${viewPay.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(viewPay.amount)}</div>
+                  <div className={`truncate text-2xl font-semibold tabular-nums ${viewPay.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(viewPay.amount)}</div>
                 </div>
-                {viewPay.notes && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Notes</div><div>{viewPay.notes}</div></div>}
+                {viewPay.notes && <div className="min-w-0 sm:col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Notes</div><div className="break-words">{viewPay.notes}</div></div>}
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Applied to</div>
