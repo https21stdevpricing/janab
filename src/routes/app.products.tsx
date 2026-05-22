@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search, Rows3, X as XIcon } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
@@ -48,6 +48,11 @@ function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Row | null>(null);
   const [form, setForm] = useState<Omit<Row, "id">>(empty);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  type BulkRow = { name: string; unit: string; hsn: string; purchase_rate: number; sale_rate: number; opening_stock: number };
+  const emptyBulk = (): BulkRow => ({ name: "", unit: "sqft", hsn: "", purchase_rate: 0, sale_rate: 0, opening_stock: 0 });
+  const [bulk, setBulk] = useState<BulkRow[]>(() => Array.from({ length: 5 }, emptyBulk));
+  const [bulkKind, setBulkKind] = useState<"stocked" | "order_basis">("stocked");
   // dimension calculator
   const [dim, setDim] = useState<{ l: number; b: number; pieces: number; unit: "in" | "cm" | "mm" | "ft" | "m" }>({ l: 0, b: 0, pieces: 1, unit: "in" });
 
@@ -185,6 +190,9 @@ function ProductsPage() {
         actions={
           <>
             <ExcelBar onExport={onExport} onImport={onImport} />
+            <Button size="sm" variant="outline" onClick={() => { setBulk(Array.from({ length: 5 }, emptyBulk)); setBulkKind(tab === "order" ? "order_basis" : "stocked"); setBulkOpen(true); }}>
+              <Rows3 className="h-4 w-4" /> <span className="hidden sm:inline">Bulk add</span>
+            </Button>
             <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
               <Plus className="h-4 w-4" /> New product
             </Button>
