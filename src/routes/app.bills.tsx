@@ -52,8 +52,10 @@ type PayRow = {
   contact_id: string | null; contact_name: string | null; amount: number;
   mode: string | null; ref_doc: string | null; notes: string | null;
   cleared: boolean; cleared_at: string | null; cheque_no: string | null; bank_name: string | null; txn_id: string | null;
+  status?: "pending" | "cleared" | "bounced" | null;
 };
 type Alloc = { doc_kind: "sale" | "purchase" | "tp" | "tp_purchase"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
+type PendingChequeLock = { doc_kind: string; doc_id: string; payment_id: string; payment_no: string; cheque_no: string | null; amount: number; date: string };
 
 const sideOf = (k: Row["doc_kind"]) => (k === "sale" || k === "tp" ? "receivable" : "payable");
 const docKindLabel = (k: Row["doc_kind"]) => k === "sale" ? "Invoice" : k === "purchase" ? "Purchase" : k === "tp" ? "TP sale" : "TP purchase";
@@ -110,6 +112,7 @@ function BillsPage() {
   const [viewPay, setViewPay] = useState<PayRow | null>(null);
   const [viewAllocs, setViewAllocs] = useState<Array<{ doc_kind: string; doc_no: string; amount: number }>>([]);
   const [company, setCompany] = useState<any>(null);
+  const [pendingChequeLocks, setPendingChequeLocks] = useState<PendingChequeLock[]>([]);
 
   /* ---------- payment dialog state ---------- */
   const [payOpen, setPayOpen] = useState(false);
@@ -134,12 +137,14 @@ function BillsPage() {
   };
 
   const load = async () => {
-    const [{ data: out }, { data: ph }] = await Promise.all([
+    const [{ data: out }, { data: ph }, { data: locks }] = await Promise.all([
       supabase.from("outstanding_view" as never).select("*").gt("balance", 0).order("date", { ascending: true }) as any,
       supabase.from("payments").select("*").order("date", { ascending: false }).order("created_at", { ascending: false }),
+      supabase.from("pending_cheque_allocations_view" as never).select("doc_kind,doc_id,payment_id,payment_no,cheque_no,amount,date") as any,
     ]);
     setRows((out ?? []) as Row[]);
     setPays((ph ?? []) as PayRow[]);
+    setPendingChequeLocks((locks ?? []) as PendingChequeLock[]);
   };
   useEffect(() => {
     load();
@@ -227,6 +232,11 @@ function BillsPage() {
   const filteredPays = useMemo(() => pays.filter(p =>
     q === "" || p.payment_no.toLowerCase().includes(q.toLowerCase()) || (p.contact_name ?? "").toLowerCase().includes(q.toLowerCase())
   ), [pays, q]);
+  const lockMap = useMemo(() => {
+    const m = new Map<string, PendingChequeLock>();
+    pendingChequeLocks.forEach((l) => m.set(`${l.doc_kind}:${l.doc_id}`, l));
+    return m;
+  }, [pendingChequeLocks]);
 
   const onExport = () => {
     if (tab === "history") {
