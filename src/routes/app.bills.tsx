@@ -656,10 +656,10 @@ function BillsPage() {
                 ) : (
                   <div className="border rounded-md divide-y">
                     {viewAllocs.map((a, i) => (
-                      <div key={i} className="p-2.5 flex items-center gap-2 text-sm">
+                      <div key={i} className="grid min-w-0 grid-cols-1 gap-1 p-2.5 text-sm sm:flex sm:items-center sm:gap-2">
                         <Badge variant="outline" className="text-[10px]">{a.doc_kind === "sale" ? "Invoice" : a.doc_kind === "purchase" ? "Purchase" : a.doc_kind === "tp" ? "TP sale" : "TP purchase"}</Badge>
-                        <span className="font-mono text-xs">{a.doc_no}</span>
-                        <span className="ml-auto tabular-nums font-semibold">{inr(a.amount)}</span>
+                        <span className="truncate font-mono text-xs">{a.doc_no}</span>
+                        <span className="tabular-nums font-semibold sm:ml-auto">{inr(a.amount)}</span>
                       </div>
                     ))}
                   </div>
@@ -690,11 +690,11 @@ function BillsPage() {
 
       {/* Unified payment dialog */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
-        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto p-0 gap-0">
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-3xl overflow-y-auto overflow-x-hidden rounded-2xl p-0 gap-0 sm:w-full">
           <DialogHeader>
             <div className="border-b px-4 py-4 sm:px-6">
-              <DialogTitle className="flex items-center gap-2 text-base">
-                {direction === "in" ? <ArrowDownLeft className="h-4 w-4 text-primary" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
+              <DialogTitle className="flex items-center gap-2 pr-6 text-base">
+                {direction === "in" ? <ArrowDownLeft className="h-4 w-4 shrink-0 text-primary" /> : <ArrowUpRight className="h-4 w-4 shrink-0 text-destructive" />}
                 {direction === "in" ? "Record receipt" : "Record payment"}
               </DialogTitle>
               {mode === "Cheque" && !cleared && <p className="mt-1 text-xs text-muted-foreground">This cheque will remain pending until you mark it cleared.</p>}
@@ -801,15 +801,15 @@ function BillsPage() {
 
           {contactId && kind === "against_invoice" && (
             <div className="mt-3">
-              <div className="flex items-center justify-between mb-1">
+              <div className="mb-2 grid gap-1 sm:flex sm:items-center sm:justify-between">
                 <Label className="text-xs">Open bills · click to allocate</Label>
                 <div className="text-xs text-muted-foreground">
                   Allocated <span className="font-semibold">{inr(allocatedSum)}</span> / Remaining <span className={remaining < 0 ? "text-destructive font-semibold" : "font-semibold"}>{inr(remaining)}</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
+              <div className="mb-2 grid gap-2 text-xs text-muted-foreground sm:flex sm:items-center sm:justify-between">
                 <span>Open total: <span className="font-semibold text-foreground">{inr(totalOpen)}</span></span>
-                <Button type="button" size="sm" variant="outline" className="h-7" onClick={autoAllocate} disabled={!amount || openDocs.length === 0}>Auto-allocate oldest</Button>
+                <Button type="button" size="sm" variant="outline" className="h-8 rounded-full sm:h-7" onClick={autoAllocate} disabled={!amount || openDocs.length === 0}>Auto-allocate oldest</Button>
               </div>
               {openDocs.length === 0 ? (
                 <div className="text-xs text-muted-foreground border rounded-md p-2">No open bills for this party — will sit as advance.</div>
