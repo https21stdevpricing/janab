@@ -37,7 +37,7 @@ function OnboardingPage() {
   const [partners, setPartners] = useState<Partner[]>([]);
 
   // Step 2 — bank + opening cash/bank
-  const [bank, setBank] = useState({ bank_name: "", bank_account_no: "", bank_ifsc: "" });
+  const [bank, setBank] = useState({ bank_name: "", bank_account_no: "", bank_ifsc: "", upi_id: "" });
   const [cashOpen, setCashOpen] = useState(0);
   const [bankOpen, setBankOpen] = useState(0);
 
@@ -68,6 +68,7 @@ function OnboardingPage() {
         bank_name: (st as any).bank_name ?? "",
         bank_account_no: (st as any).bank_account_no ?? "",
         bank_ifsc: (st as any).bank_ifsc ?? "",
+        upi_id: (st as any).upi_id ?? "",
       });
       if (st && Array.isArray((st as any).partners)) setPartners((st as any).partners as Partner[]);
       await refreshInline();
@@ -432,6 +433,7 @@ function OnboardingPage() {
                 <Field label="Bank name"><Input value={bank.bank_name} onChange={e => setBank({ ...bank, bank_name: e.target.value })} placeholder="HDFC Bank" /></Field>
                 <Field label="Account number"><Input value={bank.bank_account_no} onChange={e => setBank({ ...bank, bank_account_no: e.target.value })} /></Field>
                 <Field label="IFSC"><Input value={bank.bank_ifsc} onChange={e => setBank({ ...bank, bank_ifsc: e.target.value.toUpperCase() })} placeholder="HDFC0001234" maxLength={11} /></Field>
+                <Field label="UPI ID"><Input value={bank.upi_id} onChange={e => setBank({ ...bank, upi_id: e.target.value })} placeholder="yourname@hdfc / 9876543210@upi" /></Field>
               </div>
             </div>
             <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-1">Opening balances</div>
