@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from 
 import {
   Activity,
   CalendarClock,
-  CheckCircle2,
   Clock,
   Database,
   ExternalLink,
