@@ -380,7 +380,7 @@ function OnboardingPage() {
                 </div>
                 {partners.length === 0 && <div className="text-xs text-muted-foreground">Add at least 2 partners. Shares must total 100%.</div>}
                 {partners.map((p, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_80px_110px_auto] gap-2 items-end">
+                  <div key={i} className="grid grid-cols-1 sm:grid-cols-[minmax(180px,1fr)_90px_130px_36px] gap-2 items-end">
                     <Field label={i === 0 ? "Name" : ""}><Input value={p.name} onChange={e => { const c = [...partners]; c[i] = { ...c[i], name: e.target.value }; setPartners(c); }} /></Field>
                     <Field label={i === 0 ? "Share %" : ""}><Input type="number" value={p.share} onChange={e => { const c = [...partners]; c[i] = { ...c[i], share: +e.target.value }; setPartners(c); }} /></Field>
                     <Field label={i === 0 ? "PAN" : ""}><Input value={p.pan ?? ""} onChange={e => { const c = [...partners]; c[i] = { ...c[i], pan: e.target.value.toUpperCase() }; setPartners(c); }} maxLength={10} /></Field>
