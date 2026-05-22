@@ -264,15 +264,15 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
-  // Physics-based swipe-to-close. Uses direct DOM transform writes (no React
-  // re-render during drag) + non-passive touchmove to lock page scroll.
-  // Closes on: 90px drag, 30px drag + downward velocity > 0.3 px/ms, or
-  // a flick > 0.7 px/ms regardless of distance.
+  // Whole-screen, physics-based pull-down close. Listens at document capture
+  // while the sheet is open so drags starting on icons, empty space, footer, or
+  // the dim overlay all feel identical without React re-renders during motion.
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const blockClickUntilRef = useRef(0);
   const stateRef = useRef({
-    active: false, startY: 0, lastY: 0, lastT: 0, lastV: 0,
-    fromBody: false, height: 0,
+    tracking: false, dragging: false, startY: 0, lastY: 0, lastT: 0, lastV: 0,
+    startedInScroller: false, height: 0,
   });
 
   const setTransform = (y: number) => {
