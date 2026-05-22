@@ -268,7 +268,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           <div className="mt-8 grid grid-cols-[1fr_260px] gap-10 items-start break-inside-avoid">
             <div className="text-[11px] leading-5 text-[#374050]">
               <p className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Amount in words</p>
-              <p className="mt-1 font-semibold text-[#111621]">{amountWords(totals.total)}</p>
+              <p className="mt-1 font-semibold text-[#111621]">{amountInWords(totals.total)}</p>
               {kind === "invoice" && (company?.bank_name || company?.bank_account_no || company?.bank_ifsc) && (
                 <div className="mt-4">
                   <p className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Bank Details</p>
