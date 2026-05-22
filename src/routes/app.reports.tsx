@@ -724,9 +724,9 @@ function MeterCard({ label, value, status, meaning }: { label: string; value: st
   return (
     <Card className={`border-l-4 ${ring}`}>
       <CardContent className="p-3">
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className={`text-xl font-semibold tabular-nums mt-1 ${valueTone}`}>{value}</div>
-        <div className="text-xs text-muted-foreground mt-1 leading-snug">{meaning}</div>
+        <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground truncate">{label}</div>
+        <div className={`text-base sm:text-xl font-semibold tabular-nums mt-1 truncate ${valueTone}`}>{value}</div>
+        <div className="text-[11px] text-muted-foreground mt-1 leading-snug">{meaning}</div>
       </CardContent>
     </Card>
   );
