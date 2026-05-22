@@ -38,15 +38,15 @@ const LEDGER_LIVE_TABLES = [
 ];
 
 type LedgerRow = {
-  user_id: string;
-  date: string;
+  user_id: string | null;
+  date: string | null;
   account: string | null;
   party: string | null;
   ref_no: string | null;
   narration: string | null;
   source_id?: string | null;
-  debit: number | string | null;
-  credit: number | string | null;
+  debit: number | null;
+  credit: number | null;
 };
 
 function LedgerPage() {
@@ -73,7 +73,10 @@ function LedgerPage() {
         .select("*")
         .eq("user_id", auth.user.id)
         .order("date", { ascending: false })
-        .range(from, to),
+        .range(from, to) as unknown as PromiseLike<{
+        data: LedgerRow[] | null;
+        error: { message: string } | null;
+      }>,
     );
     setRows(data);
   }, []);
