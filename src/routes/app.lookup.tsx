@@ -481,26 +481,34 @@ export function DocDetail({ doc }: { doc: DocLookupResult }) {
           {doc.kind !== "tp" && doc.outstanding && (
             <Badge variant={doc.outstanding.status === "paid" ? "default" : doc.outstanding.status === "partial" ? "secondary" : "outline"} className="mt-1 capitalize">{doc.outstanding.status}</Badge>
           )}
-          <div className="mt-2 flex flex-col items-end gap-1">
-            {printable && (
-              <Button asChild size="sm" variant="outline"><Link to={"/app/print/" + printable + "/$id" as any} params={{ id: h.id } as any}><Printer className="h-3 w-3" /> Print</Link></Button>
-            )}
-            {doc.kind !== "payment" && doc.kind !== "deposit" && (
-              <Button size="sm" variant="outline" onClick={() => exportStoneWorldDocument(doc, company)}><Printer className="h-3 w-3" /> PDF</Button>
-            )}
+          {/* Minimal action set — primary settle action only; secondaries hidden behind icon row */}
+          <div className="mt-2 flex items-center justify-end gap-1.5 flex-wrap">
             {payable && doc.kind !== "tp" && doc.outstanding && doc.outstanding.balance > 0 && (
-              <Button size="sm" onClick={goPay}><Wallet className="h-3 w-3" /> {payDir === "in" ? "Receive" : "Pay"} {inr(doc.outstanding.balance)}</Button>
+              <Button size="sm" onClick={goPay}>
+                <Wallet className="h-3 w-3" /> {payDir === "in" ? "Receive" : "Pay"} {inr(doc.outstanding.balance)}
+              </Button>
             )}
             {doc.kind === "tp" && doc.outstanding && doc.outstanding.balance > 0 && (
-              <Button size="sm" onClick={goPay}><Wallet className="h-3 w-3" /> Receive from buyer {inr(doc.outstanding.balance)}</Button>
+              <Button size="sm" onClick={goPay}><Wallet className="h-3 w-3" /> Receive {inr(doc.outstanding.balance)}</Button>
             )}
             {doc.kind === "tp" && doc.supplierOutstanding && doc.supplierOutstanding.balance > 0 && (
               <Button size="sm" variant="secondary" onClick={goPaySupplier}><Wallet className="h-3 w-3" /> Pay supplier {inr(doc.supplierOutstanding.balance)}</Button>
             )}
-            {doc.kind === "sale" && (
-              <Button size="sm" variant="outline" onClick={goDelivery}><Truck className="h-3 w-3" /> Delivery</Button>
+            {doc.kind !== "payment" && doc.kind !== "deposit" && (
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PDF" onClick={() => exportStoneWorldDocument(doc, company)}>
+                <Printer className="h-3.5 w-3.5" />
+              </Button>
             )}
-            <ExcelBar onExport={exportDoc} exportLabel="Excel" />
+            {printable && (
+              <Button asChild size="sm" variant="ghost" className="h-8 w-8 p-0" title="Print">
+                <Link to={"/app/print/" + printable + "/$id" as any} params={{ id: h.id } as any}><Printer className="h-3.5 w-3.5" /></Link>
+              </Button>
+            )}
+            {doc.kind === "sale" && (
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Delivery" onClick={goDelivery}>
+                <Truck className="h-3.5 w-3.5" />
+              </Button>
+            )}
           </div>
         </div>
       </div>

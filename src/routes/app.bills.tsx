@@ -316,6 +316,24 @@ function BillsPage() {
     if (!contactId) { toast.error("Pick a party"); return; }
     if (amount <= 0) { toast.error("Amount must be > 0"); return; }
     if (mode === "Cheque" && !chequeNo.trim()) { toast.error("Cheque number is required"); return; }
+    // Strict duplicate guard — block any identical party + amount + date + direction recorded already.
+    // Allows intentional duplicates only on explicit confirmation.
+    const { data: dup } = await supabase
+      .from("payments")
+      .select("id,payment_no")
+      .eq("contact_id", contactId)
+      .eq("direction", direction)
+      .eq("date", date)
+      .eq("amount", amount)
+      .limit(1);
+    if (dup && dup.length > 0) {
+      const ok = confirm(`A ${direction === "in" ? "receipt" : "payment"} of ${inr(amount)} for this party on ${fmtDate(date)} already exists (${dup[0].payment_no}). Record another one anyway?`);
+      if (!ok) return;
+    }
+    if (allocs.length > 0 && allocatedSum > amount + 0.01) {
+      toast.error(`Allocated (${inr(allocatedSum)}) is more than amount (${inr(amount)}).`);
+      return;
+    }
     const { data: pay, error } = await supabase.from("payments").insert({
       user_id: user.id, direction, date, amount, mode, notes: notes || null,
       contact_id: contactId, contact_name: contactName,
@@ -490,30 +508,24 @@ function BillsPage() {
           {filtered.map(r => {
             const d = ageDays(r.date); const b = bucket(d);
             const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
-            const sideClr = tab === "receivable" ? "text-primary" : "text-destructive";
-            const sideBdr = tab === "receivable" ? "border-l-primary" : "border-l-destructive";
             const st = payStatus(Number(r.total), Number(r.paid), d);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className={`rounded-2xl border border-l-4 ${sideBdr} bg-card p-3 space-y-3 shadow-sm`}>
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="rounded-2xl border bg-card p-3 space-y-3">
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="font-mono text-sm font-medium text-primary">{r.doc_no}</div>
-                      <div className="text-sm truncate">{r.party_name ?? "—"}</div>
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">{docKindLabel(r.doc_kind)}</div>
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
+                      <div className="font-mono text-sm font-medium mt-0.5">{r.doc_no}</div>
+                      <div className="text-sm truncate text-muted-foreground">{r.party_name ?? "—"}</div>
                     </div>
                     <div className="text-right shrink-0">
-                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Remaining</div>
-                      <div className={`text-lg font-semibold tabular-nums ${sideClr}`}>{inr(r.balance)}</div>
-                      <div className="mt-1 flex justify-end gap-1"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div>
+                      <div className="text-lg font-semibold tabular-nums">{inr(r.balance)}</div>
+                      <div className="mt-1 flex justify-end"><StatusBadge s={st} /></div>
                     </div>
                   </div>
                 </button>
                 <PayProgress pct={pct} tab={tab} />
-                <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                  <span>Paid <span className="tabular-nums font-medium text-foreground">{inr(r.paid)}</span> of {inr(r.total)}</span>
-                  <span>{fmtDate(r.date)}</span>
-                </div>
+                <div className="text-[11px] text-muted-foreground tabular-nums">{inr(r.paid)} of {inr(r.total)} · {b}d</div>
                 <div className="grid grid-cols-2 gap-2">
                   <Button size="sm" variant="outline" onClick={() => openPreview(r.doc_no)}><Eye className="h-3.5 w-3.5" /> Preview</Button>
                   <Button size="sm" onClick={() => settleBill(r)}>
