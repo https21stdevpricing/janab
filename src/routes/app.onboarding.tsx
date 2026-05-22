@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/page-header";
 import { inr } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, FileUp } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, FileUp, ClipboardCheck } from "lucide-react";
 import { importWorkbook, pickSheet } from "@/lib/excel";
 import { useRef } from "react";
 
@@ -46,6 +47,7 @@ function OnboardingPage() {
   // Step 3 — inline product rows
   type ProdRow = { id?: string; name: string; unit: string; opening_stock: number; purchase_rate: number; _dirty?: boolean };
   const [prods, setProds] = useState<ProdRow[]>([]);
+  const [bulkStockText, setBulkStockText] = useState("");
 
   // Step 4 — inline contact rows
   type ContactRow = { id?: string; name: string; type: "buyer" | "supplier"; opening_balance: number; phone?: string; _dirty?: boolean };
@@ -87,6 +89,17 @@ function OnboardingPage() {
   const liveOpeningStockValue = useMemo(() => prods.reduce((a, p) => a + Number(p.opening_stock || 0) * Number(p.purchase_rate || 0), 0), [prods]);
   const liveRecv = useMemo(() => contacts.filter(c => c.type === "buyer").reduce((a, c) => a + Number(c.opening_balance || 0), 0), [contacts]);
   const livePay  = useMemo(() => contacts.filter(c => c.type === "supplier").reduce((a, c) => a + Number(c.opening_balance || 0), 0), [contacts]);
+
+  const addBulkStock = () => {
+    const rows = bulkStockText.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map((line) => {
+      const [name, unit, qty, rate] = line.split(/[\t|,]/).map(x => x.trim());
+      return name ? { name, unit: unit || "sqft", opening_stock: Number(qty) || 0, purchase_rate: Number(rate) || 0, _dirty: true } : null;
+    }).filter(Boolean) as ProdRow[];
+    if (!rows.length) { toast.error("Paste at least one valid product row"); return; }
+    setProds([...prods, ...rows]);
+    setBulkStockText("");
+    toast.success(`Added ${rows.length} product rows`);
+  };
 
   const saveProducts = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -307,20 +320,20 @@ function OnboardingPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-2">
+    <div className="mx-auto max-w-5xl py-2 sm:py-4">
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> First-time setup</span>}
-        description="Five quick steps so your books start clean. Nothing posts until the final confirm."
+        title={<span className="inline-flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-primary" /> Business setup</span>}
+        description="One guided flow for profile, bank, stock and opening balances — no page switching."
       />
 
       {/* Progress */}
-      <div className="flex items-center gap-1 mb-6">
+      <div className="mb-4 grid grid-cols-5 gap-1.5 rounded-full bg-muted p-1">
         {[1, 2, 3, 4, 5].map(n => (
-          <div key={n} className={`h-1 flex-1 rounded-full transition-all ${n <= step ? "bg-primary" : "bg-border"}`} />
+          <button key={n} type="button" onClick={() => setStep(n as Step)} className={`h-2 rounded-full transition-all ${n <= step ? "bg-primary" : "bg-background"}`} aria-label={`Step ${n}`} />
         ))}
       </div>
 
-      <div className="rounded-2xl border bg-card p-6 sm:p-8 space-y-5">
+      <div className="rounded-[1.5rem] border border-border/70 bg-card p-4 shadow-sm sm:p-6 lg:p-8 space-y-5 overflow-hidden">
         {step === 1 && (
           <>
             <Header n={1} title="Your business" hint="Legal identity for invoices, GST returns and reports." icon={Building2} />
@@ -367,7 +380,7 @@ function OnboardingPage() {
                 </div>
                 {partners.length === 0 && <div className="text-xs text-muted-foreground">Add at least 2 partners. Shares must total 100%.</div>}
                 {partners.map((p, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_80px_110px_auto] gap-2 items-end">
+                  <div key={i} className="grid grid-cols-1 sm:grid-cols-[minmax(180px,1fr)_90px_130px_36px] gap-2 items-end">
                     <Field label={i === 0 ? "Name" : ""}><Input value={p.name} onChange={e => { const c = [...partners]; c[i] = { ...c[i], name: e.target.value }; setPartners(c); }} /></Field>
                     <Field label={i === 0 ? "Share %" : ""}><Input type="number" value={p.share} onChange={e => { const c = [...partners]; c[i] = { ...c[i], share: +e.target.value }; setPartners(c); }} /></Field>
                     <Field label={i === 0 ? "PAN" : ""}><Input value={p.pan ?? ""} onChange={e => { const c = [...partners]; c[i] = { ...c[i], pan: e.target.value.toUpperCase() }; setPartners(c); }} maxLength={10} /></Field>
@@ -418,26 +431,33 @@ function OnboardingPage() {
         {step === 3 && (
           <>
             <Header n={3} title="Opening stock" hint="Add each product with current quantity and purchase rate. Edit inline — no need to leave this page." icon={Boxes} />
-            <div className="rounded-lg border bg-muted/10">
-              <div className="grid grid-cols-[1fr_70px_90px_110px_32px] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
+            <div className="rounded-2xl border bg-background overflow-hidden">
+              <div className="hidden sm:grid grid-cols-[minmax(180px,1fr)_82px_110px_130px_36px] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
                 <div>Product</div><div>Unit</div><div className="text-right">Qty</div><div className="text-right">Rate ₹</div><div></div>
               </div>
-              <div className="max-h-[40vh] overflow-y-auto divide-y">
+              <div className="max-h-[46vh] overflow-y-auto divide-y">
                 {prods.length === 0 && <div className="px-3 py-6 text-center text-xs text-muted-foreground">No products yet. Add your first below.</div>}
                 {prods.map((p, i) => (
-                  <div key={p.id ?? `n-${i}`} className="grid grid-cols-[1fr_70px_90px_110px_32px] gap-2 px-3 py-1.5 items-center">
-                    <Input className="h-8 text-sm" value={p.name} placeholder="e.g. Marble 24×24" onChange={e => { const c = [...prods]; c[i] = { ...c[i], name: e.target.value, _dirty: true }; setProds(c); }} />
-                    <Input className="h-8 text-sm" value={p.unit} onChange={e => { const c = [...prods]; c[i] = { ...c[i], unit: e.target.value, _dirty: true }; setProds(c); }} />
-                    <Input className="h-8 text-sm text-right tabular-nums" type="number" value={p.opening_stock} onChange={e => { const c = [...prods]; c[i] = { ...c[i], opening_stock: +e.target.value, _dirty: true }; setProds(c); }} />
-                    <Input className="h-8 text-sm text-right tabular-nums" type="number" value={p.purchase_rate} onChange={e => { const c = [...prods]; c[i] = { ...c[i], purchase_rate: +e.target.value, _dirty: true }; setProds(c); }} />
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => { if (p.id) { if (!confirm(`Delete "${p.name}"?`)) return; await supabase.from("products").delete().eq("id", p.id); } setProds(prods.filter((_, j) => j !== i)); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  <div key={p.id ?? `n-${i}`} className="grid grid-cols-2 sm:grid-cols-[minmax(180px,1fr)_82px_110px_130px_36px] gap-2 p-3 sm:py-2 items-end">
+                    <RowField label="Product"><Input className="h-10 text-sm" value={p.name} placeholder="e.g. Marble 24×24" onChange={e => { const c = [...prods]; c[i] = { ...c[i], name: e.target.value, _dirty: true }; setProds(c); }} /></RowField>
+                    <RowField label="Unit"><Input className="h-10 text-sm" value={p.unit} onChange={e => { const c = [...prods]; c[i] = { ...c[i], unit: e.target.value, _dirty: true }; setProds(c); }} /></RowField>
+                    <RowField label="Qty"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={p.opening_stock} onChange={e => { const c = [...prods]; c[i] = { ...c[i], opening_stock: +e.target.value, _dirty: true }; setProds(c); }} /></RowField>
+                    <RowField label="Rate ₹"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={p.purchase_rate} onChange={e => { const c = [...prods]; c[i] = { ...c[i], purchase_rate: +e.target.value, _dirty: true }; setProds(c); }} /></RowField>
+                    <Button size="icon" variant="ghost" className="h-10 w-10 self-end" onClick={async () => { if (p.id) { if (!confirm(`Delete "${p.name}"?`)) return; await supabase.from("products").delete().eq("id", p.id); } setProds(prods.filter((_, j) => j !== i)); }}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
-              <div className="border-t flex items-center justify-between px-3 py-2 bg-card">
+              <div className="border-t flex flex-col gap-3 px-3 py-3 bg-card sm:flex-row sm:items-center sm:justify-between">
                 <Button size="sm" variant="outline" onClick={() => setProds([...prods, { name: "", unit: "pc", opening_stock: 0, purchase_rate: 0, _dirty: true }])}><Plus className="h-3.5 w-3.5" /> Add product</Button>
                 <div className="text-xs">Stock value: <span className="font-semibold tabular-nums">{inr(liveOpeningStockValue)}</span></div>
               </div>
+            </div>
+            <div className="rounded-2xl border bg-muted/20 p-3 space-y-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div><div className="text-sm font-semibold">Bulk paste products</div><div className="text-xs text-muted-foreground">One line each: Name | Unit | Qty | Purchase rate</div></div>
+                <Button size="sm" variant="outline" onClick={addBulkStock}>Add pasted rows</Button>
+              </div>
+              <Textarea value={bulkStockText} onChange={(e) => setBulkStockText(e.target.value)} rows={4} className="font-mono text-xs" placeholder={"Italian Marble | sqft | 1200 | 95\nKota Stone | sqft | 800 | 40"} />
             </div>
             <Note>Saved here directly. Full management later in <Link className="underline" to="/app/products">Products</Link>.</Note>
             <Foot>
@@ -505,6 +525,9 @@ function Header({ n, title, hint, icon: Icon }: { n: number; title: string; hint
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1.5"><Label className="text-xs">{label}</Label>{children}</div>;
 }
+function RowField({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="space-y-1.5 sm:space-y-0"><Label className="text-[10px] text-muted-foreground sm:hidden">{label}</Label>{children}</div>;
+}
 function Foot({ children }: { children: React.ReactNode }) {
   return <div className="flex items-center justify-between pt-2">{children}</div>;
 }
@@ -538,7 +561,7 @@ function InlineContacts({ kind, rows, setRows }: {
   const label = kind === "buyer" ? "Buyers (Receivable)" : "Suppliers (Payable)";
   const tone = kind === "buyer" ? "text-primary" : "text-destructive";
   return (
-    <div className="rounded-lg border bg-muted/10">
+    <div className="rounded-2xl border bg-background overflow-hidden">
       <div className="px-3 py-2 border-b text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center justify-between">
         <span>{label}</span>
         <span className={`tabular-nums ${tone}`}>{inrLocal(list.reduce((a, r) => a + Number(r.opening_balance || 0), 0))}</span>
@@ -548,14 +571,14 @@ function InlineContacts({ kind, rows, setRows }: {
         {list.map((r) => {
           const idx = rows.indexOf(r);
           return (
-            <div key={r.id ?? `n-${idx}`} className="grid grid-cols-[1fr_110px_130px_32px] gap-2 px-3 py-1.5 items-center">
-              <Input className="h-8 text-sm" value={r.name} placeholder="Name" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], name: e.target.value, _dirty: true }; setRows(c); }} />
-              <Input className="h-8 text-sm" value={r.phone ?? ""} placeholder="Phone" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], phone: e.target.value, _dirty: true }; setRows(c); }} />
-              <Input className="h-8 text-sm text-right tabular-nums" type="number" value={r.opening_balance} onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], opening_balance: +e.target.value, _dirty: true }; setRows(c); }} />
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => {
+            <div key={r.id ?? `n-${idx}`} className="grid grid-cols-2 sm:grid-cols-[minmax(180px,1fr)_130px_150px_36px] gap-2 p-3 sm:py-2 items-end">
+              <RowField label="Name"><Input className="h-10 text-sm" value={r.name} placeholder="Name" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], name: e.target.value, _dirty: true }; setRows(c); }} /></RowField>
+              <RowField label="Phone"><Input className="h-10 text-sm" value={r.phone ?? ""} placeholder="Phone" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], phone: e.target.value, _dirty: true }; setRows(c); }} /></RowField>
+              <RowField label="Opening ₹"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={r.opening_balance} onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], opening_balance: +e.target.value, _dirty: true }; setRows(c); }} /></RowField>
+              <Button size="icon" variant="ghost" className="h-10 w-10 self-end" onClick={async () => {
                 if (r.id) { if (!confirm(`Delete "${r.name}"?`)) return; await supabase.from("contacts").delete().eq("id", r.id); }
                 setRows(rows.filter((_, j) => j !== idx));
-              }}><X className="h-3.5 w-3.5" /></Button>
+              }}><X className="h-4 w-4" /></Button>
             </div>
           );
         })}

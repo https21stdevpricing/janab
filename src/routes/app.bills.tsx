@@ -363,19 +363,26 @@ function BillsPage() {
   return (
     <div>
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><Wallet className="h-4 w-4" /> Money <Kbd>B</Kbd></span>}
-        description="Receivables, payables and every receipt or payment — in one place."
+        title={<span className="inline-flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" /> Money hub <Kbd>B</Kbd></span>}
+        description="Clear balances first: what buyers owe, what you owe suppliers, and every settlement behind it."
         actions={
           <>
             <ExcelBar onExport={onExport} />
-            <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receipt <Kbd>R</Kbd></Button>
-            <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Payment <Kbd>P</Kbd></Button>
+            <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receive <Kbd>R</Kbd></Button>
+            <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Pay <Kbd>P</Kbd></Button>
           </>
         }
       />
 
-      {/* Top KPIs — always visible across all tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+      <div className="mb-4 rounded-[1.5rem] border border-border/70 bg-card p-3 shadow-sm sm:p-4">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Balance control</div>
+            <div className="text-sm text-muted-foreground">Tap any bill to settle it with party, balance and allocation pre-filled.</div>
+          </div>
+          <div className="text-right text-xs text-muted-foreground">Net position <span className={`ml-1 font-semibold tabular-nums ${kpis.net >= 0 ? "text-primary" : "text-destructive"}`}>{inr(kpis.net)}</span></div>
+        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <KpiTile label="Receivable" sub={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "On track"}
           value={inr(kpis.recv)} tone="good" onClick={() => setTab("receivable")} active={tab === "receivable"} />
         <KpiTile label="Payable" sub={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "On track"}
@@ -385,9 +392,10 @@ function BillsPage() {
         <KpiTile label="Overdue > 30d" sub={`${inr(kpis.overdue)} stuck`}
           value={inr(kpis.overdue)} tone={kpis.overdue > 0 ? "bad" : "muted"} />
       </div>
+      </div>
 
       <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
-        <TabsList className="w-full sm:w-auto">
+        <TabsList className="w-full rounded-full bg-muted p-1 sm:w-auto">
           <TabsTrigger value="receivable" className="flex-1 sm:flex-none gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
           <TabsTrigger value="payable" className="flex-1 sm:flex-none gap-1"><ArrowUpRight className="h-3.5 w-3.5" /> Payable</TabsTrigger>
           <TabsTrigger value="history" className="flex-1 sm:flex-none gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
@@ -430,9 +438,9 @@ function BillsPage() {
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
-          <div className="space-y-2">
+          <div className="grid gap-2 lg:grid-cols-2">
             {filteredPays.map(p => (
-              <div key={p.id} className="rounded-md border bg-card p-3 flex items-center gap-3 cursor-pointer hover:bg-muted/40" onClick={() => openPayView(p)}>
+              <div key={p.id} className="rounded-2xl border bg-card p-3 flex items-center gap-3 cursor-pointer transition-colors hover:bg-muted/40" onClick={() => openPayView(p)}>
                 <Badge variant={p.direction === "in" ? "default" : "secondary"} className="shrink-0">{p.direction === "in" ? "IN" : "OUT"}</Badge>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -456,9 +464,9 @@ function BillsPage() {
         )
       ) : filtered.length === 0 ? <Empty>No outstanding {tab === "receivable" ? "receivables" : "payables"}.</Empty> : (
         <>
-        <div className="hidden md:block rounded-md border bg-card overflow-x-auto">
+        <div className="hidden md:block rounded-2xl border bg-card overflow-x-auto shadow-sm">
           <table className="w-full text-sm min-w-[640px]">
-            <thead className="bg-muted/40 text-xs uppercase">
+            <thead className="bg-muted/40 text-xs uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
                 <th className="text-left p-2">Doc</th>
                 <th className="text-left p-2">Party</th>
@@ -474,7 +482,7 @@ function BillsPage() {
                 const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
                 const st = payStatus(Number(r.total), Number(r.paid), d);
                 return (
-                  <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t">
+                  <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t transition-colors hover:bg-muted/35">
                     <td className="p-2">
                       <button onClick={() => openPreview(r.doc_no)} className="font-mono text-primary hover:underline">{r.doc_no}</button>
                       <div className="text-[10px] text-muted-foreground mt-0.5">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
@@ -506,7 +514,7 @@ function BillsPage() {
             const sideBdr = tab === "receivable" ? "border-l-primary" : "border-l-destructive";
             const st = payStatus(Number(r.total), Number(r.paid), d);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className={`rounded-md border border-l-4 ${sideBdr} bg-card p-3 space-y-3`}>
+              <div key={`${r.doc_kind}-${r.doc_id}`} className={`rounded-2xl border border-l-4 ${sideBdr} bg-card p-3 space-y-3 shadow-sm`}>
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -747,7 +755,7 @@ function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; 
   const ring = active ? "ring-2 ring-primary/50" : "";
   return (
     <button type="button" onClick={onClick} disabled={!onClick}
-      className={`text-left rounded-xl border border-border/70 bg-card p-3 transition-all ${onClick ? "hover:bg-muted/40 active:scale-[0.99]" : ""} ${ring}`}>
+      className={`text-left rounded-2xl border border-border/70 bg-background p-3 transition-all ${onClick ? "hover:bg-muted/40 active:scale-[0.99]" : ""} ${ring}`}>
       <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
       <div className={`text-base sm:text-lg font-semibold tabular-nums truncate ${valueClr}`}>{value}</div>
       {sub && <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
@@ -758,7 +766,7 @@ function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; 
 function MiniBucket({ label, value, tone }: { label: string; value: number; tone?: "warn" | "bad" }) {
   const clr = tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : "text-foreground";
   return (
-    <div className="rounded-md border bg-muted/30 px-2 py-1.5">
+    <div className="rounded-2xl border bg-card px-2.5 py-2">
       <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={`text-xs sm:text-sm font-semibold tabular-nums truncate ${clr}`}>{inr(value)}</div>
     </div>

@@ -1,13 +1,14 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Package, Users, ShoppingCart, Truck, Repeat,
   Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Percent, UserCheck, UserCog, LineChart, Tags, Building2,
-  Home, ChevronDown, MoreHorizontal,
+  Home, ChevronDown, MoreHorizontal, X, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { History, PackageCheck, FileSpreadsheet, Keyboard } from "lucide-react";
@@ -88,6 +89,7 @@ function AppLayout() {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [moreOpen, setMoreOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => { setMoreOpen(false); }, [path]);
 
@@ -126,13 +128,13 @@ function AppLayout() {
         <header className="md:hidden sticky top-0 z-30 flex items-center gap-2 border-b border-border/60 bg-background/85 backdrop-blur-xl px-4 py-3">
           <div className="text-[15px] font-semibold tracking-tight">StoneWorld</div>
           <div className="ml-auto flex items-center gap-1">
-            <Link to="/app/lookup" className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted"><Search className="h-[18px] w-[18px]" /></Link>
+            <button type="button" onClick={() => setSearchOpen(true)} className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted" aria-label="Search this page"><Search className="h-[18px] w-[18px]" /></button>
             <NotificationsBell />
           </div>
         </header>
         {/* Desktop top bar */}
         <div className="hidden md:flex sticky top-0 z-20 items-center gap-2 px-6 py-2.5 border-b border-border/60 bg-background/80 backdrop-blur-xl">
-          <GlobalSearch />
+          <GlobalSearchTrigger onOpen={() => setSearchOpen(true)} pageLabel={pageLabel(path)} />
           <div className="ml-auto flex items-center gap-1"><HelpButton /><NotificationsBell /></div>
         </div>
         <div className="max-w-[1400px] mx-auto p-4 md:p-8 pb-safe-tabs md:pb-8">
@@ -141,6 +143,7 @@ function AppLayout() {
       </main>
       <MobileTabBar path={path} onMore={() => setMoreOpen(true)} />
       <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} email={user.email ?? ""} onSignOut={async () => { await signOut(); navigate({ to: "/login" }); }} />
+      <GlobalSearchOverlay open={searchOpen} onOpenChange={setSearchOpen} pageLabel={pageLabel(path)} />
     </div>
     </ShortcutsProvider>
   );
@@ -303,26 +306,115 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
   );
 }
 
-function GlobalSearch() {
+function pageLabel(path: string) {
+  const current = [...pinned, ...moreGroups.flatMap((g) => g.items)].find((it: any) => isActive(path, it.to, (it as any).exact));
+  return current?.label ?? "this page";
+}
+
+function GlobalSearchTrigger({ onOpen, pageLabel }: { onOpen: () => void; pageLabel: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group flex h-9 w-full max-w-md items-center gap-2 rounded-full border border-border/60 bg-muted/45 px-3 text-left text-sm text-muted-foreground transition-all hover:bg-background hover:shadow-sm"
+      aria-label={`Search from ${pageLabel}`}
+    >
+      <Search className="h-3.5 w-3.5" />
+      <span className="truncate">Search from {pageLabel}…</span>
+      <span className="ml-auto hidden rounded-md border bg-background px-1.5 py-0.5 text-[10px] sm:inline">/</span>
+    </button>
+  );
+}
+
+type QuickHit = { kind: string; title: string; sub: string; no?: string };
+
+function GlobalSearchOverlay({ open, onOpenChange, pageLabel }: { open: boolean; onOpenChange: (v: boolean) => void; pageLabel: string }) {
   const [q, setQ] = useState("");
+  const [hits, setHits] = useState<QuickHit[]>([]);
+  const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
-  const submit = () => {
-    const v = q.trim();
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "/" && !open && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+        e.preventDefault();
+        onOpenChange(true);
+      }
+      if (e.key === "Escape" && open) onOpenChange(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onOpenChange]);
+
+  useEffect(() => {
+    if (!open) return;
+    const term = q.trim();
+    if (term.length < 2) { setHits([]); return; }
+    let cancelled = false;
+    const t = window.setTimeout(async () => {
+      setBusy(true);
+      const like = `%${term}%`;
+      const [{ data: cs }, { data: ps }, { data: ss }, { data: pos }, { data: tps }, { data: qs }, { data: pys }, { data: bts }] = await Promise.all([
+        supabase.from("contacts").select("name,code,type,phone").or(`name.ilike.${like},phone.ilike.${like},gstin.ilike.${like},code.ilike.${like}`).limit(4),
+        supabase.from("products").select("name,code,unit,hsn").or(`name.ilike.${like},code.ilike.${like},hsn.ilike.${like}`).limit(4),
+        supabase.from("sales").select("invoice_no,date,buyer_name").or(`invoice_no.ilike.${like},buyer_name.ilike.${like}`).limit(4),
+        supabase.from("purchases").select("po_no,date,supplier_name").or(`po_no.ilike.${like},supplier_name.ilike.${like}`).limit(4),
+        supabase.from("third_party").select("tp_no,date,buyer_name,supplier_name").or(`tp_no.ilike.${like},buyer_name.ilike.${like},supplier_name.ilike.${like}`).limit(3),
+        supabase.from("quotations").select("quote_no,date,buyer_name").or(`quote_no.ilike.${like},buyer_name.ilike.${like}`).limit(3),
+        supabase.from("payments").select("payment_no,date,contact_name,direction").or(`payment_no.ilike.${like},contact_name.ilike.${like}`).limit(3),
+        supabase.from("bank_transfers" as never).select("transfer_no,date,kind,bank_name,amount").or(`transfer_no.ilike.${like},bank_name.ilike.${like},cheque_no.ilike.${like},txn_id.ilike.${like},notes.ilike.${like}`).limit(3) as any,
+      ]);
+      const out: QuickHit[] = [];
+      for (const r of ss ?? []) out.push({ kind: "Invoice", title: r.invoice_no, sub: `${r.buyer_name ?? "—"} · ${r.date}`, no: r.invoice_no });
+      for (const r of pos ?? []) out.push({ kind: "Purchase", title: r.po_no, sub: `${r.supplier_name ?? "—"} · ${r.date}`, no: r.po_no });
+      for (const r of tps ?? []) out.push({ kind: "Third party", title: r.tp_no, sub: `${r.supplier_name ?? "—"} → ${r.buyer_name ?? "—"}`, no: r.tp_no });
+      for (const r of qs ?? []) out.push({ kind: "Quote", title: r.quote_no, sub: `${r.buyer_name ?? "—"} · ${r.date}`, no: r.quote_no });
+      for (const r of pys ?? []) out.push({ kind: r.direction === "in" ? "Receipt" : "Payment", title: r.payment_no, sub: `${r.contact_name ?? "—"} · ${r.date}`, no: r.payment_no });
+      for (const r of bts ?? []) out.push({ kind: r.kind === "cash_withdrawal" ? "Withdrawal" : "Deposit", title: r.transfer_no, sub: `${r.bank_name ?? "Bank"} · ${r.date}`, no: r.transfer_no });
+      for (const r of cs ?? []) out.push({ kind: r.type === "supplier" ? "Supplier" : "Buyer", title: r.name, sub: [r.code, r.phone].filter(Boolean).join(" · ") || "Contact" });
+      for (const r of ps ?? []) out.push({ kind: "Product", title: r.name, sub: [r.code, r.unit, r.hsn && `HSN ${r.hsn}`].filter(Boolean).join(" · ") || "Product" });
+      if (!cancelled) { setHits(out.slice(0, 12)); setBusy(false); }
+    }, 180);
+    return () => { cancelled = true; window.clearTimeout(t); };
+  }, [q, open]);
+
+  const openLookup = (term = q) => {
+    const v = term.trim();
     if (!v) return;
+    onOpenChange(false);
     navigate({ to: "/app/lookup", search: { q: v } as any });
   };
+
+  if (!open) return null;
   return (
-    <div className="flex items-center gap-1 w-full max-w-md">
-      <div className="relative flex-1">
-        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-        <Input
-          data-global-search="1"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && submit()}
-          placeholder="Search anything — invoices, parties, products  ( / )"
-          className="pl-7 h-9 text-sm rounded-full bg-muted/50 border-transparent focus-visible:bg-background"
-        />
+    <div className="fixed inset-0 z-50 bg-background/78 backdrop-blur-xl animate-in fade-in duration-150">
+      <div className="mx-auto flex min-h-full w-full max-w-3xl flex-col px-4 pt-16 sm:pt-24">
+        <div className="rounded-2xl border border-border/70 bg-card shadow-lg overflow-hidden animate-in zoom-in-95 slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-3 border-b px-3 py-3 sm:px-4">
+            <Search className="h-5 w-5 text-muted-foreground" />
+            <Input autoFocus value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && openLookup()} placeholder={`Search from ${pageLabel}…`} className="h-10 border-0 bg-transparent px-0 text-base shadow-none focus-visible:ring-0" />
+            <Button variant="ghost" size="icon" onClick={() => onOpenChange(false)} aria-label="Close search"><X className="h-5 w-5" /></Button>
+          </div>
+          <div className="max-h-[60vh] overflow-y-auto p-2">
+            {q.trim().length < 2 ? (
+              <div className="px-3 py-8 text-center text-sm text-muted-foreground">Type an invoice, party, product, payment or bank ID.</div>
+            ) : hits.length === 0 && !busy ? (
+              <div className="px-3 py-8 text-center text-sm text-muted-foreground">No quick matches. Press Enter to open detailed Lookup.</div>
+            ) : (
+              hits.map((h, i) => (
+                <button key={`${h.kind}-${h.title}-${i}`} type="button" onClick={() => openLookup(h.no ?? h.title)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors hover:bg-muted/60">
+                  <span className="w-24 shrink-0 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{h.kind}</span>
+                  <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{h.title}</span><span className="block truncate text-xs text-muted-foreground">{h.sub}</span></span>
+                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                </button>
+              ))
+            )}
+          </div>
+          <div className="flex items-center justify-between border-t px-4 py-3 text-xs text-muted-foreground">
+            <span>{busy ? "Searching…" : "Enter opens detailed Lookup report"}</span>
+            <Button size="sm" variant="outline" onClick={() => openLookup()} disabled={!q.trim()}>Open report</Button>
+          </div>
+        </div>
       </div>
     </div>
   );
