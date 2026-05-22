@@ -271,7 +271,7 @@ function ProductsPage() {
                   <button
                     type="button"
                     onClick={() => setPreview(r)}
-                    className="group grid w-full grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30 active:bg-muted/40 sm:px-5"
+                    className="group grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30 active:bg-muted/40 sm:px-5"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
