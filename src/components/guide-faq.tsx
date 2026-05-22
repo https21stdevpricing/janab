@@ -55,6 +55,25 @@ const GROUPS: Group[] = [
         a: "Yes. Invite teammates from Settings → Team. Each person signs in with their own email, and every action is logged in the audit trail with their name and timestamp.",
         links: [{ label: "Settings", to: "/app/settings" }],
       },
+      {
+        q: "I just signed in but the dashboard says ₹0 everywhere — is something broken?",
+        a: "No. A brand-new account has nothing in it, so every total is genuinely zero. Record one sale, one purchase or one payment and the tiles, charts and reports update within a second.",
+        steps: [
+          "Tap 'New sale' on the Home screen.",
+          "Pick or create a buyer and add one line item.",
+          "Save — the Today tiles and trend chart refresh immediately.",
+        ],
+        links: [{ label: "Try a sale", to: "/app/sales" }],
+      },
+      {
+        q: "What does 'opening balance' mean and do I have to fill it?",
+        a: "Opening balance is what your books looked like the day you started using StoneWorld — cash in hand, money buyers already owed you, stock already on shelves. If you've been running the business for a while, fill these so the reports start from your real position, not zero.",
+        links: [{ label: "Settings", to: "/app/settings" }],
+      },
+      {
+        q: "I don't understand any accounting words — will this still work?",
+        a: "Yes. Nothing on the screens asks you to pick a debit or a credit. You just answer 'who, what, how much' and the books take care of themselves. Words like 'journal' or 'trial balance' only appear inside Reports — and even there, every number has a one-line plain-English explanation.",
+      },
     ],
   },
   {
@@ -93,6 +112,26 @@ const GROUPS: Group[] = [
         q: "I sold something at a special rate for one buyer — will it remember?",
         a: "Yes. We track the last 5 rates you charged this buyer for each product. Next time you pick them, the most recent rate auto-fills, and a small history pill shows the trend.",
       },
+      {
+        q: "What happens if I close the app while writing an invoice?",
+        a: "Nothing is lost. Every form autosaves to your device every few seconds. Reopen the same screen and you'll see a 'Resume draft' banner — pick up exactly where you left off, or discard and start fresh.",
+      },
+      {
+        q: "Can I make an invoice without entering a price right now?",
+        a: "Yes. Leave the rate as zero and save — it becomes a draft sale. Edit it any time before sending it to the buyer; it won't post to the books until you give it a real amount.",
+      },
+      {
+        q: "How do I add a discount to one invoice?",
+        a: "Reduce the rate on the line item, or add a negative line at the bottom labelled 'Discount'. Both flow through GST correctly — the tax recalculates on the net amount automatically.",
+      },
+      {
+        q: "Can I sell partial stock — like half a slab?",
+        a: "Yes. Quantity accepts decimals (e.g. 0.5, 1.75). Stock and value both update to the same precision.",
+      },
+      {
+        q: "What if the same buyer has two GSTINs in different states?",
+        a: "Create them as two separate contacts — one per state. The GST split (CGST/SGST vs IGST) is decided per contact, so keeping them separate guarantees correct tax on every bill.",
+      },
     ],
   },
   {
@@ -127,6 +166,88 @@ const GROUPS: Group[] = [
         a: "You billed more than you had on hand, usually because the purchase entry is late. Add the missing purchase, or correct the sale quantity. The Reconcile tab in Reports lists every negative SKU with a one-click fix.",
         links: [{ label: "Reconcile", to: "/app/reports" }],
       },
+      {
+        q: "How do I add new stock that I just purchased?",
+        a: "Open Purchases → New, pick the supplier, add the items with quantity and cost. Save — the stock count updates instantly. You don't need to touch the Stock page separately.",
+        links: [{ label: "New purchase", to: "/app/purchases" }],
+      },
+      {
+        q: "I want to write off some damaged stock — how?",
+        a: "Open Stock → pick the SKU → 'Adjustment'. Enter the quantity lost and pick a reason (damage, theft, sample). The cost is moved from stock to an expense account so your P&L stays honest.",
+        links: [{ label: "Stock", to: "/app/stock" }],
+      },
+      {
+        q: "Can I track stock at two warehouses?",
+        a: "Today we track a single combined on-hand per SKU. If you need multi-location, tag each purchase/sale with the location in the notes field — most users find one combined number easier to manage day-to-day.",
+      },
+      {
+        q: "Why is my stock value different from quantity × price?",
+        a: "Because cost-per-unit changes over time. We value stock at the actual cost you paid (FIFO or weighted average), not the latest sale price. The Valuation report shows the breakdown for every SKU.",
+        links: [{ label: "Reports", to: "/app/reports" }],
+      },
+    ],
+  },
+  {
+    id: "bank",
+    title: "Bank, cash & cheques",
+    blurb: "Deposits, withdrawals, cheque tracking and UTRs.",
+    items: [
+      {
+        q: "How do I record a cash deposit into my bank?",
+        a: "Open Bank & cash → 'Cash deposit'. Enter the amount and bank name. We move it from Cash to Bank in one tap and the journal is posted for you.",
+        steps: [
+          "Open Bank & cash from the More menu.",
+          "Tap 'Cash deposit'.",
+          "Enter amount and bank name, save.",
+        ],
+        links: [{ label: "Bank & cash", to: "/app/bank" }],
+      },
+      {
+        q: "I withdrew cash from the ATM — where do I record that?",
+        a: "Bank & cash → 'Withdraw cash'. Enter amount and bank name. Optional: drop in the ATM reference / txn id so you can match it on your bank statement later.",
+        links: [{ label: "Bank & cash", to: "/app/bank" }],
+      },
+      {
+        q: "A buyer paid me by cheque — how do I track it until it clears?",
+        a: "Open Payments → Receipt, pick mode 'Cheque', enter the cheque number, date and drawee bank. Uncheck 'Already cleared' — it stays as a pending entry. Once cleared, open it and tick 'Cleared'.",
+        links: [{ label: "Payments", to: "/app/payments" }],
+      },
+      {
+        q: "Where do I deposit a buyer's cheque?",
+        a: "Bank & cash → 'Cheque deposit'. Enter cheque number, date and the bank you deposited it in. We hold it as pending until you confirm clearance.",
+        links: [{ label: "Bank & cash", to: "/app/bank" }],
+      },
+      {
+        q: "What is a UTR / transaction ID and where do I put it?",
+        a: "UTR is the reference number your bank prints on every NEFT/RTGS/IMPS/UPI transfer. On the payment screen, after picking mode 'Bank' or 'UPI', a 'Transaction ID / UTR' field appears — paste it there so you can match the entry to your bank statement.",
+      },
+      {
+        q: "I forgot to record a cash sale from yesterday — is it too late?",
+        a: "No. Open Sales → New, change the date to yesterday and save. The books and stock backdate themselves; reports update across all past periods.",
+      },
+      {
+        q: "What's the difference between Cash and Bank balance?",
+        a: "Cash is physical money in your drawer. Bank is the balance in your bank account. Moving between them is a deposit (Cash → Bank) or withdrawal (Bank → Cash). Both show on the dashboard and in Reports.",
+      },
+      {
+        q: "My bank statement doesn't match my Bank balance here. What now?",
+        a: "Open Bank & cash and filter by date range. Look for entries marked 'Pending' (uncleared cheques) — those explain most gaps. For everything else, compare your statement line-by-line and use the transaction ID to spot what's missing on either side.",
+        links: [{ label: "Bank & cash", to: "/app/bank" }],
+      },
+      {
+        q: "Can I record a payment made by card?",
+        a: "Yes. On the payment screen, pick mode 'Card'. Enter the last 4 digits of the card and the authorisation/txn id in the reference field so you can reconcile with your card statement later.",
+      },
+      {
+        q: "Where do I see all pending (uncleared) cheques?",
+        a: "Bank & cash filters down to 'Cheques' and clearly tags every entry that's still pending with an amber 'Pending' badge. Tap 'Clear' on the row once your bank confirms it.",
+        links: [{ label: "Bank & cash", to: "/app/bank" }],
+      },
+      {
+        q: "A cheque bounced — what do I do?",
+        a: "Open the original payment, delete it (the books reverse automatically), and raise a fresh receipt only when the buyer pays you for real. The audit log keeps a record of the deletion in case you need to prove what happened.",
+        links: [{ label: "Audit log", to: "/app/audit" }],
+      },
     ],
   },
   {
@@ -150,6 +271,23 @@ const GROUPS: Group[] = [
       {
         q: "Can I record a payment that hasn't cleared the bank yet?",
         a: "Yes. Set the payment mode to 'Cheque' or 'NEFT pending' and mark the clearance date. Until cleared, it shows in the bank reconciliation list. Once cleared, mark it cleared and the cash account updates.",
+      },
+      {
+        q: "What if a buyer pays more than they owe?",
+        a: "Record the full amount. We allocate against open bills first and park the surplus as an 'advance' on their ledger. Next time you raise an invoice for them, the advance auto-applies first.",
+      },
+      {
+        q: "Two buyers paid in one bank transfer — how do I split it?",
+        a: "Record two separate receipts of the same date, one per buyer, each with the same UTR. The reference field can hold the shared UTR so you can still trace it back to the single line on your statement.",
+      },
+      {
+        q: "I paid a supplier in instalments — can I track that?",
+        a: "Yes. Record each instalment as a separate payment with mode and ref. Each one auto-applies against the oldest unpaid bill from that supplier until everything's settled.",
+      },
+      {
+        q: "How do I refund a buyer?",
+        a: "Record a Payment (money out) with the buyer as the contact and 'Refund' in the notes. The balance on their ledger reduces; if you also need to reverse the invoice itself, edit or delete it.",
+        links: [{ label: "Payments", to: "/app/payments" }],
       },
     ],
   },
@@ -185,6 +323,25 @@ const GROUPS: Group[] = [
         q: "Why is profit on P&L different from money in the bank?",
         a: "Profit is earned when you raise the bill; cash arrives when the buyer pays. The gap is your receivables. If the gap is widening, you're profitable on paper but starving for cash — chase the aging report.",
       },
+      {
+        q: "What is the General Ledger and when should I look at it?",
+        a: "It's the master diary of every rupee that moved, grouped by account (Cash, Bank, Sales, etc.). Most days you won't open it. When a number on a report looks wrong, the ledger shows the exact entries that built it.",
+        links: [{ label: "General ledger", to: "/app/ledger" }],
+      },
+      {
+        q: "How often should I check my reports?",
+        a: "Glance at the Home dashboard daily. Open Reports weekly to scan P&L and Aging. Once a month, run Reconcile to confirm everything ties — usually 60 seconds with no findings.",
+        links: [{ label: "Reports", to: "/app/reports" }],
+      },
+      {
+        q: "Can I see one supplier or buyer's full history?",
+        a: "Yes. Open the contact from Contacts or Buyers. Their ledger shows every invoice, payment, refund and advance in chronological order with the running balance.",
+        links: [{ label: "Contacts", to: "/app/contacts" }],
+      },
+      {
+        q: "What's a Balance Sheet in one line?",
+        a: "A snapshot on a date: what you own (cash, stock, dues from buyers) minus what you owe (suppliers, loans). The difference is your equity — what the business is worth on paper.",
+      },
     ],
   },
   {
@@ -213,6 +370,28 @@ const GROUPS: Group[] = [
         a: "Every deletion is soft for 30 days. Open Settings → Audit log, find the entry, and click Restore. The original document number, journal and stock movement come back unchanged.",
         links: [{ label: "Audit", to: "/app/audit" }],
       },
+      {
+        q: "Dashboard isn't updating after I saved a sale — what's wrong?",
+        a: "It updates in real time. If you don't see a change, pull-to-refresh or tap the Home tab again. If still stale, the network blinked — switch tabs and back to force a reload.",
+      },
+      {
+        q: "I see an old GSTIN on my buyer — how do I correct it?",
+        a: "Open Contacts, search the buyer, edit the GSTIN field and save. All future bills use the new one; past bills keep the GSTIN they were issued with for GST compliance.",
+        links: [{ label: "Contacts", to: "/app/contacts" }],
+      },
+      {
+        q: "The same product appears twice in my list — can I merge?",
+        a: "Yes. Open Products, edit one of the duplicates to be the 'keeper'. Open the other and reassign its stock to the keeper via an adjustment, then delete it. The audit log keeps the trail.",
+        links: [{ label: "Products", to: "/app/products" }],
+      },
+      {
+        q: "I typed the wrong amount on a payment — can I edit it?",
+        a: "Open the payment from the Payments list and edit. The allocations to invoices re-balance automatically; if any invoice becomes underpaid as a result, it shows back up in the outstanding list.",
+      },
+      {
+        q: "Why is search not finding my invoice?",
+        a: "Search is exact-match on document number. Try just the digits without the prefix, or paste the full INV-XXXX. If still nothing, the invoice may live in a different financial year — change the date filter to widen the range.",
+      },
     ],
   },
   {
@@ -231,6 +410,74 @@ const GROUPS: Group[] = [
       {
         q: "How do I close my account?",
         a: "Settings → Danger zone → Close account. Your data stays available for 60 days in case you change your mind, then is permanently deleted. We send an email confirmation at each step.",
+      },
+      {
+        q: "Will my data sync to a new phone when I sign in?",
+        a: "Yes. Your data lives in the cloud, not on the phone. Sign in on the new device with the same email and everything appears, exactly as you left it.",
+      },
+      {
+        q: "Can I use this without internet?",
+        a: "You need internet to save anything to the cloud. If the connection drops mid-action, the draft autosaves locally — once you're back online, reopen the same screen and save it for real.",
+      },
+      {
+        q: "Is there a free trial?",
+        a: "Yes — start free and only pay when you outgrow the limits. No credit card upfront, and you can export your data at any time.",
+      },
+    ],
+  },
+  {
+    id: "small",
+    title: "Small everyday questions",
+    blurb: "The little doubts that come up while you work.",
+    items: [
+      {
+        q: "What does the ₹ symbol mean here?",
+        a: "Indian Rupee. Numbers are formatted with Indian grouping (1,00,000 not 100,000) and shown to two decimal places.",
+      },
+      {
+        q: "Why are some buttons greyed out?",
+        a: "Because the action isn't valid yet — usually a required field is empty. Hover over the button (or tap-and-hold on mobile) and you'll see the reason in a small tooltip.",
+      },
+      {
+        q: "What does 'auto' mean in the No. field?",
+        a: "We pick the next number in the series for you (INV-0001 → INV-0002 → …). You only need to type a number if you're carrying over a number from your old system.",
+      },
+      {
+        q: "Why does the date default to today?",
+        a: "Because 95% of entries are today's. Change it for backdated entries — past dates are fine, future dates trigger a small warning to prevent typos.",
+      },
+      {
+        q: "Can I use this on my phone?",
+        a: "Yes. The whole app is built mobile-first. Add it to your home screen from your browser menu and it opens like a native app.",
+      },
+      {
+        q: "Why does the screen show 'Loading…' for a moment?",
+        a: "We're fetching the freshest numbers from the cloud. On a slow connection it can take a second or two. Once loaded, future updates stream in instantly via realtime.",
+      },
+      {
+        q: "Will the app warn me if I'm about to do something wrong?",
+        a: "Yes. We surface plain-English suggestions live as you type: 'Over-allocated by ₹500', 'Stock will go negative', 'Buyer's GSTIN is invalid'. You can still save through them, but you'll know.",
+      },
+      {
+        q: "What's an 'audit log'?",
+        a: "A timestamped record of every create, edit and delete in your account. Open Audit log from the More menu — it's how you find out who did what and when.",
+        links: [{ label: "Audit log", to: "/app/audit" }],
+      },
+      {
+        q: "Can I print a receipt for a buyer?",
+        a: "Yes. Open the payment or invoice and tap Print or Download PDF. Both use your business name, logo and address from Settings.",
+      },
+      {
+        q: "What is HSN and do I have to fill it?",
+        a: "HSN is the GST code for what you sell. Yes — GSTR-1 needs it, so add it once on each Product and we copy it onto every invoice automatically.",
+      },
+      {
+        q: "Why do I see the same number twice on two different reports?",
+        a: "Different reports group the same money differently. A payment shows in Receipts, in the buyer's ledger, in the Cash/Bank book and on the P&L — same rupee, four lenses.",
+      },
+      {
+        q: "Can I rename 'Sales Revenue' to something else?",
+        a: "The internal account name is fixed to keep reports stable, but the label shown on PDFs and customer-facing screens can be changed in Settings → Numbering & labels.",
       },
     ],
   },
