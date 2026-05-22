@@ -264,8 +264,7 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
-  // Swipe-down-to-close: track a single touch on the sheet body, close at >90px drag with downward velocity.
-  const startY = useState<{ y: number; t: number } | null>(null);
+  // Swipe-down-to-close: track a single touch, close at >110px drag or >60px with downward velocity.
   const [drag, setDrag] = useState(0);
   const dragRef = { current: 0 };
   const onTouchStart = (e: React.TouchEvent) => {
@@ -292,7 +291,6 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     if (dy > 110 || (dy > 60 && velocity > 0.5)) onOpenChange(false);
     setDrag(0);
   };
-  void startY;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
