@@ -42,8 +42,20 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const totals = useMemo(() => {
     const subtotal = items.reduce((a, it) => a + Number(it.qty || 0) * Number(it.rate || 0), 0);
     const gst = items.reduce((a, it) => a + Number(it.qty || 0) * Number(it.rate || 0) * Number(it.gst_pct ?? 0) / 100, 0);
-    return { subtotal, gst, total: subtotal + gst };
-  }, [items]);
+    const raw = subtotal + gst;
+    // Prefer the round_off persisted on the saved header so the printed total
+    // and the journal always tie. Fall back to the design-side toggle for
+    // previews where the header is empty.
+    let roundOff = Number((doc as any)?.round_off ?? 0);
+    if (!roundOff && design?.roundOff && design.roundOff !== "off") {
+      const target =
+        design.roundOff === "up"   ? Math.ceil(raw)  :
+        design.roundOff === "down" ? Math.floor(raw) :
+                                     Math.round(raw);
+      roundOff = +(target - raw).toFixed(2);
+    }
+    return { subtotal, gst, roundOff, total: +(raw + roundOff).toFixed(2) };
+  }, [items, doc, design]);
 
   if (!doc) return <div className="text-sm text-muted-foreground p-4">Loading…</div>;
 
