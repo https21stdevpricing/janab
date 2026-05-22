@@ -10,10 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Empty } from "@/components/empty";
 import { inr, fmtDate, todayISO } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpFromLine, Banknote, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Banknote, ShieldCheck, Trash2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CollapseFilters } from "@/components/collapse-filters";
 import { useDraft } from "@/hooks/use-draft";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/app/bank")({ component: BankPage });
 
@@ -97,7 +97,7 @@ function BankPage() {
   }, [filtered]);
 
   const startNew = (k: Kind) => {
-    setForm({ ...EMPTY, kind: k, date: todayISO() });
+    setForm({ ...EMPTY, kind: k, date: todayISO(), cleared: k !== "cheque_deposit" });
     setOpen(true);
   };
 
@@ -106,6 +106,7 @@ function BankPage() {
     if (!user) return;
     if (form.amount <= 0) { toast.error("Amount must be > 0"); return; }
     if (form.kind === "cheque_deposit" && !form.cheque_no.trim()) { toast.error("Cheque number is required"); return; }
+    const finalCleared = form.kind === "cheque_deposit" ? form.cleared : true;
     const payload: any = {
       user_id: user.id,
       kind: form.kind,
@@ -116,8 +117,9 @@ function BankPage() {
       cheque_date: form.cheque_date || null,
       txn_id: form.txn_id || null,
       notes: form.notes || null,
-      cleared: form.cleared,
-      cleared_at: form.cleared ? form.date : null,
+      cleared: finalCleared,
+      status: finalCleared ? "cleared" : "pending",
+      cleared_at: finalCleared ? form.date : null,
     };
     const { error } = await supabase.from("bank_transfers" as never).insert(payload as never);
     if (error) { toast.error(error.message); return; }
@@ -133,8 +135,9 @@ function BankPage() {
   };
 
   const changeStatus = async (r: Row, status: Status) => {
+    const nextCleared = status === "cleared";
     const { error } = await supabase.from("bank_transfers" as never)
-      .update({ status } as never).eq("id" as never, r.id);
+      .update({ status, cleared: nextCleared, cleared_at: nextCleared ? todayISO() : null } as never).eq("id" as never, r.id);
     if (error) toast.error(error.message);
     else { toast.success(status === "cleared" ? "Marked cleared" : status === "bounced" ? "Marked bounced" : "Set to pending"); load(); }
   };
@@ -142,8 +145,8 @@ function BankPage() {
   return (
     <div>
       <PageHeader
-        title="Bank & cash"
-        description="Deposits, withdrawals and cheques between your cash drawer and bank"
+        title="Deposits"
+        description="Cash, bank, and cheque movements with pending clearance kept separate from account balances."
         actions={
           <>
             <Button size="sm" variant="outline" onClick={() => startNew("cash_deposit")}><ArrowDownToLine className="h-4 w-4" /> Cash deposit</Button>
@@ -167,7 +170,7 @@ function BankPage() {
       </div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-3">
-        <TabsList className="w-full sm:w-auto flex-wrap h-auto">
+        <TabsList className="scroll-tabs w-full justify-start sm:w-auto">
           <TabsTrigger value="all" className="flex-1 sm:flex-none">All</TabsTrigger>
           <TabsTrigger value="cash_deposit" className="flex-1 sm:flex-none">Deposits</TabsTrigger>
           <TabsTrigger value="cheque_deposit" className="flex-1 sm:flex-none">Cheques</TabsTrigger>
@@ -175,13 +178,12 @@ function BankPage() {
         </TabsList>
       </Tabs>
 
-      <CollapseFilters
-        summary={`${filtered.length} of ${rows.length} entries · Deposits ${inr(totals.dep)} · Withdrawals ${inr(totals.wd)}`}
-        active={q ? 1 : 0}
-        onClear={() => setQ("")}
-      >
-        <Input placeholder="Search no / bank / cheque / txn id…" value={q} onChange={(e) => setQ(e.target.value)} />
-      </CollapseFilters>
+      <div className="mb-3 flex flex-col gap-2 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-xs text-muted-foreground">
+          {filtered.length} of {rows.length} entries · Deposits {inr(totals.dep)} · Withdrawals {inr(totals.wd)}
+        </div>
+        <Input className="h-9 sm:max-w-xs" placeholder="Search no / bank / cheque / txn id…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
 
       {filtered.length === 0 ? (
         <Empty>No bank entries yet. Record a cash deposit or cheque deposit to begin.</Empty>
@@ -218,7 +220,7 @@ function BankPage() {
                 )}
 
                 {/* Bottom: status control + delete */}
-                <div className="mt-3 flex items-center gap-2 pt-2 border-t border-border/50">
+                <div className="mt-3 flex flex-col gap-2 border-t border-border/50 pt-2 sm:flex-row sm:items-center">
                   <Select value={st} onValueChange={(v) => changeStatus(r, v as Status)}>
                     <SelectTrigger className="h-8 flex-1 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -238,18 +240,23 @@ function BankPage() {
       )}
 
       <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) draft.clear(); }}>
-        <DialogContent className="max-w-lg max-h-[92vh] overflow-y-auto">
+        <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto p-0 gap-0">
           <DialogHeader>
-            <DialogTitle>
-              {KIND_LABEL[form.kind]}
-            </DialogTitle>
+            <div className="border-b px-4 py-4 sm:px-6">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                {form.kind === "cheque_deposit" ? <Banknote className="h-4 w-4" /> : form.kind === "cash_withdrawal" ? <ArrowUpFromLine className="h-4 w-4" /> : <ArrowDownToLine className="h-4 w-4" />}
+                {KIND_LABEL[form.kind]}
+              </DialogTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Uncleared cheque deposits stay pending and do not affect Cash or Bank balances.</p>
+            </div>
           </DialogHeader>
+          <div className="space-y-4 p-4 sm:p-6">
           {draft.hasDraft && (
             <div className="text-[11px] rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300 px-2 py-1">
               Resumed an unsaved draft. <button className="underline" onClick={() => { draft.discard(); }}>Discard</button>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label className="text-xs">Type</Label>
               <Select value={form.kind} onValueChange={(v) => setForm({ ...form, kind: v as Kind })}>
@@ -285,14 +292,25 @@ function BankPage() {
             <div className="col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
 
-            <label className="col-span-2 flex items-center gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" checked={form.cleared} onChange={(e) => setForm({ ...form, cleared: e.target.checked })} />
-              Already cleared (uncheck for pending cheque)
-            </label>
+            {form.kind === "cheque_deposit" && (
+              <label className="col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
+                <Checkbox checked={form.cleared} onCheckedChange={(v) => setForm({ ...form, cleared: !!v })} className="mt-0.5" />
+                <span>
+                  <span className="block font-medium">Cheque is cleared</span>
+                  <span className="block text-xs text-muted-foreground">Leave unchecked while the cheque is in transit or not confirmed. It will not post to accounts until marked cleared.</span>
+                </span>
+              </label>
+            )}
           </div>
-          <DialogFooter>
+          {form.kind === "cheque_deposit" && !form.cleared && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+              Pending cheque: saved for tracking only. Mark cleared from the list once confirmed by the bank.
+            </div>
+          )}
+          </div>
+          <DialogFooter className="border-t px-4 py-3 sm:px-6">
             <Button variant="outline" onClick={() => { draft.discard(); setOpen(false); }}>Cancel</Button>
-            <Button onClick={save}>Save</Button>
+            <Button onClick={save}><ShieldCheck className="h-4 w-4" /> Save safely</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/page-header";
 import { inr } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, FileUp, ClipboardCheck } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, FileUp } from "lucide-react";
 import { importWorkbook, pickSheet } from "@/lib/excel";
 import { useRef } from "react";
 
@@ -153,6 +153,13 @@ function OnboardingPage() {
   const validateGSTIN = (g: string) => !g || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]{3}$/.test(g.toUpperCase());
   const validateIFSC = (i: string) => !i || /^[A-Z]{4}0[A-Z0-9]{6}$/.test(i.toUpperCase());
   const needsPartners = biz.business_type === "partnership" || biz.business_type === "llp";
+  const steps: Array<{ n: Step; label: string; detail: string }> = [
+    { n: 1, label: "Business", detail: "Legal, tax, address" },
+    { n: 2, label: "Bank", detail: "Account and opening cash" },
+    { n: 3, label: "Stock", detail: "Products and values" },
+    { n: 4, label: "Parties", detail: "Receivable and payable" },
+    { n: 5, label: "Confirm", detail: "Post opening voucher" },
+  ];
 
   const importRef = useRef<HTMLInputElement | null>(null);
   const handleBackupImport = async (file: File) => {
@@ -320,20 +327,32 @@ function OnboardingPage() {
   };
 
   return (
-    <div className="mx-auto max-w-5xl py-2 sm:py-4">
+    <div className="mx-auto max-w-6xl py-2 sm:py-4">
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-primary" /> Business setup</span>}
-        description="One guided flow for profile, bank, stock and opening balances — no page switching."
+        title={<span className="inline-flex items-center gap-2"><SetupMark /> Business setup</span>}
+        description="A clean setup flow for company details, opening balances, stock, buyers, and suppliers."
       />
 
-      {/* Progress */}
-      <div className="mb-4 grid grid-cols-5 gap-1.5 rounded-full bg-muted p-1">
-        {[1, 2, 3, 4, 5].map(n => (
-          <button key={n} type="button" onClick={() => setStep(n as Step)} className={`h-2 rounded-full transition-all ${n <= step ? "bg-primary" : "bg-background"}`} aria-label={`Step ${n}`} />
-        ))}
-      </div>
+      <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
+      <aside className="surface h-fit p-2 lg:sticky lg:top-4">
+        <div className="px-2 py-2">
+          <div className="eyebrow">Setup steps</div>
+          <div className="mt-1 text-xs text-muted-foreground">Fill what you know now. Everything remains editable later.</div>
+        </div>
+        <div className="mt-2 space-y-1">
+          {steps.map(s => (
+            <button key={s.n} type="button" onClick={() => setStep(s.n)} className={`w-full rounded-lg px-3 py-2 text-left transition-colors ${step === s.n ? "bg-primary/10 text-primary" : "hover:bg-muted/50"}`}>
+              <div className="flex items-center gap-2">
+                <span className={`grid h-6 w-6 place-items-center rounded-full border text-xs ${s.n <= step ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background text-muted-foreground"}`}>{s.n}</span>
+                <span className="text-sm font-medium">{s.label}</span>
+              </div>
+              <div className="ml-8 mt-0.5 text-[11px] text-muted-foreground">{s.detail}</div>
+            </button>
+          ))}
+        </div>
+      </aside>
 
-      <div className="rounded-[1.5rem] border border-border/70 bg-card p-4 shadow-sm sm:p-6 lg:p-8 space-y-5 overflow-hidden">
+      <div className="surface p-4 sm:p-6 lg:p-8 space-y-5 overflow-hidden">
         {step === 1 && (
           <>
             <Header n={1} title="Your business" hint="Legal identity for invoices, GST returns and reports." icon={Building2} />
@@ -503,6 +522,7 @@ function OnboardingPage() {
           </>
         )}
       </div>
+      </div>
 
       <div className="text-[11px] text-muted-foreground text-center mt-4">
         You can re-run this any time from <Link to="/app/settings" className="underline">Settings → Opening balances</Link>.
@@ -522,8 +542,17 @@ function Header({ n, title, hint, icon: Icon }: { n: number; title: string; hint
     </div>
   );
 }
+
+function SetupMark() {
+  return (
+    <span className="grid h-8 w-8 place-items-center rounded-xl border border-primary/30 bg-primary/5 text-primary">
+      <Building2 className="h-4 w-4" />
+    </span>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label className="text-xs">{label}</Label>{children}</div>;
+  return <div className="space-y-1.5"><Label className="text-xs font-medium text-muted-foreground">{label}</Label>{children}</div>;
 }
 function RowField({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1.5 sm:space-y-0"><Label className="text-[10px] text-muted-foreground sm:hidden">{label}</Label>{children}</div>;

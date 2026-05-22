@@ -10,11 +10,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
-import { CollapseFilters } from "@/components/collapse-filters";
 import { inr, fmtDate, todayISO } from "@/lib/format";
-import { ArrowDownLeft, ArrowUpRight, Eye, Trash2, History, X, Printer } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Clock3, Eye, History, Printer, ShieldCheck, Trash2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ContactPicker } from "@/components/contact-picker";
 import { DocDetail } from "@/routes/app.lookup";
 import { lookupDoc, openDocsFor, type DocLookupResult } from "@/lib/doc-lookup";
@@ -51,6 +51,7 @@ type PayRow = {
   id: string; payment_no: string; date: string; direction: "in" | "out";
   contact_id: string | null; contact_name: string | null; amount: number;
   mode: string | null; ref_doc: string | null; notes: string | null;
+  cleared: boolean; cleared_at: string | null; cheque_no: string | null; bank_name: string | null; txn_id: string | null;
 };
 type Alloc = { doc_kind: "sale" | "purchase" | "tp" | "tp_purchase"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
 
@@ -82,6 +83,19 @@ function StatusBadge({ s }: { s: { label: string; tone: "warn" | "info" | "bad" 
     : s.tone === "info" ? "border-primary/30 text-primary bg-primary/5"
     : "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/5";
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${cls}`}>{s.label}</span>;
+}
+
+function ClearancePill({ cleared, mode }: { cleared: boolean; mode?: string | null }) {
+  const isCheque = mode === "Cheque";
+  const cls = cleared
+    ? "border-primary/30 bg-primary/5 text-primary"
+    : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${cls}`}>
+      {cleared ? <CheckCircle2 className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
+      {cleared ? "Cleared" : isCheque ? "Cheque pending" : "Pending"}
+    </span>
+  );
 }
 
 function BillsPage() {
@@ -333,13 +347,14 @@ function BillsPage() {
       toast.error(`Allocated (${inr(allocatedSum)}) is more than amount (${inr(amount)}).`);
       return;
     }
+    const finalCleared = mode === "Cheque" ? cleared : true;
     const { data: pay, error } = await supabase.from("payments").insert({
       user_id: user.id, direction, date, amount, mode, notes: notes || null,
       contact_id: contactId, contact_name: contactName,
       ref_doc: allocs.map(a => a.doc_no).join(", ") || null,
       cheque_no: chequeNo || null, cheque_date: chequeDate || null,
       txn_id: txnId || null, bank_name: bankName || null,
-      cleared, cleared_at: cleared ? date : null,
+      cleared: finalCleared, cleared_at: finalCleared ? date : null,
     } as never).select().single() as { data: any; error: any };
     if (error) { toast.error(error.message); return; }
     if (allocs.length) {
@@ -364,6 +379,14 @@ function BillsPage() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const markPayCleared = async (p: PayRow) => {
+    const { error } = await supabase.from("payments").update({ cleared: true, cleared_at: todayISO() } as never).eq("id", p.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Payment marked cleared");
+    setViewPay({ ...p, cleared: true, cleared_at: todayISO() });
+    load();
+  };
+
   const openPayView = async (r: PayRow) => {
     setViewPay(r);
     const [{ data }, { data: st }] = await Promise.all([
@@ -381,7 +404,7 @@ function BillsPage() {
     <div>
       <PageHeader
         title="Money"
-        description="Receivables, payables and every settlement."
+        description="Bills to collect, bills to pay, and payment history in one place."
         actions={
           <>
             <ExcelBar onExport={onExport} />
@@ -391,65 +414,65 @@ function BillsPage() {
         }
       />
 
-      {/* Minimal hero — one calm summary card with three balances */}
-      <div className="mb-4 rounded-2xl border border-border/70 bg-card overflow-hidden">
-        <div className="grid grid-cols-3 divide-x divide-border/60">
-          <HeroCell label="Receivable" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
-          <HeroCell label="Payable" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
-          <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
-        </div>
-        {kpis.overdue > 0 && (
-          <div className="px-4 py-2 border-t border-border/60 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-500/5">
-            {inr(kpis.overdue)} overdue · {">"} 30 days
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_280px]">
+        <div className="surface overflow-hidden">
+          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <HeroCell label="To collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
+            <HeroCell label="To pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
+            <HeroCell label="Net position" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
           </div>
-        )}
-      </div>
-
-      <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
-        <TabsList className="w-full rounded-full bg-muted p-1 sm:w-auto">
-          <TabsTrigger value="receivable" className="flex-1 sm:flex-none gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
-          <TabsTrigger value="payable" className="flex-1 sm:flex-none gap-1"><ArrowUpRight className="h-3.5 w-3.5" /> Payable</TabsTrigger>
-          <TabsTrigger value="history" className="flex-1 sm:flex-none gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {/* aging buckets folded into filter chips below — surfaced only when needed */}
-
-      <CollapseFilters
-        summary={tab === "history" ? `${filteredPays.length} of ${pays.length} entries` : `${filtered.length} of ${sideRows.length} ${tab}`}
-        active={(q ? 1 : 0) + (bucketFilter !== "all" ? 1 : 0)}
-        onClear={() => { setQ(""); setBucketFilter("all"); }}
-      >
-        <div className="space-y-3">
-          <Input placeholder={tab === "history" ? "Search receipt / payment no / party…" : "Search document or party…"} value={q} onChange={e => setQ(e.target.value)} />
-          {tab !== "history" && (
-            <div>
-              <div className="text-[10px] uppercase text-muted-foreground mb-1">Aging bucket</div>
-              <div className="flex flex-wrap gap-1">
-                {(["all", "0–30", "31–60", "61–90", "90+"] as const).map(b => (
-                  <Button key={b} size="sm" variant={bucketFilter === b ? "default" : "outline"} onClick={() => setBucketFilter(b)}>{b}</Button>
-                ))}
-              </div>
+          {kpis.overdue > 0 && (
+            <div className="border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground">
+              Overdue over 30 days: <span className="font-medium text-foreground">{inr(kpis.overdue)}</span>
             </div>
           )}
-          <p className="text-xs text-muted-foreground">
-            {tab === "receivable" && "Money buyers owe you. Tap a row to record what you've received — we pre-fill amount, party and the bill it settles."}
-            {tab === "payable" && "Money you owe suppliers. Tap a row to record a payment — fully pre-filled and allocated."}
-            {tab === "history" && "Every receipt and payment ever recorded. Click an entry to see what it settled."}
-          </p>
         </div>
-      </CollapseFilters>
+        <div className="surface p-3">
+          <div className="eyebrow">Quick actions</div>
+          <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
+            <Button variant="outline" className="justify-start" onClick={() => startNew("in")}><ArrowDownLeft className="h-4 w-4" /> New receipt</Button>
+            <Button variant="outline" className="justify-start" onClick={() => startNew("out")}><ArrowUpRight className="h-4 w-4" /> New payment</Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Tabs value={tab} onValueChange={v => setTab(v as any)}>
+          <TabsList className="scroll-tabs w-full justify-start rounded-full bg-muted p-1 sm:w-auto">
+            <TabsTrigger value="receivable" className="gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
+            <TabsTrigger value="payable" className="gap-1"><ArrowUpRight className="h-3.5 w-3.5" /> Payable</TabsTrigger>
+            <TabsTrigger value="history" className="gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input className="h-9 sm:w-72" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
+          {tab !== "history" && (
+            <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
+              <SelectTrigger className="h-9 sm:w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All ages</SelectItem>
+                <SelectItem value="0–30">0–30 days</SelectItem>
+                <SelectItem value="31–60">31–60 days</SelectItem>
+                <SelectItem value="61–90">61–90 days</SelectItem>
+                <SelectItem value="90+">90+ days</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </div>
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
           <div className="grid gap-2 lg:grid-cols-2">
             {filteredPays.map(p => (
-              <div key={p.id} className="rounded-2xl border bg-card p-3 flex items-center gap-3 cursor-pointer transition-colors hover:bg-muted/40" onClick={() => openPayView(p)}>
-                <Badge variant={p.direction === "in" ? "default" : "secondary"} className="shrink-0">{p.direction === "in" ? "IN" : "OUT"}</Badge>
+              <div key={p.id} className="surface p-3 cursor-pointer transition-colors hover:bg-muted/35" onClick={() => openPayView(p)}>
+                <div className="flex items-start gap-3">
+                <Badge variant={p.direction === "in" ? "default" : "secondary"} className="shrink-0 mt-0.5">{p.direction === "in" ? "IN" : "OUT"}</Badge>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm">{p.payment_no}</span>
                     <span className="text-xs text-muted-foreground">{fmtDate(p.date)}</span>
+                    <ClearancePill cleared={p.cleared !== false} mode={p.mode} />
                     {p.ref_doc && (
                       <span className="text-xs text-muted-foreground flex flex-wrap gap-1">
                         {p.ref_doc.split(",").map(s => s.trim()).filter(Boolean).map((ref, idx) => (
@@ -459,25 +482,28 @@ function BillsPage() {
                     )}
                   </div>
                   <div className="text-sm truncate">{p.contact_name ?? "—"} <span className="text-muted-foreground">via {p.mode}</span></div>
-                  {p.notes && <div className="text-xs text-muted-foreground truncate">{p.notes}</div>}
+                  <div className="text-xs text-muted-foreground truncate">
+                    {p.cheque_no ? `Cheque ${p.cheque_no}` : p.txn_id ? `Txn ${p.txn_id}` : p.notes || "Tap to view details"}
+                  </div>
                 </div>
                 <div className={`text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(p.amount)}</div>
+                </div>
               </div>
             ))}
           </div>
         )
       ) : filtered.length === 0 ? <Empty>No outstanding {tab === "receivable" ? "receivables" : "payables"}.</Empty> : (
         <>
-        <div className="hidden md:block rounded-2xl border bg-card overflow-x-auto shadow-sm">
+        <div className="hidden md:block surface overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-muted/40 text-xs uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
-                <th className="text-left p-2">Doc</th>
-                <th className="text-left p-2">Party</th>
-                <th className="text-right p-2">Remaining</th>
-                <th className="text-left p-2 w-40">Paid / Total</th>
-                <th className="text-left p-2">Status</th>
-                <th className="text-right p-2">Action</th>
+                <th className="text-left p-3">Bill</th>
+                <th className="text-left p-3">Party</th>
+                <th className="text-right p-3">Balance</th>
+                <th className="text-left p-3 w-44">Settlement</th>
+                <th className="text-left p-3">Status</th>
+                <th className="text-right p-3">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -487,18 +513,18 @@ function BillsPage() {
                 const st = payStatus(Number(r.total), Number(r.paid), d);
                 return (
                   <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t transition-colors hover:bg-muted/35">
-                    <td className="p-2">
+                    <td className="p-3">
                       <button onClick={() => openPreview(r.doc_no)} className="font-mono text-primary hover:underline">{r.doc_no}</button>
                       <div className="text-[10px] text-muted-foreground mt-0.5">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
                     </td>
-                    <td className="p-2 truncate max-w-[220px]">{r.party_name ?? "—"}</td>
-                    <td className={`p-2 text-right tabular-nums text-base font-semibold ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</td>
-                    <td className="p-2">
+                    <td className="p-3 truncate max-w-[220px]">{r.party_name ?? "—"}</td>
+                    <td className={`p-3 text-right tabular-nums text-base font-semibold ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</td>
+                    <td className="p-3">
                       <PayProgress pct={pct} tab={tab} />
                       <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">{inr(r.paid)} of {inr(r.total)}</div>
                     </td>
-                    <td className="p-2"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div></td>
-                    <td className="p-2 text-right whitespace-nowrap">
+                    <td className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div></td>
+                    <td className="p-3 text-right whitespace-nowrap">
                       <Button size="sm" variant="ghost" onClick={() => openPreview(r.doc_no)} title="Preview bill"><Eye className="h-3.5 w-3.5" /></Button>
                       <Button size="sm" variant="outline" onClick={() => settleBill(r)}>
                         {tab === "receivable" ? "Receive" : "Pay"}
@@ -516,7 +542,7 @@ function BillsPage() {
             const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
             const st = payStatus(Number(r.total), Number(r.paid), d);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className="rounded-2xl border bg-card p-3 space-y-3">
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="surface p-3 space-y-3">
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -568,6 +594,7 @@ function BillsPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewPay.date)}</div></div>
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewPay.mode ?? "—"}</div></div>
+                <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} /></div>
                 <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewPay.contact_name ?? "—"}</div></div>
                 <div className="col-span-2 rounded-md border bg-muted/30 p-3">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Amount</div>
@@ -594,6 +621,11 @@ function BillsPage() {
             </div>
           )}
           <div className="mt-2 flex flex-col gap-2 pt-3 border-t">
+            {viewPay?.cleared === false && (
+              <Button variant="outline" className="w-full" onClick={() => viewPay && markPayCleared(viewPay)}>
+                <CheckCircle2 className="h-4 w-4" /> Mark cleared and post accounts
+              </Button>
+            )}
             <Button variant="outline" className="w-full" onClick={() => viewPay && exportStoneWorldPayment(viewPay, viewAllocs, company)}>
               <Printer className="h-4 w-4" /> Download Branded PDF
             </Button>
@@ -607,14 +639,18 @@ function BillsPage() {
 
       {/* Unified payment dialog */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
-        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto p-0 gap-0">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {direction === "in" ? <ArrowDownLeft className="h-4 w-4 text-primary" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
-              {direction === "in" ? "Receive payment" : "Make payment"}
-            </DialogTitle>
+            <div className="border-b px-4 py-4 sm:px-6">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                {direction === "in" ? <ArrowDownLeft className="h-4 w-4 text-primary" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
+                {direction === "in" ? "Record receipt" : "Record payment"}
+              </DialogTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Cheque entries stay pending until cleared, so accounts and outstanding balances remain safe.</p>
+            </div>
           </DialogHeader>
 
+          <div className="space-y-4 p-4 sm:p-6">
           {/* Direction switch inside dialog */}
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => { setDirection("in"); setAllocs([]); }}
@@ -629,7 +665,7 @@ function BillsPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label className="text-xs">No.</Label>
               <Input className="font-mono" placeholder="Auto" disabled value="(auto)" /></div>
             <div className="space-y-1.5"><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
@@ -642,7 +678,7 @@ function BillsPage() {
               <p className="text-[10px] text-muted-foreground">Total of this single receipt/payment, not per invoice.</p>
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Mode</Label>
-              <Select value={mode} onValueChange={setMode}><SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={mode} onValueChange={(v) => { setMode(v); setCleared(v !== "Cheque"); }}><SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Bank">Bank transfer (NEFT/RTGS/IMPS)</SelectItem>
                   <SelectItem value="UPI">UPI</SelectItem>
@@ -680,13 +716,22 @@ function BillsPage() {
                   <Label className="text-xs">Drawee bank</Label>
                   <Input placeholder="Bank on the cheque" value={bankName} onChange={(e) => setBankName(e.target.value)} />
                 </div>
-                <label className="col-span-2 flex items-center gap-2 text-xs text-muted-foreground">
-                  <input type="checkbox" checked={cleared} onChange={(e) => setCleared(e.target.checked)} />
-                  Already cleared (uncheck if cheque is in transit)
+                <label className="col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
+                  <Checkbox checked={cleared} onCheckedChange={(v) => setCleared(!!v)} className="mt-0.5" />
+                  <span>
+                    <span className="block font-medium">Cheque is cleared</span>
+                    <span className="block text-xs text-muted-foreground">Leave unchecked for in-transit or uncertain cheques. Pending cheques will not settle bills or change Cash/Bank ledgers.</span>
+                  </span>
                 </label>
               </>
             )}
           </div>
+
+          {mode === "Cheque" && !cleared && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+              This cheque will be saved as pending. Mark it cleared later before it affects accounts.
+            </div>
+          )}
 
           {contactId && (
             <div className="mt-3">
@@ -741,23 +786,14 @@ function BillsPage() {
               )}
             </div>
           )}
-          <DialogFooter><Button onClick={save}>Save</Button></DialogFooter>
+          </div>
+          <DialogFooter className="border-t px-4 py-3 sm:px-6">
+            <Button variant="outline" onClick={() => setPayOpen(false)}>Cancel</Button>
+            <Button onClick={save}><ShieldCheck className="h-4 w-4" /> Save safely</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; value: string; sub?: string; tone?: "good" | "bad" | "muted"; onClick?: () => void; active?: boolean }) {
-  const valueClr = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "text-foreground";
-  const ring = active ? "ring-2 ring-primary/50" : "";
-  return (
-    <button type="button" onClick={onClick} disabled={!onClick}
-      className={`text-left rounded-2xl border border-border/70 bg-background p-3 transition-all ${onClick ? "hover:bg-muted/40 active:scale-[0.99]" : ""} ${ring}`}>
-      <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
-      <div className={`text-base sm:text-lg font-semibold tabular-nums truncate ${valueClr}`}>{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
-    </button>
   );
 }
 
