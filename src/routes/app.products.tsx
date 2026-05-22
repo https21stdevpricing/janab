@@ -474,23 +474,6 @@ function Field({ label, children, wide }: { label: string; children: React.React
   );
 }
 
-function StatTile({ icon: Icon, label, value, sub, tone }: { icon: any; label: string; value: string; sub?: string; tone?: "good" | "bad" }) {
-  const valueTone = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "";
-  const iconTone = tone === "bad" ? "text-destructive bg-destructive/10" : tone === "good" ? "text-primary bg-primary/10" : "text-muted-foreground bg-muted";
-  return (
-    <div className="rounded-xl border border-border/70 bg-card p-3 sm:p-4 flex gap-2.5 items-start min-w-0">
-      <div className={`h-8 w-8 rounded-md grid place-items-center shrink-0 ${iconTone}`}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground truncate">{label}</div>
-        <div className={`text-[15px] sm:text-lg font-semibold tabular-nums leading-tight truncate ${valueTone}`}>{value}</div>
-        {sub && <div className="text-[11px] text-muted-foreground truncate mt-0.5">{sub}</div>}
-      </div>
-    </div>
-  );
-}
-
 function MiniStat({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-md bg-muted/40 p-2 min-w-0">
