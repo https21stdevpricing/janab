@@ -1,15 +1,14 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/empty";
 import { Badge } from "@/components/ui/badge";
 import { fmt, fmtDate, inr } from "@/lib/format";
 import { lookupDoc, prefixOf, type DocLookupResult } from "@/lib/doc-lookup";
-import { Search, Printer, Wallet, Truck, X } from "lucide-react";
+import { Search, Printer, Wallet, Truck, X, ArrowRight, Command } from "lucide-react";
 import { toast } from "sonner";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
@@ -141,108 +140,237 @@ function LookupPage() {
   };
 
   return (
-    <div>
-      <PageHeader title="Lookup" description="Search invoices, POs, TPs, quotes, payments, buyers/suppliers, products" />
-      <div className="relative mb-4 max-w-xl">
-        <div className="flex gap-2">
-          <Input
-            className="font-mono"
-            placeholder="ID, name, phone, GSTIN, HSN…"
-            value={q}
-            onChange={(e) => { setQ(e.target.value); setShowSuggest(true); }}
-            onFocus={() => setShowSuggest(true)}
-            onBlur={() => setTimeout(() => setShowSuggest(false), 150)}
-            onKeyDown={(e) => { if (e.key === "Enter") { setShowSuggest(false); run(); } if (e.key === "Escape") setShowSuggest(false); }}
-          />
-          <Button onClick={() => { setShowSuggest(false); run(); }} disabled={busy}><Search className="h-4 w-4" /> Find</Button>
-        </div>
-        {showSuggest && suggest.length > 0 && (
-          <div className="absolute z-20 left-0 right-0 top-full mt-1 rounded-md border bg-popover shadow-md max-h-80 overflow-y-auto">
-            {suggest.map((h, i) => (
-              <button key={i} type="button" className="w-full text-left px-3 py-2 hover:bg-muted/60 flex items-center gap-2 border-b last:border-b-0"
-                onMouseDown={(e) => { e.preventDefault(); pickSuggestion(h); }}>
-                {h.kind === "contact" && <>
-                  <Badge variant="outline" className="capitalize text-[10px]">{h.row.type}</Badge>
-                  <span className="font-medium truncate flex-1">{h.row.name}</span>
-                  <span className="font-mono text-[10px] text-muted-foreground">{h.row.code}</span>
-                </>}
-                {h.kind === "product" && <>
-                  <Badge variant="outline" className="text-[10px]">Product</Badge>
-                  <span className="font-medium truncate flex-1">{h.row.name}</span>
-                  <span className="font-mono text-[10px] text-muted-foreground">{h.row.code}</span>
-                </>}
-                {h.kind === "doc" && <>
-                  <Badge className="text-[10px]">{h.docKind}</Badge>
-                  <span className="font-mono text-sm">{h.no}</span>
-                  <span className="text-[11px] text-muted-foreground truncate flex-1">{h.party}</span>
-                </>}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+    <LookupView
+      q={q}
+      setQ={setQ}
+      busy={busy}
+      run={run}
+      doc={doc}
+      setDoc={setDoc}
+      hits={hits}
+      contactInfo={contactInfo}
+      productInfo={productInfo}
+      suggest={suggest}
+      showSuggest={showSuggest}
+      setShowSuggest={setShowSuggest}
+      pickHit={pickHit}
+      pickSuggestion={pickSuggestion}
+    />
+  );
+}
 
-      <Dialog open={!!doc} onOpenChange={(o) => !o && setDoc(null)}>
+type LookupViewProps = {
+  q: string;
+  setQ: (v: string) => void;
+  busy: boolean;
+  run: () => void;
+  doc: DocLookupResult | null;
+  setDoc: (d: DocLookupResult | null) => void;
+  hits: SearchHit[];
+  contactInfo: Record<string, ContactEnrich>;
+  productInfo: Record<string, ProductEnrich>;
+  suggest: SearchHit[];
+  showSuggest: boolean;
+  setShowSuggest: (v: boolean) => void;
+  pickHit: (h: SearchHit) => void;
+  pickSuggestion: (h: SearchHit) => void;
+};
+
+function LookupView(p: LookupViewProps) {
+  const groups = useMemo(() => {
+    const docs = p.hits.filter((h) => h.kind === "doc");
+    const contacts = p.hits.filter((h) => h.kind === "contact");
+    const products = p.hits.filter((h) => h.kind === "product");
+    return { docs, contacts, products };
+  }, [p.hits]);
+
+  const hasResults = p.doc || p.hits.length > 0;
+
+  return (
+    <div className="-mx-3 sm:-mx-4 lg:-mx-6 -mt-3 sm:-mt-4 lg:-mt-6">
+      {/* Hero search */}
+      <section className={`relative px-4 sm:px-8 pt-10 sm:pt-16 pb-6 sm:pb-10 transition-all ${hasResults ? "" : "min-h-[55vh] flex flex-col justify-center"}`}>
+        <div className="mx-auto w-full max-w-3xl">
+          <div className="text-center mb-6 sm:mb-8">
+            <h1 className="text-3xl sm:text-5xl font-semibold tracking-tight">Find anything.</h1>
+            <p className="mt-2 text-sm sm:text-base text-muted-foreground">
+              Invoices, POs, TPs, quotes, payments, parties, products — one search.
+            </p>
+          </div>
+          <div className="relative">
+            <div className="flex items-center gap-2 rounded-2xl border border-border/70 bg-card shadow-sm focus-within:border-foreground/30 focus-within:shadow-md transition-all px-3 sm:px-4 py-2 sm:py-3">
+              <Search className="h-5 w-5 text-muted-foreground shrink-0" />
+              <Input
+                autoFocus
+                className="border-0 bg-transparent shadow-none focus-visible:ring-0 text-base sm:text-lg h-auto px-1 placeholder:text-muted-foreground/70"
+                placeholder="ID, name, phone, GSTIN, HSN…"
+                value={p.q}
+                onChange={(e) => { p.setQ(e.target.value); p.setShowSuggest(true); }}
+                onFocus={() => p.setShowSuggest(true)}
+                onBlur={() => setTimeout(() => p.setShowSuggest(false), 150)}
+                onKeyDown={(e) => { if (e.key === "Enter") { p.setShowSuggest(false); p.run(); } if (e.key === "Escape") p.setShowSuggest(false); }}
+              />
+              {p.q && (
+                <button onClick={() => p.setQ("")} className="rounded-full p-1 text-muted-foreground hover:bg-muted" aria-label="Clear">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+              <div className="hidden sm:flex items-center gap-1 text-[11px] text-muted-foreground border-l pl-2 ml-1">
+                <Command className="h-3 w-3" /> <span>↵</span>
+              </div>
+              <Button size="sm" onClick={() => { p.setShowSuggest(false); p.run(); }} disabled={p.busy} className="rounded-full">
+                Find <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+            {p.showSuggest && p.suggest.length > 0 && (
+              <div className="absolute z-30 left-0 right-0 top-full mt-2 rounded-xl border border-border/70 bg-popover shadow-lg overflow-hidden max-h-96 overflow-y-auto">
+                {p.suggest.map((h, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    className="w-full text-left px-4 py-2.5 hover:bg-muted/60 flex items-center gap-3 border-b border-border/40 last:border-b-0"
+                    onMouseDown={(e) => { e.preventDefault(); p.pickSuggestion(h); }}
+                  >
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground w-16 shrink-0">
+                      {h.kind === "contact" ? h.row.type : h.kind === "product" ? "product" : h.docKind}
+                    </span>
+                    <span className="font-medium truncate flex-1">
+                      {h.kind === "doc" ? <span className="font-mono">{h.no}</span> : h.row.name}
+                    </span>
+                    <span className="text-[11px] text-muted-foreground truncate max-w-[40%]">
+                      {h.kind === "doc" ? h.party : h.kind === "contact" ? h.row.code : h.row.code}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Quick hints when idle */}
+          {!hasResults && !p.busy && (
+            <div className="mt-8 flex flex-wrap justify-center gap-2">
+              {["INV-", "PO-", "TP-", "QUO-", "RI-", "PY-"].map((tag) => (
+                <button
+                  key={tag}
+                  onClick={() => { p.setQ(tag); setTimeout(() => p.run(), 0); }}
+                  className="rounded-full border border-border/60 bg-card px-3 py-1 text-xs text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors font-mono"
+                >
+                  {tag}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Doc preview dialog */}
+      <Dialog open={!!p.doc} onOpenChange={(o) => !o && p.setDoc(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Document preview</DialogTitle>
-            <button className="rounded-md p-1 hover:bg-muted" onClick={() => setDoc(null)} aria-label="Close"><X className="h-4 w-4" /></button>
+            <button className="rounded-md p-1 hover:bg-muted" onClick={() => p.setDoc(null)} aria-label="Close"><X className="h-4 w-4" /></button>
           </div>
-          {doc && <DocDetail doc={doc} />}
+          {p.doc && <DocDetail doc={p.doc} />}
         </DialogContent>
       </Dialog>
 
-      {hits.length > 0 && (
-        <div className="rounded-md border bg-card divide-y mt-4">
-          {hits.map((h, i) => (
-            <div key={i} className="p-3 flex items-center gap-3 hover:bg-muted/40 cursor-pointer" onClick={() => pickHit(h)}>
-              {h.kind === "contact" && <>
-                <Badge variant="outline" className="capitalize">{h.row.type}</Badge>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{h.row.name} <span className="font-mono text-xs text-muted-foreground">{h.row.code}</span></div>
-                  <div className="text-xs text-muted-foreground truncate">{h.row.state} {h.row.phone ? `· ${h.row.phone}` : ""} {h.row.gstin ? `· ${h.row.gstin}` : ""}</div>
-                  {contactInfo[h.row.id] && (
-                    <div className="text-xs mt-1 flex flex-wrap gap-2">
-                      {contactInfo[h.row.id].receivable > 0 && <span className="text-primary">Recv {inr(contactInfo[h.row.id].receivable)}</span>}
-                      {contactInfo[h.row.id].payable > 0 && <span className="text-destructive">Pay {inr(contactInfo[h.row.id].payable)}</span>}
-                      {contactInfo[h.row.id].open_docs > 0 && <span className="text-muted-foreground">{contactInfo[h.row.id].open_docs} open</span>}
-                    </div>
-                  )}
-                </div>
-                <Button size="sm" variant="outline" asChild onClick={(e) => e.stopPropagation()}>
-                  <Link to={h.row.type === "supplier" ? "/app/suppliers" : "/app/buyers"}>Open</Link>
-                </Button>
-              </>}
-              {h.kind === "product" && <>
-                <Badge variant="outline">Product</Badge>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium truncate">{h.row.name} <span className="font-mono text-xs text-muted-foreground">{h.row.code}</span></div>
-                  <div className="text-xs text-muted-foreground truncate">{h.row.unit} · HSN {h.row.hsn ?? "—"} · Sale ₹{fmt(h.row.sale_rate)}</div>
-                  {productInfo[h.row.id] && (
-                    <div className="text-xs mt-1 flex flex-wrap gap-2">
-                      <span className={productInfo[h.row.id].on_hand <= productInfo[h.row.id].reorder_level ? "text-destructive font-medium" : "text-foreground"}>
-                        Stock {fmt(productInfo[h.row.id].on_hand)} {h.row.unit}
-                      </span>
-                      {productInfo[h.row.id].on_hand <= productInfo[h.row.id].reorder_level && (
-                        <span className="text-destructive">Low (reorder {fmt(productInfo[h.row.id].reorder_level)})</span>
+      {/* Results */}
+      {p.hits.length > 0 && (
+        <section className="px-4 sm:px-8 pb-16">
+          <div className="mx-auto w-full max-w-3xl space-y-10">
+            {groups.docs.length > 0 && (
+              <ResultGroup title="Documents" count={groups.docs.length}>
+                {groups.docs.map((h, i) => h.kind === "doc" && (
+                  <button key={i} onClick={() => p.pickHit(h)} className="group w-full flex items-center gap-4 py-3.5 text-left">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-20 shrink-0">{h.docKind}</span>
+                    <span className="font-mono text-sm font-medium w-32 truncate">{h.no}</span>
+                    <span className="flex-1 text-sm text-muted-foreground truncate">{h.party ?? "—"}</span>
+                    <span className="text-xs text-muted-foreground tabular-nums hidden sm:block">{fmtDate(h.date)}</span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-foreground transition-colors" />
+                  </button>
+                ))}
+              </ResultGroup>
+            )}
+
+            {groups.contacts.length > 0 && (
+              <ResultGroup title="Parties" count={groups.contacts.length}>
+                {groups.contacts.map((h, i) => h.kind === "contact" && (
+                  <div key={i} className="flex items-center gap-4 py-3.5">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-20 shrink-0">{h.row.type}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{h.row.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        <span className="font-mono">{h.row.code}</span>
+                        {h.row.state ? ` · ${h.row.state}` : ""}
+                        {h.row.phone ? ` · ${h.row.phone}` : ""}
+                        {h.row.gstin ? ` · ${h.row.gstin}` : ""}
+                      </div>
+                      {p.contactInfo[h.row.id] && (p.contactInfo[h.row.id].receivable > 0 || p.contactInfo[h.row.id].payable > 0) && (
+                        <div className="text-xs mt-1 flex flex-wrap gap-3">
+                          {p.contactInfo[h.row.id].receivable > 0 && <span className="text-primary tabular-nums">Recv {inr(p.contactInfo[h.row.id].receivable)}</span>}
+                          {p.contactInfo[h.row.id].payable > 0 && <span className="text-destructive tabular-nums">Pay {inr(p.contactInfo[h.row.id].payable)}</span>}
+                          {p.contactInfo[h.row.id].open_docs > 0 && <span className="text-muted-foreground">{p.contactInfo[h.row.id].open_docs} open</span>}
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </>}
-              {h.kind === "doc" && <>
-                <Badge>{h.docKind}</Badge>
-                <div className="flex-1 min-w-0">
-                  <div className="font-mono text-sm">{h.no}</div>
-                  <div className="text-xs text-muted-foreground truncate">{fmtDate(h.date)} · {h.party ?? "—"}</div>
-                </div>
-              </>}
-            </div>
-          ))}
-        </div>
+                    <Button size="sm" variant="ghost" asChild className="rounded-full">
+                      <Link to={h.row.type === "supplier" ? "/app/suppliers" : "/app/buyers"}>
+                        Open <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
+              </ResultGroup>
+            )}
+
+            {groups.products.length > 0 && (
+              <ResultGroup title="Products" count={groups.products.length}>
+                {groups.products.map((h, i) => h.kind === "product" && (
+                  <div key={i} className="flex items-center gap-4 py-3.5">
+                    <span className="text-[10px] uppercase tracking-wider text-muted-foreground w-20 shrink-0">product</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium truncate">{h.row.name}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        <span className="font-mono">{h.row.code}</span> · {h.row.unit} · HSN {h.row.hsn ?? "—"} · ₹{fmt(h.row.sale_rate)}
+                      </div>
+                    </div>
+                    {p.productInfo[h.row.id] && (
+                      <div className="text-xs text-right tabular-nums">
+                        <div className={p.productInfo[h.row.id].on_hand <= p.productInfo[h.row.id].reorder_level ? "text-destructive font-medium" : "text-foreground"}>
+                          {fmt(p.productInfo[h.row.id].on_hand)} {h.row.unit}
+                        </div>
+                        {p.productInfo[h.row.id].on_hand <= p.productInfo[h.row.id].reorder_level && (
+                          <div className="text-destructive">Low</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </ResultGroup>
+            )}
+          </div>
+        </section>
       )}
 
-      {!doc && hits.length === 0 && <Empty>Type an ID, name, phone, GSTIN or HSN and press Find.</Empty>}
+      {!p.doc && p.hits.length === 0 && p.q && !p.busy && (
+        <section className="px-4 sm:px-8 pb-16">
+          <div className="mx-auto w-full max-w-3xl">
+            <Empty>No matches. Try a different ID, name, phone, GSTIN or HSN.</Empty>
+          </div>
+        </section>
+      )}
+    </div>
+  );
+}
+
+function ResultGroup({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1 border-b border-border/60 pb-2">
+        <h2 className="text-lg sm:text-xl font-semibold tracking-tight">{title}</h2>
+        <span className="text-xs text-muted-foreground tabular-nums">{count}</span>
+      </div>
+      <div className="divide-y divide-border/40">{children}</div>
     </div>
   );
 }
