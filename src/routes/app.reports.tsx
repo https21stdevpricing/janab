@@ -3,7 +3,8 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { SegmentedTabs } from "@/components/ui-tokens";
 import { inr, fmt } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert, Layers, Calculator, Check, Wrench } from "lucide-react";
@@ -22,6 +23,7 @@ function ReportsPage() {
   const [cogsMethod, setCogsMethod] = useState<"weighted_average" | "fifo">("weighted_average");
   const [payments, setPayments] = useState<any[]>([]);
   const [allocations, setAllocations] = useState<any[]>([]);
+  const [reportTab, setReportTab] = useState("outlook");
 
   useEffect(() => {
     const loadAll = () => {
@@ -333,28 +335,21 @@ function ReportsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="outlook">
-        <div className="-mx-1 px-1 mb-3">
-          {/* Visual parity with SegmentedTabs (Money, Deposits, Products, Audit) */}
-          <TabsList className="scroll-tabs w-full sm:w-auto justify-start gap-0 bg-muted/70 ring-1 ring-border/60 p-1 rounded-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[
-              ["outlook", "Overview"],
-              ["pnl", "Profit & Loss"],
-              ["bs", "Balance Sheet"],
-              ["wc", "Working Capital"],
-              ["inv", "Inventory"],
-              ["tb", "Trial Balance"],
-              ["reconcile", "Reconcile"],
-            ].map(([v, label]) => (
-              <TabsTrigger
-                key={v}
-                value={v}
-                className="shrink-0 snap-start whitespace-nowrap rounded-full px-3.5 h-8 text-[13px] font-medium leading-none tracking-tight data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+      <Tabs value={reportTab} onValueChange={setReportTab}>
+        <div className="mb-3">
+          <SegmentedTabs
+            value={reportTab}
+            onValueChange={setReportTab}
+            items={[
+              { value: "outlook", label: "Overview" },
+              { value: "pnl", label: "Profit & Loss" },
+              { value: "bs", label: "Balance Sheet" },
+              { value: "wc", label: "Working Capital" },
+              { value: "inv", label: "Inventory" },
+              { value: "tb", label: "Trial Balance" },
+              { value: "reconcile", label: "Reconcile" },
+            ]}
+          />
         </div>
 
         <TabsContent value="outlook" className="space-y-3">
