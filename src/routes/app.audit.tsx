@@ -22,16 +22,32 @@ function AuditPage() {
   const [action, setAction] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [restoring, setRestoring] = useState<Record<string, boolean>>({});
+  const [authReady, setAuthReady] = useState(false);
 
   const load = async () => {
-    const { data } = await supabase.from("audit_log" as never).select("*").order("at", { ascending: false }).limit(500) as any;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) { setRows([]); return; }
+    const { data, error } = await supabase
+      .from("audit_log" as never)
+      .select("*")
+      .order("at", { ascending: false })
+      .limit(500) as any;
+    if (error) { console.error("audit load", error); toast.error(error.message); return; }
     setRows((data ?? []) as Row[]);
   };
 
   useEffect(() => {
-    load();
+    let cancelled = false;
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (cancelled) return;
+      setAuthReady(true);
+      if (session?.user) load();
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session?.user) load();
+    });
     const ch = supabase.channel("audit-live").on("postgres_changes", { event: "INSERT", schema: "public", table: "audit_log" }, () => load()).subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => { cancelled = true; subscription.unsubscribe(); supabase.removeChannel(ch); };
   }, []);
 
   const filtered = rows.filter(r =>
