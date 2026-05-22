@@ -380,6 +380,14 @@ function BillsPage() {
       toast.error(`Allocated (${inr(allocatedSum)}) is more than amount (${inr(amount)}).`);
       return;
     }
+    if (kind === "against_invoice" && allocs.length === 0) {
+      toast.error(`"Against invoice" needs at least one bill selected. Switch to Advance or On-account if no specific bill applies.`);
+      return;
+    }
+    if ((kind === "advance" || kind === "on_account") && allocs.length > 0) {
+      toast.error(`${kind === "advance" ? "Advance" : "On-account"} entries cannot be tied to a specific bill. Clear selections or change kind to "Against invoice".`);
+      return;
+    }
     const finalCleared = mode === "Cheque" ? cleared : true;
     const finalStatus = mode === "Cheque" ? (finalCleared ? "cleared" : "pending") : "cleared";
     const { data: pay, error } = await supabase.from("payments").insert({
@@ -389,9 +397,10 @@ function BillsPage() {
       cheque_no: chequeNo || null, cheque_date: chequeDate || null,
       txn_id: txnId || null, bank_name: bankName || null,
       cleared: finalCleared, cleared_at: finalCleared ? date : null, status: finalStatus,
+      kind,
     } as never).select().single() as { data: any; error: any };
     if (error) { toast.error(error.message); return; }
-    if (allocs.length) {
+    if (kind === "against_invoice" && allocs.length) {
       const rowsToInsert = allocs.filter(a => a.amount > 0).map(a => ({
         user_id: user.id, payment_id: pay.id, doc_kind: a.doc_kind, doc_id: a.doc_id, doc_no: a.doc_no, amount: a.amount,
       }));
@@ -399,10 +408,14 @@ function BillsPage() {
         const { error: e2 } = await supabase.from("payment_allocations" as never).insert(rowsToInsert as never);
         if (e2) toast.error("Saved, but allocation failed: " + e2.message);
       }
-    } else if (contactId) {
+    } else if (kind === "against_invoice" && contactId) {
       const { error: e3 } = await supabase.rpc("auto_allocate_payment" as never, { _pid: pay.id } as never);
       if (e3) toast.error("Saved, but auto-allocation failed: " + e3.message);
       else toast.success("Auto-applied to oldest open dues");
+    } else if (kind === "advance") {
+      toast.success(`Parked as advance — auto-applies when you raise the next ${direction === "in" ? "invoice" : "purchase"} for this party.`);
+    } else if (kind === "on_account") {
+      toast.success("Recorded on account — allocate manually from outstanding bills.");
     }
     toast.success("Saved"); setPayOpen(false); load();
   };
