@@ -4,6 +4,7 @@ export type PrintFooterPosition = "above-signature" | "page-bottom";
 export type PrintWatermarkLayer = "back" | "front";
 export type PrintQrMode = "digital-copy" | "upi-pay" | "manual" | "off";
 export type PrintBarcodeMode = "auto" | "manual" | "off";
+export type PrintRoundOffMode = "off" | "nearest" | "up" | "down";
 
 export type PrintDesign = {
   headerStyle: PrintHeaderStyle;
@@ -30,6 +31,7 @@ export type PrintDesign = {
   showTaxInWords: boolean;           // separate "Tax amount in words" line
   showShipTo: boolean;               // separate Ship-To panel
   showTransport: boolean;            // transport details panel (dispatch/vehicle/destination)
+  roundOff: PrintRoundOffMode;       // rounding behaviour on grand total
   transporter?: string;              // editable transporter name
   vehicleNo?: string;                // editable vehicle no
   destination?: string;              // editable destination
@@ -64,6 +66,7 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   showTaxInWords: true,
   showShipTo: true,
   showTransport: false,
+  roundOff: "nearest",
   transporter: "",
   vehicleNo: "",
   destination: "",

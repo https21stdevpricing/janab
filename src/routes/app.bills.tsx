@@ -53,6 +53,7 @@ type PayRow = {
   mode: string | null; ref_doc: string | null; notes: string | null;
   cleared: boolean; cleared_at: string | null; cheque_no: string | null; bank_name: string | null; txn_id: string | null;
   status?: "pending" | "cleared" | "bounced" | null;
+  kind?: "against_invoice" | "advance" | "on_account" | null;
 };
 type Alloc = { doc_kind: "sale" | "purchase" | "tp" | "tp_purchase"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
 type PendingChequeLock = { doc_kind: string; doc_id: string; payment_id: string; payment_no: string; cheque_no: string | null; amount: number; date: string };
@@ -133,6 +134,7 @@ function BillsPage() {
   const [cleared, setCleared] = useState(true);
   const [openDocs, setOpenDocs] = useState<any[]>([]);
   const [allocs, setAllocs] = useState<Alloc[]>([]);
+  const [kind, setKind] = useState<"against_invoice" | "advance" | "on_account">("against_invoice");
 
   const openPreview = async (docNo: string) => {
     const r = await lookupDoc(docNo);
@@ -283,6 +285,7 @@ function BillsPage() {
     setDirection(dir); setDate(todayISO()); setContactId(null); setContactName(null);
     setAmount(0); setMode("Bank"); setNotes(""); setOpenDocs([]); setAllocs([]);
     setChequeNo(""); setChequeDate(""); setTxnId(""); setBankName(""); setCleared(true);
+    setKind("against_invoice");
     setPayOpen(true);
   };
 
@@ -301,6 +304,7 @@ function BillsPage() {
     setContactId(r.party_id); setContactName(r.party_name);
     setAmount(Number(Number(r.balance).toFixed(2)));
     setAllocs([{ doc_kind: r.doc_kind, doc_id: r.doc_id, doc_no: r.doc_no, amount: Number(r.balance), balance: Number(r.balance), total: Number(r.total) }]);
+    setKind("against_invoice");
     setPayOpen(true);
   };
 
@@ -377,6 +381,14 @@ function BillsPage() {
       toast.error(`Allocated (${inr(allocatedSum)}) is more than amount (${inr(amount)}).`);
       return;
     }
+    if (kind === "against_invoice" && allocs.length === 0) {
+      toast.error(`"Against invoice" needs at least one bill selected. Switch to Advance or On-account if no specific bill applies.`);
+      return;
+    }
+    if ((kind === "advance" || kind === "on_account") && allocs.length > 0) {
+      toast.error(`${kind === "advance" ? "Advance" : "On-account"} entries cannot be tied to a specific bill. Clear selections or change kind to "Against invoice".`);
+      return;
+    }
     const finalCleared = mode === "Cheque" ? cleared : true;
     const finalStatus = mode === "Cheque" ? (finalCleared ? "cleared" : "pending") : "cleared";
     const { data: pay, error } = await supabase.from("payments").insert({
@@ -386,9 +398,10 @@ function BillsPage() {
       cheque_no: chequeNo || null, cheque_date: chequeDate || null,
       txn_id: txnId || null, bank_name: bankName || null,
       cleared: finalCleared, cleared_at: finalCleared ? date : null, status: finalStatus,
+      kind,
     } as never).select().single() as { data: any; error: any };
     if (error) { toast.error(error.message); return; }
-    if (allocs.length) {
+    if (kind === "against_invoice" && allocs.length) {
       const rowsToInsert = allocs.filter(a => a.amount > 0).map(a => ({
         user_id: user.id, payment_id: pay.id, doc_kind: a.doc_kind, doc_id: a.doc_id, doc_no: a.doc_no, amount: a.amount,
       }));
@@ -396,10 +409,14 @@ function BillsPage() {
         const { error: e2 } = await supabase.from("payment_allocations" as never).insert(rowsToInsert as never);
         if (e2) toast.error("Saved, but allocation failed: " + e2.message);
       }
-    } else if (contactId) {
+    } else if (kind === "against_invoice" && contactId) {
       const { error: e3 } = await supabase.rpc("auto_allocate_payment" as never, { _pid: pay.id } as never);
       if (e3) toast.error("Saved, but auto-allocation failed: " + e3.message);
       else toast.success("Auto-applied to oldest open dues");
+    } else if (kind === "advance") {
+      toast.success(`Parked as advance — auto-applies when you raise the next ${direction === "in" ? "invoice" : "purchase"} for this party.`);
+    } else if (kind === "on_account") {
+      toast.success("Recorded on account — allocate manually from outstanding bills.");
     }
     toast.success("Saved"); setPayOpen(false); load();
   };
@@ -614,6 +631,12 @@ function BillsPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewPay.date)}</div></div>
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewPay.mode ?? "—"}</div></div>
+                <div className="col-span-2">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Applied as</div>
+                  <Badge variant="outline" className="text-[10px]">
+                    {viewPay.kind === "advance" ? "Advance payment" : viewPay.kind === "on_account" ? "On account" : "Against invoice"}
+                  </Badge>
+                </div>
                 {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} status={viewPay.status} /></div>}
                 <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewPay.contact_name ?? "—"}</div></div>
                 <div className="col-span-2 rounded-md border bg-muted/30 p-3">
@@ -689,6 +712,25 @@ function BillsPage() {
             </button>
           </div>
 
+          {/* Transaction kind: against invoice / advance / on-account */}
+          <div>
+            <Label className="text-xs">Apply as</Label>
+            <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {([
+                { v: "against_invoice", t: "Against invoice", d: "Knock off specific pending bill(s)." },
+                { v: "advance", t: "Advance payment", d: direction === "in" ? "Park as Advance from Customers." : "Park as Advances to Suppliers." },
+                { v: "on_account", t: "On account", d: "Sits open on the party ledger until allocated." },
+              ] as const).map((k) => (
+                <button key={k.v} type="button"
+                  onClick={() => { setKind(k.v); if (k.v !== "against_invoice") setAllocs([]); }}
+                  className={`rounded-md border p-2.5 text-left transition-colors ${kind === k.v ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:bg-muted/40"}`}>
+                  <div className="text-xs font-medium">{k.t}</div>
+                  <div className="mt-0.5 text-[10px] text-muted-foreground">{k.d}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
             <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">{direction === "in" ? "From buyer" : "To supplier"}</Label>
@@ -755,7 +797,7 @@ function BillsPage() {
             </div>
           )}
 
-          {contactId && (
+          {contactId && kind === "against_invoice" && (
             <div className="mt-3">
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-xs">Open bills · click to allocate</Label>

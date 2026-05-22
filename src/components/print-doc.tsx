@@ -42,8 +42,20 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const totals = useMemo(() => {
     const subtotal = items.reduce((a, it) => a + Number(it.qty || 0) * Number(it.rate || 0), 0);
     const gst = items.reduce((a, it) => a + Number(it.qty || 0) * Number(it.rate || 0) * Number(it.gst_pct ?? 0) / 100, 0);
-    return { subtotal, gst, total: subtotal + gst };
-  }, [items]);
+    const raw = subtotal + gst;
+    // Prefer the round_off persisted on the saved header so the printed total
+    // and the journal always tie. Fall back to the design-side toggle for
+    // previews where the header is empty.
+    let roundOff = Number((doc as any)?.round_off ?? 0);
+    if (!roundOff && design?.roundOff && design.roundOff !== "off") {
+      const target =
+        design.roundOff === "up"   ? Math.ceil(raw)  :
+        design.roundOff === "down" ? Math.floor(raw) :
+                                     Math.round(raw);
+      roundOff = +(target - raw).toFixed(2);
+    }
+    return { subtotal, gst, roundOff, total: +(raw + roundOff).toFixed(2) };
+  }, [items, doc, design]);
 
   if (!doc) return <div className="text-sm text-muted-foreground p-4">Loading…</div>;
 
@@ -293,6 +305,15 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <span>Show transport / dispatch panel</span>
               </label>
               <label className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Round off grand total</span>
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.roundOff} onChange={(e) => updateDesign({ ...design, roundOff: e.target.value as any })}>
+                  <option value="off">Off · show paise</option>
+                  <option value="nearest">Nearest rupee (recommended)</option>
+                  <option value="up">Always round up</option>
+                  <option value="down">Always round down</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground">QR code</span>
                 <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.qrMode} onChange={(e) => updateDesign({ ...design, qrMode: e.target.value as any })}>
                   <option value="digital-copy">Auto · Digital copy link</option>
@@ -514,6 +535,9 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               )}
               <SummaryLine label="Subtotal" value={totals.subtotal} />
               {design.showGstSummary && (sameState ? <><SummaryLine label="CGST" value={totals.gst / 2} /><SummaryLine label="SGST" value={totals.gst / 2} /></> : <SummaryLine label="IGST" value={totals.gst} />)}
+              {Math.abs(totals.roundOff) > 0.0001 && (
+                <SummaryLine label={totals.roundOff > 0 ? "Round Off (+)" : "Round Off (−)"} value={Math.abs(totals.roundOff)} />
+              )}
               <div className="border-t-2 border-[#111621] mt-1 pt-2 flex justify-between items-baseline">
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em]">Grand Total</span>
                 <span className="tabular-nums font-bold text-[15px]">{inr(totals.total)}</span>

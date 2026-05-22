@@ -548,6 +548,7 @@ export type Database = {
           date: string
           direction: string
           id: string
+          kind: string
           mode: string | null
           notes: string | null
           payment_no: string
@@ -569,6 +570,7 @@ export type Database = {
           date?: string
           direction: string
           id?: string
+          kind?: string
           mode?: string | null
           notes?: string | null
           payment_no: string
@@ -590,6 +592,7 @@ export type Database = {
           date?: string
           direction?: string
           id?: string
+          kind?: string
           mode?: string | null
           notes?: string | null
           payment_no?: string
@@ -871,6 +874,7 @@ export type Database = {
           id: string
           notes: string | null
           po_no: string
+          round_off: number
           status: string | null
           supplier_id: string | null
           supplier_name: string | null
@@ -882,6 +886,7 @@ export type Database = {
           id?: string
           notes?: string | null
           po_no: string
+          round_off?: number
           status?: string | null
           supplier_id?: string | null
           supplier_name?: string | null
@@ -893,6 +898,7 @@ export type Database = {
           id?: string
           notes?: string | null
           po_no?: string
+          round_off?: number
           status?: string | null
           supplier_id?: string | null
           supplier_name?: string | null
@@ -1103,6 +1109,7 @@ export type Database = {
           id: string
           invoice_no: string
           notes: string | null
+          round_off: number
           status: string | null
           user_id: string
         }
@@ -1114,6 +1121,7 @@ export type Database = {
           id?: string
           invoice_no: string
           notes?: string | null
+          round_off?: number
           status?: string | null
           user_id: string
         }
@@ -1125,6 +1133,7 @@ export type Database = {
           id?: string
           invoice_no?: string
           notes?: string | null
+          round_off?: number
           status?: string | null
           user_id?: string
         }
@@ -1149,6 +1158,7 @@ export type Database = {
         Row: {
           account_closed_at: string | null
           address: string | null
+          auto_round_off: boolean
           bank_account_no: string | null
           bank_ifsc: string | null
           bank_name: string | null
@@ -1180,6 +1190,7 @@ export type Database = {
         Insert: {
           account_closed_at?: string | null
           address?: string | null
+          auto_round_off?: boolean
           bank_account_no?: string | null
           bank_ifsc?: string | null
           bank_name?: string | null
@@ -1211,6 +1222,7 @@ export type Database = {
         Update: {
           account_closed_at?: string | null
           address?: string | null
+          auto_round_off?: boolean
           bank_account_no?: string | null
           bank_ifsc?: string | null
           bank_name?: string | null
@@ -1330,6 +1342,7 @@ export type Database = {
           date: string
           id: string
           notes: string | null
+          round_off: number
           supplier_id: string | null
           supplier_name: string | null
           tp_no: string
@@ -1342,6 +1355,7 @@ export type Database = {
           date?: string
           id?: string
           notes?: string | null
+          round_off?: number
           supplier_id?: string | null
           supplier_name?: string | null
           tp_no: string
@@ -1354,6 +1368,7 @@ export type Database = {
           date?: string
           id?: string
           notes?: string | null
+          round_off?: number
           supplier_id?: string | null
           supplier_name?: string | null
           tp_no?: string
