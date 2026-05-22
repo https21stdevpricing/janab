@@ -9,6 +9,7 @@ import { lookupDocById } from "@/lib/doc-lookup";
 import { amountInWords } from "@/lib/amount-words";
 import { DEFAULT_PRINT_DESIGN, fileToDataUrl, loadPrintDesign, savePrintDesign, type PrintDesign } from "@/lib/print-customizer";
 import { digitalCopyUrl, generateBarcodeDataUrl, generateQrDataUrl, upiPayString } from "@/lib/doc-codes";
+import { stateWithCode } from "@/lib/india-states";
 
 export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }) {
   const [doc, setDoc] = useState<any>(null);
@@ -51,6 +52,24 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const title = kind === "invoice" ? "Tax Invoice" : "Quotation";
   const address = [company?.address, company?.state].filter(Boolean).join(", ");
   const partyAddress = [buyer?.address, buyer?.state].filter(Boolean).join(", ");
+  const shipToText = (design.shipToOverride?.trim() || partyAddress || "Same as Bill-To");
+
+  // HSN/SAC-wise tax summary (Tally style). Groups item taxable value and
+  // splits CGST/SGST (intra-state) or IGST (inter-state) per HSN row.
+  const hsnSummary = useMemo(() => {
+    const map = new Map<string, { hsn: string; taxable: number; rate: number; tax: number }>();
+    for (const it of items) {
+      const hsn = String((it as any).hsn ?? (it as any).hsn_code ?? "—");
+      const taxable = Number(it.qty || 0) * Number(it.rate || 0);
+      const rate = Number(it.gst_pct ?? 0);
+      const tax = taxable * rate / 100;
+      const key = `${hsn}|${rate}`;
+      const prev = map.get(key);
+      if (prev) { prev.taxable += taxable; prev.tax += tax; }
+      else map.set(key, { hsn, taxable, rate, tax });
+    }
+    return Array.from(map.values());
+  }, [items]);
 
   // -----------------------------------------------------------------
   // Auto-generated codes (QR for digital copy / UPI pay, Code-128 barcode).
@@ -257,6 +276,22 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <input type="checkbox" checked={design.showGstSummary} onChange={(e) => updateDesign({ ...design, showGstSummary: e.target.checked })} />
                 <span>Show GST breakdown (CGST/SGST/IGST)</span>
               </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showHsnSummary} onChange={(e) => updateDesign({ ...design, showHsnSummary: e.target.checked })} />
+                <span>Show HSN/SAC tax summary table</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showTaxInWords} onChange={(e) => updateDesign({ ...design, showTaxInWords: e.target.checked })} />
+                <span>Show tax amount in words</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showShipTo} onChange={(e) => updateDesign({ ...design, showShipTo: e.target.checked })} />
+                <span>Show Ship-To (Consignee) panel</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showTransport} onChange={(e) => updateDesign({ ...design, showTransport: e.target.checked })} />
+                <span>Show transport / dispatch panel</span>
+              </label>
               <label className="flex flex-col gap-1">
                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground">QR code</span>
                 <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.qrMode} onChange={(e) => updateDesign({ ...design, qrMode: e.target.value as any })}>
@@ -293,6 +328,37 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <input className="h-8 flex-1 rounded-md border bg-background px-2 text-xs" placeholder="Authorised Signatory" value={design.signatoryName ?? ""} onChange={(e) => updateDesign({ ...design, signatoryName: e.target.value })} />
               </label>
             </div>
+
+            {(design.showShipTo || design.showTransport) && (
+              <div className="grid gap-2 sm:grid-cols-2 pt-1 border-t border-border/40 mt-1">
+                {design.showShipTo && (
+                  <label className="sm:col-span-2 flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ship-To address (leave blank to mirror Bill-To)</span>
+                    <textarea rows={2} className="rounded-md border bg-background px-2 py-1.5 text-xs" placeholder="Consignee name, address, GSTIN…" value={design.shipToOverride ?? ""} onChange={(e) => updateDesign({ ...design, shipToOverride: e.target.value })} />
+                  </label>
+                )}
+                {design.showTransport && (
+                  <>
+                    <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Dispatch doc no.</span>
+                      <input className="h-8 rounded-md border bg-background px-2 text-xs" value={design.dispatchDocNo ?? ""} onChange={(e) => updateDesign({ ...design, dispatchDocNo: e.target.value })} />
+                    </label>
+                    <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Dispatched through</span>
+                      <input className="h-8 rounded-md border bg-background px-2 text-xs" placeholder="Transporter / courier" value={design.transporter ?? ""} onChange={(e) => updateDesign({ ...design, transporter: e.target.value })} />
+                    </label>
+                    <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Vehicle no.</span>
+                      <input className="h-8 rounded-md border bg-background px-2 text-xs" value={design.vehicleNo ?? ""} onChange={(e) => updateDesign({ ...design, vehicleNo: e.target.value })} />
+                    </label>
+                    <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Destination</span>
+                      <input className="h-8 rounded-md border bg-background px-2 text-xs" value={design.destination ?? ""} onChange={(e) => updateDesign({ ...design, destination: e.target.value })} />
+                    </label>
+                  </>
+                )}
+                <label className="sm:col-span-2 flex flex-col gap-1">
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Declaration / Terms (override)</span>
+                  <textarea rows={2} className="rounded-md border bg-background px-2 py-1.5 text-xs" placeholder="Leave blank to use default T&C…" value={design.declaration ?? ""} onChange={(e) => updateDesign({ ...design, declaration: e.target.value })} />
+                </label>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-2">
@@ -339,23 +405,41 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           <div className="mt-1 h-[2px] w-16 bg-[#00abb5]" />
         </header>
 
-        <section className="px-9 py-6 grid grid-cols-2 gap-10">
-          <InfoPanel title={kind === "invoice" ? "Bill To" : "Quoted To"} rows={[
+        <section className={`px-9 py-6 grid gap-10 ${design.showShipTo ? "md:grid-cols-3" : "grid-cols-2"}`}>
+          <InfoPanel title={kind === "invoice" ? "Bill To (Buyer)" : "Quoted To"} rows={[
             ["Name", doc.buyer_name ?? buyer?.name ?? "—"],
             ["Address", partyAddress],
-            ["State", buyer?.state],
+            ["State", stateWithCode(buyer?.state)],
             ["GSTIN", buyer?.gstin],
             ["Phone", buyer?.phone],
           ]} />
+          {design.showShipTo && (
+            <InfoPanel title="Ship To (Consignee)" rows={[
+              ["Address", shipToText],
+              ["State", stateWithCode(buyer?.state)],
+              ["GSTIN", buyer?.gstin],
+            ]} />
+          )}
           <InfoPanel title={kind === "invoice" ? "Invoice Info" : "Quotation Info"} rows={[
             [kind === "invoice" ? "Invoice No" : "Quote No", documentNo],
             ["Date", fmtDate(doc.date)],
             ...(doc.valid_until ? [["Valid Until", fmtDate(doc.valid_until)] as [string, string]] : []),
-            ["Place of Supply", buyer?.state ?? "—"],
+            ["Place of Supply", stateWithCode(buyer?.state) || "—"],
             ["GST Treatment", sameState ? "Intra-state (CGST + SGST)" : "Inter-state (IGST)"],
             ["Reverse Charge", "No"],
           ]} />
         </section>
+
+        {kind === "invoice" && design.showTransport && (design.dispatchDocNo || design.transporter || design.vehicleNo || design.destination) && (
+          <section className="px-9 pb-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border border-slate-200 rounded p-3 text-[11px]">
+              {design.dispatchDocNo && <div><div className="text-[9.5px] uppercase tracking-wide text-[#6e7886]">Dispatch Doc No.</div><div className="font-semibold text-[#111621] mt-0.5">{design.dispatchDocNo}</div></div>}
+              {design.transporter && <div><div className="text-[9.5px] uppercase tracking-wide text-[#6e7886]">Dispatched through</div><div className="font-semibold text-[#111621] mt-0.5">{design.transporter}</div></div>}
+              {design.vehicleNo && <div><div className="text-[9.5px] uppercase tracking-wide text-[#6e7886]">Vehicle No.</div><div className="font-semibold text-[#111621] mt-0.5 font-mono">{design.vehicleNo}</div></div>}
+              {design.destination && <div><div className="text-[9.5px] uppercase tracking-wide text-[#6e7886]">Destination</div><div className="font-semibold text-[#111621] mt-0.5">{design.destination}</div></div>}
+            </div>
+          </section>
+        )}
 
         <section className={`${design.bodyLayout === "dense" ? "px-8 pb-4" : design.bodyLayout === "spacious" ? "px-10 pb-7" : "px-9 pb-6"} relative`}>
           <table className="w-full border-collapse text-[11.5px] leading-4">
@@ -417,6 +501,9 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               <p className="mt-1 text-[10.5px] leading-4 text-[#6e7886]">{kind === "invoice"
                 ? "Goods once sold will not be taken back. Interest @18% p.a. on overdue balances. Subject to local jurisdiction. E&OE."
                 : "Prices valid until the date shown above. Quotation does not constitute a tax invoice. Stock and lot variation may apply. E&OE."}</p>
+              {design.declaration && design.declaration.trim() && (
+                <p className="mt-1 text-[10.5px] leading-4 text-[#374050] whitespace-pre-line">{design.declaration}</p>
+              )}
             </div>
             <div className="text-[11.5px] relative">
               {renderedQr && (
@@ -433,6 +520,69 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               </div>
             </div>
           </div>
+
+          {kind === "invoice" && design.showHsnSummary && hsnSummary.length > 0 && (
+            <div className="mt-6 break-inside-avoid">
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886] mb-2">HSN/SAC tax summary</p>
+              <table className="w-full border-collapse text-[10.5px] leading-4 border border-slate-200">
+                <thead className="bg-slate-50 text-[#6e7886] uppercase text-[9px] tracking-[0.08em]">
+                  <tr>
+                    <th className="text-left py-1.5 px-2 border-b border-slate-200 font-bold">HSN/SAC</th>
+                    <th className="text-right py-1.5 px-2 border-b border-slate-200 font-bold">Taxable Value</th>
+                    {sameState ? (
+                      <>
+                        <th className="text-center py-1.5 px-2 border-b border-slate-200 font-bold" colSpan={2}>CGST</th>
+                        <th className="text-center py-1.5 px-2 border-b border-slate-200 font-bold" colSpan={2}>SGST</th>
+                      </>
+                    ) : (
+                      <th className="text-center py-1.5 px-2 border-b border-slate-200 font-bold" colSpan={2}>IGST</th>
+                    )}
+                    <th className="text-right py-1.5 px-2 border-b border-slate-200 font-bold">Total Tax</th>
+                  </tr>
+                  <tr className="text-[9px]">
+                    <th></th><th></th>
+                    {sameState ? (<><th className="text-center py-1 px-2 border-b border-slate-200">Rate</th><th className="text-right py-1 px-2 border-b border-slate-200">Amount</th><th className="text-center py-1 px-2 border-b border-slate-200">Rate</th><th className="text-right py-1 px-2 border-b border-slate-200">Amount</th></>) : (<><th className="text-center py-1 px-2 border-b border-slate-200">Rate</th><th className="text-right py-1 px-2 border-b border-slate-200">Amount</th></>)}
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hsnSummary.map((r, i) => (
+                    <tr key={i} className="border-b border-slate-100">
+                      <td className="py-1.5 px-2 font-mono">{r.hsn}</td>
+                      <td className="py-1.5 px-2 text-right tabular-nums">{fmt(r.taxable, 2)}</td>
+                      {sameState ? (
+                        <>
+                          <td className="py-1.5 px-2 text-center tabular-nums">{fmt(r.rate / 2, r.rate % 2 === 0 ? 0 : 2)}%</td>
+                          <td className="py-1.5 px-2 text-right tabular-nums">{fmt(r.tax / 2, 2)}</td>
+                          <td className="py-1.5 px-2 text-center tabular-nums">{fmt(r.rate / 2, r.rate % 2 === 0 ? 0 : 2)}%</td>
+                          <td className="py-1.5 px-2 text-right tabular-nums">{fmt(r.tax / 2, 2)}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-1.5 px-2 text-center tabular-nums">{fmt(r.rate, r.rate % 1 === 0 ? 0 : 2)}%</td>
+                          <td className="py-1.5 px-2 text-right tabular-nums">{fmt(r.tax, 2)}</td>
+                        </>
+                      )}
+                      <td className="py-1.5 px-2 text-right tabular-nums font-semibold">{fmt(r.tax, 2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-slate-50 font-bold">
+                    <td className="py-1.5 px-2">Total</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.subtotal, 2)}</td>
+                    {sameState ? (
+                      <><td></td><td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.gst / 2, 2)}</td><td></td><td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.gst / 2, 2)}</td></>
+                    ) : (
+                      <><td></td><td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.gst, 2)}</td></>
+                    )}
+                    <td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.gst, 2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+              {design.showTaxInWords && totals.gst > 0 && (
+                <p className="mt-2 text-[10.5px] text-[#374050]"><span className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Tax amount in words: </span><span className="font-semibold text-[#111621]">{amountInWords(totals.gst)}</span></p>
+              )}
+            </div>
+          )}
 
           {design.footerPosition === "above-signature" && !design.footerOnEveryPage && footerLogoBlock}
           <div className="mt-14 grid grid-cols-2 text-[11px] text-[#6e7886] break-inside-avoid">
