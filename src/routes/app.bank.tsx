@@ -8,7 +8,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Empty } from "@/components/empty";
-import { Badge } from "@/components/ui/badge";
 import { inr, fmtDate, todayISO } from "@/lib/format";
 import { toast } from "sonner";
 import { ArrowDownToLine, ArrowUpFromLine, Banknote, Trash2 } from "lucide-react";
