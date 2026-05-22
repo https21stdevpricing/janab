@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Empty } from "@/components/empty";
@@ -12,8 +12,23 @@ import { fmt, fmtDate } from "@/lib/format";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { Filter, ChevronDown, ChevronUp } from "lucide-react";
+import { useLiveSync } from "@/hooks/use-live-sync";
 
 export const Route = createFileRoute("/app/ledger")({ component: LedgerPage });
+
+const LEDGER_LIVE_TABLES = [
+  "journal_lines",
+  "journal_entries",
+  "sales",
+  "purchases",
+  "third_party",
+  "payments",
+  "payment_allocations",
+  "expenses",
+  "bank_transfers",
+  "fixed_assets",
+  "stock_adjustments",
+];
 
 function LedgerPage() {
   const [rows, setRows] = useState<any[]>([]);
@@ -27,9 +42,25 @@ function LedgerPage() {
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [showFilters, setShowFilters] = useState(false);
 
-  useEffect(() => {
-    supabase.from("ledger_view").select("*").then(({ data }) => setRows(data ?? []));
+  const loadRows = useCallback(async () => {
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError || !auth.user) {
+      setRows([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("ledger_view")
+      .select("*")
+      .eq("user_id", auth.user.id)
+      .order("date", { ascending: false });
+    if (error) throw error;
+    setRows(data ?? []);
   }, []);
+  const { isLive, isRefreshing, lastSyncedAt, lastError, refresh } = useLiveSync({
+    channelName: "ledger-live",
+    tables: LEDGER_LIVE_TABLES,
+    load: loadRows,
+  });
 
   const accounts = useMemo(() => Array.from(new Set(rows.map(r => r.account))).sort(), [rows]);
   const filtered = useMemo(() => {
@@ -84,8 +115,9 @@ function LedgerPage() {
 
   return (
     <div>
-      <PageHeader title="General Ledger" description="Every double-entry posting · latest on top · exports always start → end"
-        actions={<ExcelBar onExport={onExport} />} />
+      <PageHeader title="General Ledger" description={`Every double-entry posting · ${isLive ? "live" : "syncing"}${lastSyncedAt ? ` · updated ${lastSyncedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+        actions={<div className="flex items-center gap-2"><Button variant="outline" size="sm" onClick={refresh} disabled={isRefreshing}>{isRefreshing ? "Syncing…" : "Refresh"}</Button><ExcelBar onExport={onExport} /></div>} />
+      {lastError && <div className="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">Ledger sync failed: {lastError.message}</div>}
 
       {/* Filter toggle */}
       <div className="mb-3 flex items-center gap-2">
