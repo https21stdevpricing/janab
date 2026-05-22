@@ -6,12 +6,14 @@ import { Printer } from "lucide-react";
 import swLogo from "@/assets/sw-logo.png";
 import { exportStoneWorldDocument } from "@/lib/pdf-theme";
 import { lookupDocById } from "@/lib/doc-lookup";
+import { DEFAULT_PRINT_DESIGN, fileToDataUrl, loadPrintDesign, savePrintDesign, type PrintDesign } from "@/lib/print-customizer";
 
 export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }) {
   const [doc, setDoc] = useState<any>(null);
   const [items, setItems] = useState<any[]>([]);
   const [company, setCompany] = useState<any>(null);
   const [buyer, setBuyer] = useState<any>(null);
+  const [design, setDesign] = useState<PrintDesign>(DEFAULT_PRINT_DESIGN);
 
   useEffect(() => { (async () => {
     const table = kind === "invoice" ? "sales" : "quotations";
@@ -29,6 +31,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
     }
     const { data: c } = await supabase.from("settings").select("*").maybeSingle();
     setCompany(c);
+    setDesign(loadPrintDesign());
   })(); }, [kind, id]);
 
   const totals = useMemo(() => {
@@ -46,14 +49,44 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const partyAddress = [buyer?.address, buyer?.state].filter(Boolean).join(", ");
   const downloadPdf = async () => {
     const result = await lookupDocById(kind === "invoice" ? "sale" : "quote", id);
-    if (result) exportStoneWorldDocument(result, company);
+    if (result) exportStoneWorldDocument(result, company, design);
+  };
+
+  const updateDesign = (next: PrintDesign) => { setDesign(next); savePrintDesign(next); };
+  const uploadLogo = async (file?: File) => { if (file) updateDesign({ ...design, logoDataUrl: await fileToDataUrl(file) }); };
+  const uploadFooterLogos = async (files?: FileList | null) => {
+    if (!files) return;
+    const add = await Promise.all(Array.from(files).slice(0, 20 - design.footerLogos.length).map(fileToDataUrl));
+    updateDesign({ ...design, footerLogos: [...design.footerLogos, ...add].slice(0, 20) });
   };
 
   return (
     <div>
-      <div className="flex justify-end gap-2 mb-3 print:hidden">
+      <div className="grid gap-3 mb-3 print:hidden lg:grid-cols-[1fr_auto] lg:items-start">
+        <div className="surface p-3 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div><div className="eyebrow">Document design</div><div className="text-xs text-muted-foreground">Header, watermark and footer logos apply to invoices and quotations.</div></div>
+            <Button variant="outline" size="sm" onClick={() => updateDesign(DEFAULT_PRINT_DESIGN)}>Reset</Button>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-4">
+            <select className="h-9 rounded-md border bg-background px-2 text-sm" value={design.headerStyle} onChange={(e) => updateDesign({ ...design, headerStyle: e.target.value as any })}>
+              <option value="classic">Classic header</option><option value="editorial">Editorial header</option><option value="compact">Compact header</option>
+            </select>
+            <select className="h-9 rounded-md border bg-background px-2 text-sm" value={design.bodyLayout} onChange={(e) => updateDesign({ ...design, bodyLayout: e.target.value as any })}>
+              <option value="balanced">Balanced body</option><option value="spacious">Spacious body</option><option value="dense">Dense body</option>
+            </select>
+            <input className="h-9 rounded-md border bg-background px-2 text-sm" placeholder="Watermark text" value={design.watermarkText ?? ""} onChange={(e) => updateDesign({ ...design, watermarkText: e.target.value })} />
+            <label className="h-9 rounded-md border bg-background px-2 text-sm flex items-center justify-center cursor-pointer">Logo PNG<input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadLogo(e.target.files?.[0])} /></label>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="h-8 rounded-md border bg-background px-3 text-xs flex items-center cursor-pointer">Add footer brand logos ({design.footerLogos.length}/20)<input type="file" accept="image/png,image/jpeg" multiple className="hidden" onChange={(e) => uploadFooterLogos(e.target.files)} /></label>
+            {design.footerLogos.length > 0 && <Button variant="ghost" size="sm" onClick={() => updateDesign({ ...design, footerLogos: [] })}>Clear logos</Button>}
+          </div>
+        </div>
+        <div className="flex justify-end gap-2">
         <Button variant="outline" size="sm" onClick={downloadPdf}><Printer className="h-4 w-4" /> Download Branded PDF</Button>
         <Button variant="outline" size="sm" onClick={() => window.print()}><Printer className="h-4 w-4" /> Print / Save PDF</Button>
+        </div>
       </div>
 
       <article id="print-area" className="sw-print-doc bg-white text-[#121826] mx-auto max-w-[820px] rounded-md border border-slate-200 shadow-sm overflow-hidden print:border-0 print:shadow-none print:max-w-full print:rounded-none">
@@ -61,7 +94,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
         <header className="px-9 pt-7 pb-5 border-b border-slate-200">
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-start gap-4 min-w-0">
-              <img src={swLogo} alt="StoneWorld Traders logo" className="h-16 w-16 object-contain shrink-0" />
+              <img src={design.logoDataUrl || swLogo} alt="StoneWorld Traders logo" className="h-16 w-16 object-contain shrink-0" />
               <div className="min-w-0">
                 <h1 className="text-2xl font-extrabold tracking-normal leading-tight text-[#121826]">{company?.company_name ?? "StoneWorld Traders"}</h1>
                 {address && <p className="mt-1 text-[11px] leading-4 text-[#566070] max-w-[360px]">{address}</p>}
@@ -94,7 +127,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           ]} />
         </section>
 
-        <section className="px-9 py-5">
+        <section className="px-9 py-5 relative">
+          {design.watermarkText && <div className="pointer-events-none absolute inset-0 grid place-items-center text-6xl font-black uppercase tracking-normal text-slate-200/50 rotate-[-24deg] select-none">{design.watermarkText}</div>}
           <table className="w-full border-collapse text-[12px] leading-4">
             <thead>
               <tr className="bg-[#f4fcfd] text-[#007e87] uppercase text-[10px] tracking-normal border-y border-slate-200">
@@ -140,6 +174,11 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
             </div>
           </div>
 
+          {design.footerLogos.length > 0 && (
+            <div className="mt-10 border-t border-slate-200 pt-4 grid gap-3 break-inside-avoid" style={{ gridTemplateColumns: `repeat(${Math.min(5, Math.max(2, design.footerLogos.length))}, minmax(0, 1fr))` }}>
+              {design.footerLogos.map((src, i) => <img key={i} src={src} alt={`Footer brand logo ${i + 1}`} className="h-9 max-w-full object-contain justify-self-center opacity-80" />)}
+            </div>
+          )}
           <div className="mt-14 grid grid-cols-2 text-[11px] text-[#566070] break-inside-avoid">
             <div>Thank you for your business.</div>
             <div className="text-right">For {company?.company_name ?? "StoneWorld Traders"}<br /><br /><br /><span className="border-t border-slate-300 pt-2 inline-block min-w-[180px]">Authorised Signatory</span></div>
