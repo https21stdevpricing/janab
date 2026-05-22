@@ -790,7 +790,7 @@ function BillsPage() {
             </div>
           )}
 
-          {contactId && (
+          {contactId && kind === "against_invoice" && (
             <div className="mt-3">
               <div className="flex items-center justify-between mb-1">
                 <Label className="text-xs">Open bills · click to allocate</Label>
