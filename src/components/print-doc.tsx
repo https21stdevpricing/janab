@@ -54,6 +54,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
 
   const updateDesign = (next: PrintDesign) => { setDesign(next); savePrintDesign(next); };
   const uploadLogo = async (file?: File) => { if (file) updateDesign({ ...design, logoDataUrl: await fileToDataUrl(file) }); };
+  const uploadWatermarkLogo = async (file?: File) => { if (file) updateDesign({ ...design, watermarkLogoDataUrl: await fileToDataUrl(file) }); };
   const uploadFooterLogos = async (files?: FileList | null) => {
     if (!files) return;
     const add = await Promise.all(Array.from(files).slice(0, 20 - design.footerLogos.length).map(fileToDataUrl));
@@ -119,6 +120,18 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <option value="back">Behind content</option><option value="front">Over content</option>
               </select>
             </div>
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                <span className="truncate">{design.watermarkLogoDataUrl ? "Logo watermark uploaded" : "Logo watermark (PNG)"}</span>
+                <span className="text-primary">{design.watermarkLogoDataUrl ? "Replace" : "Upload"}</span>
+                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadWatermarkLogo(e.target.files?.[0])} />
+              </label>
+              <label className="flex items-center gap-2 text-[11px]"><span>Size</span>
+                <input type="range" min={20} max={90} value={design.watermarkLogoScale} onChange={(e) => updateDesign({ ...design, watermarkLogoScale: Number(e.target.value) })} className="w-24" />
+                <span className="tabular-nums w-10 text-right">{design.watermarkLogoScale}%</span>
+              </label>
+              {design.watermarkLogoDataUrl && <Button variant="ghost" size="sm" className="h-8 px-2" onClick={() => updateDesign({ ...design, watermarkLogoDataUrl: null })}>Remove logo</Button>}
+            </div>
           </div>
 
           <div className="rounded-md border border-border/60 p-2 space-y-2">
@@ -161,102 +174,130 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
         </div>
       </div>
 
-      <article id="print-area" className="sw-print-doc bg-white text-[#121826] mx-auto max-w-[820px] rounded-md border border-slate-200 shadow-sm overflow-hidden print:border-0 print:shadow-none print:max-w-full print:rounded-none">
-        <div className="h-2 bg-[#00abb5]" />
-        <header className={`${design.headerStyle === "compact" ? "px-8 pt-5 pb-4" : "px-9 pt-7 pb-5"} border-b border-slate-200 ${design.headerStyle === "editorial" ? "bg-[#f4fcfd]" : ""}`}>
-          <div className={`flex items-start justify-between gap-6 ${design.headerStyle === "editorial" ? "border-l-4 border-[#00abb5] pl-4" : ""}`}>
+      <article id="print-area" className="sw-print-doc bg-white text-[#111621] mx-auto max-w-[820px] rounded-md border border-slate-200 shadow-sm overflow-hidden print:border-0 print:shadow-none print:max-w-full print:rounded-none relative" style={{ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}>
+        {(design.watermarkText || design.watermarkLogoDataUrl) && (
+          <div className="pointer-events-none absolute inset-0 grid place-items-center select-none" style={{ opacity: watermarkOpacity, zIndex: design.watermarkLayer === "front" ? 30 : 0 }}>
+            {design.watermarkLogoDataUrl && (
+              <img src={design.watermarkLogoDataUrl} alt="" style={{ width: `${design.watermarkLogoScale}%`, transform: "rotate(-8deg)" }} className="object-contain" />
+            )}
+            {design.watermarkText && (
+              <div className="absolute text-6xl font-black uppercase tracking-tight" style={{ color: "#0f172a", transform: "rotate(-24deg)" }}>{design.watermarkText}</div>
+            )}
+          </div>
+        )}
+
+        <header className="px-9 pt-8 pb-5 relative">
+          <div className="flex items-start justify-between gap-6">
             <div className="flex items-start gap-4 min-w-0">
-              <img src={design.logoDataUrl || swLogo} alt="StoneWorld Traders logo" className="h-16 w-16 object-contain shrink-0" />
+              <img src={design.logoDataUrl || swLogo} alt="logo" className="h-14 w-14 object-contain shrink-0" />
               <div className="min-w-0">
-                <h1 className="text-2xl font-extrabold tracking-normal leading-tight text-[#121826]">{company?.company_name ?? "StoneWorld Traders"}</h1>
-                {address && <p className="mt-1 text-[11px] leading-4 text-[#566070] max-w-[360px]">{address}</p>}
-                <p className="mt-1 text-[11px] leading-4 text-[#566070]">
-                  {[company?.phone && `Ph: ${company.phone}`, company?.email, company?.gstin && `GSTIN: ${company.gstin}`].filter(Boolean).join("  |  ")}
+                <h1 className="text-[20px] font-bold leading-tight text-[#111621] tracking-tight">{company?.company_name ?? "StoneWorld Traders"}</h1>
+                {address && <p className="mt-1 text-[11px] leading-4 text-[#374050] max-w-[380px]">{address}</p>}
+                <p className="mt-1 text-[11px] leading-4 text-[#6e7886]">
+                  {[company?.phone && `Tel: ${company.phone}`, company?.email, company?.gstin && `GSTIN ${company.gstin}`, company?.pan && `PAN ${company.pan}`].filter(Boolean).join("  ·  ")}
                 </p>
               </div>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#007e87]">{title}</div>
-              <div className="mt-1 text-2xl font-extrabold font-mono tracking-normal text-[#121826]">{documentNo}</div>
-              <div className="mt-2 text-[11px] leading-4 text-[#566070]">Date: {fmtDate(doc.date)}</div>
-              {doc.valid_until && <div className="text-[11px] leading-4 text-[#566070]">Valid until: {fmtDate(doc.valid_until)}</div>}
+              <div className="text-[22px] font-bold uppercase tracking-tight text-[#111621] leading-none">{title}</div>
+              <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#6e7886]">{kind === "invoice" ? "Original for Recipient" : "Proposal · Not a tax invoice"}</div>
+              <dl className="mt-4 grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-[11px] justify-end">
+                <dt className="text-[#6e7886]">No.</dt><dd className="font-bold tabular-nums text-[#111621]">{documentNo}</dd>
+                <dt className="text-[#6e7886]">Date</dt><dd className="font-bold tabular-nums text-[#111621]">{fmtDate(doc.date)}</dd>
+                {doc.valid_until && <><dt className="text-[#6e7886]">Valid</dt><dd className="font-bold tabular-nums text-[#111621]">{fmtDate(doc.valid_until)}</dd></>}
+              </dl>
             </div>
           </div>
+          <div className="mt-5 h-px bg-slate-200" />
+          <div className="mt-1 h-[2px] w-16 bg-[#00abb5]" />
         </header>
 
-        <section className="px-9 py-5 grid grid-cols-2 gap-4 border-b border-slate-200">
+        <section className="px-9 py-6 grid grid-cols-2 gap-10">
           <InfoPanel title={kind === "invoice" ? "Bill To" : "Quoted To"} rows={[
-            ["Customer", doc.buyer_name ?? buyer?.name ?? "—"],
+            ["Name", doc.buyer_name ?? buyer?.name ?? "—"],
             ["Address", partyAddress],
+            ["State", buyer?.state],
             ["GSTIN", buyer?.gstin],
             ["Phone", buyer?.phone],
           ]} />
-          <InfoPanel title="Document Details" rows={[
-            ["Document No", documentNo],
+          <InfoPanel title={kind === "invoice" ? "Invoice Info" : "Quotation Info"} rows={[
+            [kind === "invoice" ? "Invoice No" : "Quote No", documentNo],
             ["Date", fmtDate(doc.date)],
-            ["GST Type", sameState ? "CGST + SGST" : "IGST"],
-            ["Status", kind === "invoice" ? "Original for recipient" : "Customer quote"],
+            ...(doc.valid_until ? [["Valid Until", fmtDate(doc.valid_until)] as [string, string]] : []),
+            ["Place of Supply", buyer?.state ?? "—"],
+            ["GST Treatment", sameState ? "Intra-state (CGST + SGST)" : "Inter-state (IGST)"],
+            ["Reverse Charge", "No"],
           ]} />
         </section>
 
-        <section className={`${design.bodyLayout === "dense" ? "px-8 py-4" : design.bodyLayout === "spacious" ? "px-10 py-7" : "px-9 py-5"} relative`}>
-          {design.watermarkText && (
-            <div
-              className="pointer-events-none absolute inset-0 grid place-items-center text-6xl font-black uppercase tracking-normal select-none"
-              style={{ color: "#94a3b8", opacity: watermarkOpacity, transform: "rotate(-24deg)", zIndex: design.watermarkLayer === "front" ? 30 : 0 }}
-            >
-              {design.watermarkText}
-            </div>
-          )}
-          <table className="w-full border-collapse text-[12px] leading-4">
+        <section className={`${design.bodyLayout === "dense" ? "px-8 pb-4" : design.bodyLayout === "spacious" ? "px-10 pb-7" : "px-9 pb-6"} relative`}>
+          <table className="w-full border-collapse text-[11.5px] leading-4">
             <thead>
-              <tr className="bg-[#f4fcfd] text-[#007e87] uppercase text-[10px] tracking-normal border-y border-slate-200">
-                <th className="text-center py-2.5 px-2 w-8">#</th>
-                <th className="text-left py-2.5 px-2">Description</th>
-                <th className="text-right py-2.5 px-2 w-16">Qty</th>
-                <th className="text-center py-2.5 px-2 w-14">Unit</th>
-                <th className="text-right py-2.5 px-2 w-20">Rate</th>
-                <th className="text-right py-2.5 px-2 w-14">GST</th>
-                <th className="text-right py-2.5 px-2 w-24">Amount</th>
+              <tr className="text-[#6e7886] uppercase text-[9.5px] tracking-[0.08em]">
+                <th className="text-center py-2 px-2 w-7 border-b-2 border-[#111621] border-t border-slate-200 font-bold">#</th>
+                <th className="text-left py-2 px-2 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Description</th>
+                <th className="text-center py-2 px-2 w-16 border-b-2 border-[#111621] border-t border-slate-200 font-bold">HSN</th>
+                <th className="text-right py-2 px-2 w-12 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Qty</th>
+                <th className="text-center py-2 px-2 w-12 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Unit</th>
+                <th className="text-right py-2 px-2 w-20 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Rate</th>
+                <th className="text-right py-2 px-2 w-12 border-b-2 border-[#111621] border-t border-slate-200 font-bold">GST</th>
+                <th className="text-right py-2 px-2 w-24 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Amount</th>
               </tr>
             </thead>
             <tbody>
               {items.map((it, i) => {
                 const base = Number(it.qty || 0) * Number(it.rate || 0);
+                const padY = design.bodyLayout === "dense" ? "py-2" : "py-3";
                 return (
-                  <tr key={i} className="border-b border-slate-100 break-inside-avoid">
-                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-center text-[#566070]`}>{i + 1}</td>
-                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 font-semibold text-[#121826]`}>{it.product_name ?? "—"}</td>
-                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-right tabular-nums`}>{fmt(it.qty)}</td>
-                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-center text-[#566070]`}>{it.unit ?? "—"}</td>
-                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-right tabular-nums font-semibold`}>{fmt(it.rate)}</td>
-                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-right tabular-nums text-[#566070]`}>{fmt(it.gst_pct, Number(it.gst_pct ?? 0) % 1 === 0 ? 0 : 2)}%</td>
-                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-right tabular-nums font-semibold text-[#007e87]`}>{fmt(base)}</td>
+                  <tr key={i} className="border-b border-slate-100 break-inside-avoid align-top">
+                    <td className={`${padY} px-2 text-center text-[#6e7886] tabular-nums`}>{i + 1}</td>
+                    <td className={`${padY} px-2 font-semibold text-[#111621]`}>{it.product_name ?? "—"}</td>
+                    <td className={`${padY} px-2 text-center text-[#6e7886] font-mono text-[10.5px]`}>{(it as any).hsn ?? (it as any).hsn_code ?? "—"}</td>
+                    <td className={`${padY} px-2 text-right tabular-nums`}>{fmt(it.qty)}</td>
+                    <td className={`${padY} px-2 text-center text-[#6e7886]`}>{it.unit ?? "—"}</td>
+                    <td className={`${padY} px-2 text-right tabular-nums`}>{fmt(it.rate)}</td>
+                    <td className={`${padY} px-2 text-right tabular-nums text-[#6e7886]`}>{fmt(it.gst_pct, Number(it.gst_pct ?? 0) % 1 === 0 ? 0 : 2)}%</td>
+                    <td className={`${padY} px-2 text-right tabular-nums font-bold text-[#111621]`}>{fmt(base)}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
 
-          <div className="mt-6 flex items-start justify-between gap-6 break-inside-avoid">
-            <div className="max-w-[360px] text-[11px] leading-4 text-[#566070]">
-              {doc.notes && <p><span className="font-bold text-[#121826]">Notes: </span>{doc.notes}</p>}
-              <p className="mt-3 font-bold uppercase text-[#007e87]">Terms & Conditions</p>
-              <p className="mt-1">Goods are subject to stock availability, shade variation and final confirmation. GST and statutory charges apply as shown. E&OE.</p>
+          <div className="mt-8 grid grid-cols-[1fr_260px] gap-10 items-start break-inside-avoid">
+            <div className="text-[11px] leading-5 text-[#374050]">
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Amount in words</p>
+              <p className="mt-1 font-semibold text-[#111621]">{amountWords(totals.total)}</p>
+              {kind === "invoice" && (company?.bank_name || company?.bank_account_no || company?.bank_ifsc) && (
+                <div className="mt-4">
+                  <p className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Bank Details</p>
+                  <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px]">
+                    {company?.bank_name && <><span className="text-[#6e7886]">Bank</span><span className="font-semibold">{company.bank_name}</span></>}
+                    {company?.bank_account_no && <><span className="text-[#6e7886]">A/c No.</span><span className="font-mono font-semibold">{company.bank_account_no}</span></>}
+                    {company?.bank_ifsc && <><span className="text-[#6e7886]">IFSC</span><span className="font-mono font-semibold">{company.bank_ifsc}</span></>}
+                  </div>
+                </div>
+              )}
+              {doc.notes && <p className="mt-4"><span className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Notes</span><br />{doc.notes}</p>}
+              <p className="mt-4 text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">{kind === "invoice" ? "Terms & Conditions" : "Terms of Proposal"}</p>
+              <p className="mt-1 text-[10.5px] leading-4 text-[#6e7886]">{kind === "invoice"
+                ? "Goods once sold will not be taken back. Interest @18% p.a. on overdue balances. Subject to local jurisdiction. E&OE."
+                : "Prices valid until the date shown above. Quotation does not constitute a tax invoice. Stock and lot variation may apply. E&OE."}</p>
             </div>
-            <div className="w-[260px] rounded-md border border-slate-200 overflow-hidden text-[12px]">
+            <div className="text-[11.5px]">
               <SummaryLine label="Subtotal" value={totals.subtotal} />
               {sameState ? <><SummaryLine label="CGST" value={totals.gst / 2} /><SummaryLine label="SGST" value={totals.gst / 2} /></> : <SummaryLine label="IGST" value={totals.gst} />}
-              <div className="flex justify-between items-center bg-[#00abb5] text-white px-4 py-3 font-extrabold text-[13px]">
-                <span>Total</span><span className="tabular-nums">{inr(totals.total)}</span>
+              <div className="border-t-2 border-[#111621] mt-1 pt-2 flex justify-between items-baseline">
+                <span className="text-[10px] font-bold uppercase tracking-[0.14em]">Grand Total</span>
+                <span className="tabular-nums font-bold text-[15px]">{inr(totals.total)}</span>
               </div>
             </div>
           </div>
 
           {design.footerPosition === "above-signature" && footerLogoBlock}
-          <div className="mt-14 grid grid-cols-2 text-[11px] text-[#566070] break-inside-avoid">
+          <div className="mt-14 grid grid-cols-2 text-[11px] text-[#6e7886] break-inside-avoid">
             <div>Thank you for your business.</div>
-            <div className="text-right">For {company?.company_name ?? "StoneWorld Traders"}<br /><br /><br /><span className="border-t border-slate-300 pt-2 inline-block min-w-[180px]">Authorised Signatory</span></div>
+            <div className="text-right">For {company?.company_name ?? "StoneWorld Traders"}<br /><br /><br /><span className="border-t border-slate-400 pt-2 inline-block min-w-[180px] font-semibold text-[#111621]">Authorised Signatory</span></div>
           </div>
           {design.footerPosition === "page-bottom" && footerLogoBlock}
         </section>
@@ -269,13 +310,13 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
 
 function InfoPanel({ title, rows }: { title: string; rows: Array<[string, any]> }) {
   return (
-    <div className="rounded-md border border-slate-200 bg-[#f4fcfd] p-4 min-h-[112px]">
-      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#007e87] mb-2">{title}</div>
-      <div className="space-y-1.5">
+    <div className="border-t border-slate-300 pt-3">
+      <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-[#6e7886] mb-3">{title}</div>
+      <div className="space-y-2">
         {rows.filter(([, value]) => value).map(([label, value]) => (
-          <div key={label} className="grid grid-cols-[76px_1fr] gap-2 text-[11px] leading-4">
-            <span className="text-[#566070]">{label}:</span>
-            <span className="font-semibold text-[#121826] break-words">{value}</span>
+          <div key={label} className="text-[11px] leading-4">
+            <div className="text-[9.5px] uppercase tracking-wide text-[#6e7886]">{label}</div>
+            <div className="font-semibold text-[#111621] break-words">{value}</div>
           </div>
         ))}
       </div>
@@ -284,5 +325,5 @@ function InfoPanel({ title, rows }: { title: string; rows: Array<[string, any]> 
 }
 
 function SummaryLine({ label, value }: { label: string; value: number }) {
-  return <div className="flex justify-between px-4 py-2 border-b border-slate-100"><span className="text-[#566070]">{label}</span><span className="tabular-nums font-semibold">{inr(value)}</span></div>;
+  return <div className="flex justify-between py-1.5"><span className="text-[#6e7886]">{label}</span><span className="tabular-nums font-semibold text-[#111621]">{inr(value)}</span></div>;
 }
