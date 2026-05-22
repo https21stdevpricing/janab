@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { DragSheet } from "@/components/drag-sheet";
 import {
   Package, Users, ShoppingCart, Truck, Repeat,
   Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Percent, UserCheck, UserCog, LineChart, Tags, Building2,
@@ -265,11 +266,20 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="p-0 h-[88vh] rounded-t-2xl flex flex-col">
-        <div className="px-5 pt-5 pb-3 border-b">
-          <div className="text-base font-semibold tracking-tight">StoneWorld</div>
-          <div className="text-xs text-muted-foreground truncate">{email}</div>
+    <DragSheet open={open} onOpenChange={onOpenChange} heightVh={88}>
+        <div className="flex items-start justify-between gap-3 px-5 pt-2 pb-3 border-b">
+          <div className="min-w-0">
+            <div className="text-base font-semibold tracking-tight">StoneWorld</div>
+            <div className="text-xs text-muted-foreground truncate">{email}</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="-mt-0.5 h-9 w-9 grid place-items-center rounded-full hover:bg-muted active:bg-muted text-muted-foreground"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
           {[{ label: "Daily", items: [...pinned].slice(1).map((p) => ({ ...p })) }, ...moreGroups].map((g) => (
@@ -296,13 +306,12 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
             </div>
           ))}
         </div>
-        <div className="border-t p-3">
+        <div className="border-t p-3" style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}>
           <Button variant="ghost" size="sm" className="w-full justify-center gap-2" onClick={onSignOut}>
             <LogOut className="h-4 w-4" /> Sign out
           </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+    </DragSheet>
   );
 }
 
