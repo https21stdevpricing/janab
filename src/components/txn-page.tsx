@@ -341,9 +341,6 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">{cfg.title.replace(/s$/, "")} preview</DialogTitle>
           </div>
           <div className="p-4">{docPreview && <DocDetail doc={docPreview} />}</div>
-          <div className="px-4 py-3 border-t flex justify-end">
-            <Button variant="outline" onClick={() => setDocPreview(null)}>Close</Button>
-          </div>
         </DialogContent>
       </Dialog>
     </div>
