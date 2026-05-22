@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Empty } from "@/components/empty";
 import { inr, fmtDate, todayISO } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpFromLine, Banknote, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Banknote, Eye, ShieldCheck, Trash2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDraft } from "@/hooks/use-draft";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -61,6 +61,7 @@ function BankPage() {
   const [form, setForm, draft] = useDraft<Form>("bank:new", EMPTY);
   const [cashBal, setCashBal] = useState(0);
   const [bankBal, setBankBal] = useState(0);
+  const [viewRow, setViewRow] = useState<Row | null>(null);
 
   const load = async () => {
     const [{ data }, { data: lv }] = await Promise.all([
@@ -107,6 +108,11 @@ function BankPage() {
     if (!user) return;
     if (form.amount <= 0) { toast.error("Amount must be > 0"); return; }
     if (form.kind === "cheque_deposit" && !form.cheque_no.trim()) { toast.error("Cheque number is required"); return; }
+    if (form.kind === "cheque_deposit") {
+      const { data: dup } = await supabase.from("bank_transfers" as never)
+        .select("transfer_no,status").eq("kind" as never, "cheque_deposit").eq("cheque_no" as never, form.cheque_no.trim()).limit(1) as any;
+      if (dup && dup.length) { toast.error(`Cheque already recorded as ${dup[0].transfer_no}. Open that entry and update its status.`); return; }
+    }
     const finalCleared = form.kind === "cheque_deposit" ? form.cleared : true;
     const payload: any = {
       user_id: user.id,
@@ -198,7 +204,7 @@ function BankPage() {
             const st = (r.status ?? (r.cleared ? "cleared" : "pending")) as Status;
             const isOut = r.kind === "cash_withdrawal";
             return (
-              <div key={r.id} className="grid gap-3 border-b border-border/60 p-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+              <div key={r.id} className="grid gap-3 border-b border-border/60 p-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center cursor-pointer transition-colors hover:bg-muted/30" onClick={() => setViewRow(r)}>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-sm font-medium">{r.transfer_no}</span>
@@ -212,7 +218,10 @@ function BankPage() {
                 <div className={`text-left text-base font-semibold tabular-nums sm:text-right ${isOut ? "text-destructive" : "text-primary"}`}>
                   {isOut ? "−" : "+"}{inr(r.amount)}
                 </div>
-                <div className="flex items-center gap-2 sm:w-44">
+                <div className="flex items-center gap-2 sm:w-48" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => setViewRow(r)} aria-label="View details">
+                    <Eye className="h-4 w-4" />
+                  </Button>
                   <Select value={st} onValueChange={(v) => changeStatus(r, v as Status)}>
                     <SelectTrigger className="h-9 flex-1 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
