@@ -4,7 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
   Package, Users, ShoppingCart, Truck, Repeat,
   Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Percent, UserCheck, UserCog, LineChart, Tags, Building2,
@@ -264,15 +264,12 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
-  // Whole-screen, physics-based pull-down close. Listens at document capture
-  // while the sheet is open so drags starting on icons, empty space, footer, or
-  // the dim overlay all feel identical without React re-renders during motion.
+  // Whole-screen pull-down close: capture the drag globally, write transforms
+  // directly to the sheet, and use release velocity so short flicks close too.
   const sheetRef = useRef<HTMLDivElement | null>(null);
-  const scrollRef = useRef<HTMLDivElement>(null);
   const blockClickUntilRef = useRef(0);
   const stateRef = useRef({
-    tracking: false, dragging: false, startY: 0, lastY: 0, lastT: 0, lastV: 0,
-    startedInScroller: false, height: 0,
+    tracking: false, dragging: false, startY: 0, lastY: 0, lastT: 0, lastV: 0, height: 0,
   });
 
   const setTransform = (y: number) => {
@@ -280,12 +277,11 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     if (!el) return;
     if (y <= 0) {
       el.style.transform = "";
-      el.style.transition = "transform 280ms cubic-bezier(.22,1,.36,1)";
+      el.style.transition = "transform 360ms cubic-bezier(.2,1.2,.2,1)";
       return;
     }
-    // Rubber-band: ease past ~half-screen
-    const max = stateRef.current.height || 600;
-    const eased = y < max ? y : max + (y - max) * 0.3;
+    const max = Math.max(420, stateRef.current.height || 640);
+    const eased = y < max * 0.72 ? y : max * 0.72 + (y - max * 0.72) * 0.24;
     el.style.transition = "none";
     el.style.transform = `translate3d(0, ${eased}px, 0)`;
   };
@@ -294,17 +290,15 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     const el = sheetRef.current;
     if (!el) return;
     const h = stateRef.current.height || el.getBoundingClientRect().height || 600;
-    el.style.transition = "transform 220ms cubic-bezier(.4,0,.2,1)";
+    el.style.transition = "transform 180ms cubic-bezier(.32,.72,.18,1)";
     el.style.transform = `translate3d(0, ${h}px, 0)`;
-    window.setTimeout(() => onOpenChange(false), 180);
+    window.setTimeout(() => onOpenChange(false), 140);
   };
 
   useEffect(() => {
     if (!open) return;
     const el = sheetRef.current;
     if (!el) return;
-    const scroller = scrollRef.current;
-    // Reset transform when opening
     el.style.transform = "";
     el.style.transition = "";
 
@@ -312,10 +306,9 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
       target instanceof HTMLElement && !!target.closest("input, textarea, select, [contenteditable='true']");
     const begin = (y: number, target: EventTarget | null) => {
       if (isEditableTarget(target)) return;
-      const startedInScroller = !!(scroller && target instanceof Node && scroller.contains(target));
       stateRef.current = {
         tracking: true, dragging: false, startY: y, lastY: y, lastT: performance.now(),
-        lastV: 0, startedInScroller, height: el.getBoundingClientRect().height,
+        lastV: 0, height: el.getBoundingClientRect().height,
       };
     };
     const move = (y: number, ev: Event) => {
@@ -323,11 +316,10 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
       if (!s.tracking) return;
       const dy = y - s.startY;
       if (!s.dragging) {
-        if (dy < -8) { s.tracking = false; return; }
-        if (dy < 4) return;
-        if (s.startedInScroller && scroller && scroller.scrollTop > 1) return;
+        if (dy < -10) { s.tracking = false; return; }
+        if (dy < 2) return;
         s.dragging = true;
-        s.startY = y - 1;
+        s.startY = y - 0.5;
         s.lastY = y;
         s.lastT = performance.now();
         s.lastV = 0;
@@ -336,11 +328,11 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
       if (ev.cancelable) ev.preventDefault();
       const now = performance.now();
       const dt = Math.max(1, now - s.lastT);
-      const inst = Math.max(-1.5, Math.min(2.5, (y - s.lastY) / dt));
-      s.lastV = s.lastV * 0.55 + inst * 0.45;
+      const inst = Math.max(-2.5, Math.min(3.8, (y - s.lastY) / dt));
+      s.lastV = s.lastV * 0.48 + inst * 0.52;
       s.lastY = y; s.lastT = now;
       setTransform(drag);
-      if (drag > 1) blockClickUntilRef.current = Date.now() + 500;
+      if (drag > 1) blockClickUntilRef.current = Date.now() + 650;
     };
     const end = () => {
       const s = stateRef.current;
@@ -350,7 +342,7 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
       s.dragging = false;
       const dy = s.lastY - s.startY;
       const v = s.lastV;
-      const shouldClose = dy > 54 || (dy > 18 && v > 0.16) || v > 0.42;
+      const shouldClose = dy > 42 || (dy > 12 && v > 0.12) || v > 0.34;
       if (shouldClose) animateClose();
       else setTransform(0);
     };
