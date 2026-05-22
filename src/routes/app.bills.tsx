@@ -758,9 +758,9 @@ function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; 
 function MiniBucket({ label, value, tone }: { label: string; value: number; tone?: "warn" | "bad" }) {
   const clr = tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : "text-foreground";
   return (
-    <div className="rounded-md border bg-muted/30 px-2 py-1.5">
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`text-xs sm:text-sm font-semibold tabular-nums truncate ${clr}`}>{inr(value)}</div>
+    <div className="rounded-lg border border-border/60 bg-muted/30 px-2.5 py-2">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`text-sm font-semibold tabular-nums truncate ${clr}`}>{inr(value)}</div>
     </div>
   );
 }
