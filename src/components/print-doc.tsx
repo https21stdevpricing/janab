@@ -250,29 +250,48 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <span>Show bank details (invoice)</span>
               </label>
               <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showUpi} onChange={(e) => updateDesign({ ...design, showUpi: e.target.checked })} />
+                <span>Show UPI ID in bank block</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
                 <input type="checkbox" checked={design.showGstSummary} onChange={(e) => updateDesign({ ...design, showGstSummary: e.target.checked })} />
                 <span>Show GST breakdown (CGST/SGST/IGST)</span>
               </label>
-              <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
-                <span className="truncate">{design.qrCodeDataUrl ? "QR uploaded" : "Payment / verification QR"}</span>
-                <span className="text-primary">{design.qrCodeDataUrl ? "Replace" : "Upload"}</span>
-                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadQr(e.target.files?.[0])} />
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">QR code</span>
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.qrMode} onChange={(e) => updateDesign({ ...design, qrMode: e.target.value as any })}>
+                  <option value="digital-copy">Auto · Digital copy link</option>
+                  <option value="upi-pay" disabled={!company?.upi_id}>Auto · UPI scan &amp; pay{company?.upi_id ? "" : " (set UPI ID in Settings)"}</option>
+                  <option value="manual">Manual upload</option>
+                  <option value="off">Hide</option>
+                </select>
+                {design.qrMode === "manual" && (
+                  <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                    <span className="truncate">{design.qrCodeDataUrl ? "QR uploaded" : "Upload QR image"}</span>
+                    <span className="text-primary">{design.qrCodeDataUrl ? "Replace" : "Upload"}</span>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadQr(e.target.files?.[0])} />
+                  </label>
+                )}
               </label>
-              <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
-                <span className="truncate">{design.barcodeDataUrl ? "Barcode uploaded" : "Document barcode"}</span>
-                <span className="text-primary">{design.barcodeDataUrl ? "Replace" : "Upload"}</span>
-                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadBarcode(e.target.files?.[0])} />
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Barcode</span>
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.barcodeMode} onChange={(e) => updateDesign({ ...design, barcodeMode: e.target.value as any })}>
+                  <option value="auto">Auto · Code-128 of document no.</option>
+                  <option value="manual">Manual upload</option>
+                  <option value="off">Hide</option>
+                </select>
+                {design.barcodeMode === "manual" && (
+                  <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                    <span className="truncate">{design.barcodeDataUrl ? "Barcode uploaded" : "Upload barcode image"}</span>
+                    <span className="text-primary">{design.barcodeDataUrl ? "Replace" : "Upload"}</span>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadBarcode(e.target.files?.[0])} />
+                  </label>
+                )}
               </label>
               <label className="sm:col-span-2 flex items-center gap-2 text-[11px]">
                 <span className="w-28 text-muted-foreground">Signatory name</span>
                 <input className="h-8 flex-1 rounded-md border bg-background px-2 text-xs" placeholder="Authorised Signatory" value={design.signatoryName ?? ""} onChange={(e) => updateDesign({ ...design, signatoryName: e.target.value })} />
               </label>
-              {(design.qrCodeDataUrl || design.barcodeDataUrl) && (
-                <div className="sm:col-span-2 flex gap-2">
-                  {design.qrCodeDataUrl && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => updateDesign({ ...design, qrCodeDataUrl: null })}>Remove QR</Button>}
-                  {design.barcodeDataUrl && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => updateDesign({ ...design, barcodeDataUrl: null })}>Remove barcode</Button>}
-                </div>
-              )}
             </div>
           </div>
         </div>
