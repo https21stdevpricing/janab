@@ -11,7 +11,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { seedDemoData, clearAllData } from "@/lib/seed-demo";
 import { downloadFullBackup, getLastBackupAt } from "@/lib/backup";
-import { Download, ShieldCheck, AlertTriangle, Users, Hash, LogOut, Trash2, Plus } from "lucide-react";
+import { Download, ShieldCheck, AlertTriangle, Users, Hash, LogOut, Trash2, Plus, Sparkles } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/settings")({ component: SettingsPage });
 
@@ -118,6 +119,21 @@ function SettingsPage() {
           <F label="Low-stock threshold"><Input type="number" value={s.low_stock_threshold ?? 10} onChange={(e) => setS({ ...s, low_stock_threshold: +e.target.value })} /></F>
           <F label="Address" wide><Input value={s.address ?? ""} onChange={(e) => setS({ ...s, address: e.target.value })} /></F>
           <div className="md:col-span-2"><Button onClick={save}>Save</Button></div>
+        </CardContent>
+      </Card>
+
+      {/* Opening balances re-run */}
+      <Card className="mb-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4 text-primary" /> Opening balances</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <p className="text-xs text-muted-foreground">
+            Re-run the first-time setup wizard if you need to reseed opening cash, bank, stock, receivables or payables. Posts a fresh "Opening balances" voucher so trial balance stays balanced.
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/app/onboarding" search={{ force: "1" } as any}>Run setup wizard</Link>
+          </Button>
         </CardContent>
       </Card>
 
