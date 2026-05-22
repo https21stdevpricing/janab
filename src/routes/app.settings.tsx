@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
@@ -7,7 +8,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { seedDemoData, clearAllData } from "@/lib/seed-demo";
 import { downloadFullBackup, getLastBackupAt } from "@/lib/backup";
@@ -107,167 +107,132 @@ function SettingsPage() {
 
   return (
     <div>
-      <PageHeader title="Settings" description="Company profile and tools" />
-      <Card className="mb-4">
-        <CardHeader><CardTitle>Company profile</CardTitle></CardHeader>
-        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <F label="Company name"><Input value={s.company_name ?? ""} onChange={(e) => setS({ ...s, company_name: e.target.value })} /></F>
-          <F label="GSTIN"><Input value={s.gstin ?? ""} onChange={(e) => setS({ ...s, gstin: e.target.value })} /></F>
-          <F label="State"><Input value={s.state ?? ""} onChange={(e) => setS({ ...s, state: e.target.value })} /></F>
-          <F label="Phone"><Input value={s.phone ?? ""} onChange={(e) => setS({ ...s, phone: e.target.value })} /></F>
-          <F label="Email"><Input value={s.email ?? ""} onChange={(e) => setS({ ...s, email: e.target.value })} /></F>
-          <F label="Low-stock threshold"><Input type="number" value={s.low_stock_threshold ?? 10} onChange={(e) => setS({ ...s, low_stock_threshold: +e.target.value })} /></F>
-          <F label="Address" wide><Input value={s.address ?? ""} onChange={(e) => setS({ ...s, address: e.target.value })} /></F>
-          <div className="md:col-span-2"><Button onClick={save}>Save</Button></div>
-        </CardContent>
-      </Card>
+      <PageHeader title="Settings" description="Business details, numbering, team access and safety tools." />
 
-      {/* Opening balances re-run */}
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><ClipboardCheck className="h-4 w-4 text-primary" /> Opening balances</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-muted-foreground">
-            Re-run the first-time setup wizard if you need to reseed opening cash, bank, stock, receivables or payables. Posts a fresh "Opening balances" voucher so trial balance stays balanced.
-          </p>
-          <Button asChild variant="outline" size="sm">
-            <Link to="/app/onboarding" search={{ force: "1" } as any}>Run setup wizard</Link>
-          </Button>
-        </CardContent>
-      </Card>
+      <div className="space-y-4">
+        <SettingsSection title="Company profile" description="Used on invoices, PDFs and business documents." action={<Button onClick={save}>Save changes</Button>}>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <F label="Company name"><Input value={s.company_name ?? ""} onChange={(e) => setS({ ...s, company_name: e.target.value })} /></F>
+            <F label="GSTIN"><Input value={s.gstin ?? ""} onChange={(e) => setS({ ...s, gstin: e.target.value })} /></F>
+            <F label="State"><Input value={s.state ?? ""} onChange={(e) => setS({ ...s, state: e.target.value })} /></F>
+            <F label="Phone"><Input value={s.phone ?? ""} onChange={(e) => setS({ ...s, phone: e.target.value })} /></F>
+            <F label="Email"><Input value={s.email ?? ""} onChange={(e) => setS({ ...s, email: e.target.value })} /></F>
+            <F label="Low-stock threshold"><Input type="number" value={s.low_stock_threshold ?? 10} onChange={(e) => setS({ ...s, low_stock_threshold: +e.target.value })} /></F>
+            <F label="Address" wide><Input value={s.address ?? ""} onChange={(e) => setS({ ...s, address: e.target.value })} /></F>
+          </div>
+        </SettingsSection>
 
-      {/* Numbering & document prefixes */}
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Hash className="h-4 w-4" /> Numbering & document prefixes</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-muted-foreground">Each document type uses its own prefix. The number that follows auto-increments per financial year. Once a document is saved, its number is locked to keep the GST series continuous.</p>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <SettingsSection title="Opening balances" description="Run the setup wizard again when cash, bank, stock, receivables or payables need a fresh opening voucher." icon={<ClipboardCheck className="h-4 w-4 text-primary" />}>
+          <Button asChild variant="outline" size="sm"><Link to="/app/onboarding" search={{ force: "1" } as any}>Run setup wizard</Link></Button>
+        </SettingsSection>
+
+        <SettingsSection title="Document numbering" description="Prefixes are locked into each saved document; keep them short and readable." icon={<Hash className="h-4 w-4" />} action={<Button onClick={save} size="sm">Save numbering</Button>}>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             <F label="Sale invoice"><Input className="font-mono uppercase" maxLength={6} value={s.prefix_sale ?? "INV"} onChange={(e) => setS({ ...s, prefix_sale: e.target.value.toUpperCase() })} /></F>
             <F label="Purchase"><Input className="font-mono uppercase" maxLength={6} value={s.prefix_purchase ?? "PO"} onChange={(e) => setS({ ...s, prefix_purchase: e.target.value.toUpperCase() })} /></F>
             <F label="Third-party"><Input className="font-mono uppercase" maxLength={6} value={s.prefix_tp ?? "TP"} onChange={(e) => setS({ ...s, prefix_tp: e.target.value.toUpperCase() })} /></F>
             <F label="Quotation"><Input className="font-mono uppercase" maxLength={6} value={s.prefix_quote ?? "QT"} onChange={(e) => setS({ ...s, prefix_quote: e.target.value.toUpperCase() })} /></F>
-            <F label="Delivery challan"><Input className="font-mono uppercase" maxLength={6} value={s.prefix_delivery ?? "DC"} onChange={(e) => setS({ ...s, prefix_delivery: e.target.value.toUpperCase() })} /></F>
+            <F label="Delivery"><Input className="font-mono uppercase" maxLength={6} value={s.prefix_delivery ?? "DC"} onChange={(e) => setS({ ...s, prefix_delivery: e.target.value.toUpperCase() })} /></F>
             <F label="Receipt / payment"><Input className="font-mono uppercase" maxLength={6} value={s.prefix_payment ?? "PAY"} onChange={(e) => setS({ ...s, prefix_payment: e.target.value.toUpperCase() })} /></F>
           </div>
-          <div className="rounded-md border bg-muted/30 p-2.5 text-xs text-muted-foreground">
+          <div className="rounded-lg border bg-muted/25 px-3 py-2 text-xs text-muted-foreground">
             Preview · <span className="font-mono text-foreground">{(s.prefix_sale ?? "INV")}-0001</span> · <span className="font-mono text-foreground">{(s.prefix_purchase ?? "PO")}-0001</span> · <span className="font-mono text-foreground">{(s.prefix_payment ?? "PAY")}-0001</span>
           </div>
-          <Button onClick={save} size="sm">Save numbering</Button>
-        </CardContent>
-      </Card>
+        </SettingsSection>
 
-      {/* Team invites */}
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" /> Team</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-muted-foreground">Record people who should have access. They sign up with the same email on the login page, and every action is captured in the audit log with their name and timestamp.</p>
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_140px_auto] gap-2">
+        <SettingsSection title="Team" description="Record approved teammates and their intended access level." icon={<Users className="h-4 w-4" />}>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-[1fr_150px_auto]">
             <Input type="email" placeholder="teammate@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
             <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as any)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="admin">Admin (full)</SelectItem>
-                <SelectItem value="staff">Staff (entry)</SelectItem>
-                <SelectItem value="viewer">Viewer (read-only)</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="staff">Staff</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
               </SelectContent>
             </Select>
             <Button onClick={addInvite}><Plus className="h-4 w-4" /> Invite</Button>
           </div>
           {invites.length > 0 && (
-            <div className="rounded-md border divide-y">
+            <div className="divide-y rounded-lg border">
               {invites.map(it => (
-                <div key={it.id} className="p-2.5 flex items-center gap-2 text-sm">
-                  <div className="min-w-0 flex-1">
+                <div key={it.id} className="grid gap-2 p-3 text-sm sm:grid-cols-[1fr_auto] sm:items-center">
+                  <div className="min-w-0">
                     <div className="font-medium truncate">{it.email}</div>
                     <div className="text-[11px] text-muted-foreground">{it.role} · invited {new Date(it.invited_at).toLocaleDateString()}</div>
                   </div>
-                  <Badge variant={it.status === "accepted" ? "default" : it.status === "revoked" ? "destructive" : "secondary"} className="text-[10px]">{it.status}</Badge>
-                  {it.status === "pending" && (
-                    <>
-                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => setInviteStatus(it.id, "accepted")}>Mark joined</Button>
-                      <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => setInviteStatus(it.id, "revoked")}>Revoke</Button>
-                    </>
-                  )}
-                  <Button size="sm" variant="ghost" className="h-7 w-7 p-0" onClick={() => removeInvite(it.id)} title="Remove"><Trash2 className="h-3.5 w-3.5" /></Button>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge variant={it.status === "accepted" ? "default" : it.status === "revoked" ? "destructive" : "secondary"} className="text-[10px]">{it.status}</Badge>
+                    {it.status === "pending" && <Button size="sm" variant="ghost" className="h-8 px-2" onClick={() => setInviteStatus(it.id, "accepted")}>Mark joined</Button>}
+                    {it.status === "pending" && <Button size="sm" variant="ghost" className="h-8 px-2 text-destructive" onClick={() => setInviteStatus(it.id, "revoked")}>Revoke</Button>}
+                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => removeInvite(it.id)} title="Remove"><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
                 </div>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
+        </SettingsSection>
 
-      <Card className="mb-4">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Backups &amp; data safety</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <div className="rounded-md border bg-muted/30 p-3 space-y-1.5">
-            <div className="font-medium">How your data is protected</div>
-            <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
-              <li>Cloud database with <b>automatic daily snapshots</b> retained by the platform — recoverable on request.</li>
-              <li>Point-in-time restore is available for the live cloud project (contact support for restore window).</li>
-              <li>Row-level security keeps your books isolated from every other user.</li>
-              <li>You can pull a <b>full local copy any time</b> with the button below — one Excel file, one sheet per table.</li>
-            </ul>
-          </div>
+        <SettingsSection title="Backups & safety" description="Download a local copy and keep a recent backup outside the app." icon={<ShieldCheck className="h-4 w-4 text-primary" />}>
           <div className="flex flex-wrap items-center gap-3">
-            <Button onClick={runBackup} disabled={backing}>
-              <Download className="h-4 w-4" /> {backing ? "Preparing…" : "Download full backup (.xlsx)"}
-            </Button>
-            <div className="text-xs text-muted-foreground">
-              {lastBackup
-                ? <>Last backup: <b>{new Date(lastBackup).toLocaleString()}</b> ({lastDays}d ago)</>
-                : <>No local backup yet.</>}
-            </div>
+            <Button onClick={runBackup} disabled={backing}><Download className="h-4 w-4" /> {backing ? "Preparing…" : "Download backup"}</Button>
+            <div className="text-xs text-muted-foreground">{lastBackup ? <>Last backup: <b>{new Date(lastBackup).toLocaleString()}</b> ({lastDays}d ago)</> : <>No local backup yet.</>}</div>
           </div>
-          {stale && (
-            <div className="flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs">
-              <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-              <div><b>Weekly backup recommended.</b> Download a fresh copy every Sunday and keep it on a different device / drive. In an emergency (accidental delete, account loss) you can re-import this Excel file sheet-by-sheet.</div>
-            </div>
-          )}
-          <details className="text-xs text-muted-foreground">
-            <summary className="cursor-pointer text-foreground font-medium">Emergency recovery checklist</summary>
-            <ol className="list-decimal list-inside mt-2 space-y-1">
-              <li>Stop entering new transactions to prevent further drift.</li>
-              <li>Open Settings → download a fresh backup if the app still loads.</li>
-              <li>If data is missing, contact support — daily cloud snapshots can restore to any recent point.</li>
-              <li>If the cloud project is unreachable, open your latest local .xlsx backup — every sheet maps 1:1 to a table and can be re-imported from the matching page (Products → Products sheet, Contacts → Contacts sheet, etc.).</li>
-            </ol>
-          </details>
-        </CardContent>
-      </Card>
+          {stale && <div className="flex items-start gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs"><AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" /><div><b>Weekly backup recommended.</b> Keep one fresh copy on another device or drive.</div></div>}
+        </SettingsSection>
 
-      <Card>
-        <CardHeader><CardTitle>Data tools</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">Replace your books with a complete sample dataset — products, contacts, sales, purchases, third-party deals, quotations, payments, and expenses.</p>
-            <Button variant="outline" disabled={seeding || clearing} onClick={seed}>{seeding ? "Loading…" : "Load demo data"}</Button>
-          </div>
-          <div className="border-t pt-4">
-            <p className="text-sm text-muted-foreground mb-2"><span className="text-destructive font-medium">Danger zone.</span> Permanently delete every transaction, contact, and product in your account. Your company profile is kept.</p>
-            <Button variant="destructive" disabled={seeding || clearing} onClick={clearAll}>{clearing ? "Clearing…" : "Clear all data"}</Button>
-          </div>
-          <div className="border-t pt-4">
-            <p className="text-sm text-muted-foreground mb-2">
-              <span className="text-destructive font-medium">Close account.</span> Marks your account as closed and signs you out. Your data is preserved for <b>60 days</b> in case you change your mind — sign in again within that window to reactivate. After 60 days everything is permanently deleted.
-            </p>
-            <Button variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={closeAccount}>
-              <LogOut className="h-4 w-4" /> Close my account
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        <SettingsSection title="Data tools" description="Demo data and account-level actions." >
+          <SettingRow title="Demo dataset" description="Replace your current books with sample transactions for testing."><Button variant="outline" disabled={seeding || clearing} onClick={seed}>{seeding ? "Loading…" : "Load demo data"}</Button></SettingRow>
+          <SettingRow title="Clear all business data" description="Deletes transactions, contacts and products; company profile stays." danger><Button variant="destructive" disabled={seeding || clearing} onClick={clearAll}>{clearing ? "Clearing…" : "Clear all data"}</Button></SettingRow>
+          <SettingRow title="Close account" description="Signs you out and keeps data recoverable for 60 days." danger><Button variant="outline" className="text-destructive border-destructive/40 hover:bg-destructive/10" onClick={closeAccount}><LogOut className="h-4 w-4" /> Close account</Button></SettingRow>
+        </SettingsSection>
+      </div>
     </div>
   );
 }
 
-function F({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
+function F({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return <div className={`space-y-1.5 ${wide ? "md:col-span-2" : ""}`}><Label className="text-xs">{label}</Label>{children}</div>;
+}
+
+function SettingsSection({
+  title,
+  description,
+  icon,
+  action,
+  children,
+}: {
+  title: string;
+  description?: string;
+  icon?: ReactNode;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="surface overflow-hidden">
+      <div className="grid gap-3 border-b px-4 py-4 sm:grid-cols-[1fr_auto] sm:items-start sm:px-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-base font-semibold tracking-tight">
+            {icon}
+            <h2>{title}</h2>
+          </div>
+          {description && <p className="mt-1 text-xs text-muted-foreground leading-snug">{description}</p>}
+        </div>
+        {action && <div className="flex sm:justify-end">{action}</div>}
+      </div>
+      <div className="space-y-4 p-4 sm:p-5">{children}</div>
+    </section>
+  );
+}
+
+function SettingRow({ title, description, danger, children }: { title: string; description: string; danger?: boolean; children: ReactNode }) {
+  return (
+    <div className="grid gap-3 border-b border-border/60 pb-4 last:border-b-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div className="min-w-0">
+        <div className={danger ? "font-medium text-destructive" : "font-medium"}>{title}</div>
+        <div className="mt-1 text-xs text-muted-foreground leading-snug">{description}</div>
+      </div>
+      <div className="flex sm:justify-end">{children}</div>
+    </div>
+  );
 }

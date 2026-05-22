@@ -402,11 +402,11 @@ function BillsPage() {
 
   return (
     <div>
-      <PageHeader title="Money" description="Receivables, payables and cleared payment history." actions={<ExcelBar onExport={onExport} />} />
+      <PageHeader title="Money" description="Collect, pay and review only cleared settlements in one place." actions={<ExcelBar onExport={onExport} />} />
 
-      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_300px]">
+      <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_260px]">
         <div className="surface overflow-hidden">
-          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="grid grid-cols-3 divide-x divide-border/60">
             <HeroCell label="Collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
             <HeroCell label="Pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
             <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
@@ -417,7 +417,7 @@ function BillsPage() {
         </div>
         <div className="surface p-3">
           <div className="eyebrow">Quick actions</div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2">
             <Button variant="outline" className="justify-start" onClick={() => startNew("in")}><ArrowDownLeft className="h-4 w-4" /> Receive</Button>
             <Button className="justify-start" onClick={() => startNew("out")}><ArrowUpRight className="h-4 w-4" /> Pay</Button>
           </div>
@@ -460,7 +460,7 @@ function BillsPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm">{p.payment_no}</span>
                     <span className="text-xs text-muted-foreground">{fmtDate(p.date)}</span>
-                    <ClearancePill cleared={p.cleared !== false} mode={p.mode} />
+                    {(p.mode === "Cheque" || p.cleared === false) && <ClearancePill cleared={p.cleared !== false} mode={p.mode} />}
                     {p.ref_doc && (
                       <span className="text-xs text-muted-foreground flex flex-wrap gap-1">
                         {p.ref_doc.split(",").map(s => s.trim()).filter(Boolean).map((ref, idx) => (
@@ -513,7 +513,6 @@ function BillsPage() {
                     </td>
                     <td className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div></td>
                     <td className="p-3 text-right whitespace-nowrap">
-                      <Button size="sm" variant="ghost" onClick={() => openPreview(r.doc_no)} title="Preview bill"><Eye className="h-3.5 w-3.5" /></Button>
                       <Button size="sm" variant="outline" onClick={() => settleBill(r)}>
                         {tab === "receivable" ? "Receive" : "Pay"}
                       </Button>
@@ -546,9 +545,8 @@ function BillsPage() {
                 </button>
                 <PayProgress pct={pct} tab={tab} />
                 <div className="text-[11px] text-muted-foreground tabular-nums">{inr(r.paid)} of {inr(r.total)} · {b}d</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openPreview(r.doc_no)}><Eye className="h-3.5 w-3.5" /> Preview</Button>
-                  <Button size="sm" onClick={() => settleBill(r)}>
+                <div>
+                  <Button size="sm" className="w-full" onClick={() => settleBill(r)}>
                     {tab === "receivable" ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
                     {tab === "receivable" ? "Receive" : "Pay"}
                   </Button>
@@ -567,9 +565,6 @@ function BillsPage() {
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Bill preview</DialogTitle>
           </div>
           <div className="p-4">{preview && <DocDetail doc={preview} />}</div>
-          <div className="px-4 py-3 border-t flex justify-end">
-            <Button variant="outline" onClick={() => setPreview(null)}>Close</Button>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -582,7 +577,7 @@ function BillsPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewPay.date)}</div></div>
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewPay.mode ?? "—"}</div></div>
-                <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} /></div>
+                {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} /></div>}
                 <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewPay.contact_name ?? "—"}</div></div>
                 <div className="col-span-2 rounded-md border bg-muted/30 p-3">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Amount</div>
@@ -620,7 +615,6 @@ function BillsPage() {
             <Button variant="outline" className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive" onClick={() => { if (viewPay) { delPay(viewPay.id); setViewPay(null); } }}>
               <Trash2 className="h-4 w-4" /> Delete
             </Button>
-            <Button className="w-full" onClick={() => setViewPay(null)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -634,28 +628,26 @@ function BillsPage() {
                 {direction === "in" ? <ArrowDownLeft className="h-4 w-4 text-primary" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
                 {direction === "in" ? "Record receipt" : "Record payment"}
               </DialogTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Cheque entries stay pending until cleared, so accounts and outstanding balances remain safe.</p>
+              {mode === "Cheque" && !cleared && <p className="mt-1 text-xs text-muted-foreground">This cheque will remain pending until you mark it cleared.</p>}
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 p-4 sm:p-6">
+          <div className="space-y-5 p-4 sm:p-6">
           {/* Direction switch inside dialog */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/30 p-1">
             <button type="button" onClick={() => { setDirection("in"); setAllocs([]); }}
-              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "in" ? "border-primary bg-primary/5" : "hover:bg-muted/40"}`}>
+              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "in" ? "border-primary bg-background shadow-sm" : "border-transparent hover:bg-background/70"}`}>
               <div className="flex items-center gap-2 text-xs font-medium"><ArrowDownLeft className="h-3.5 w-3.5 text-primary" /> Money in (receipt)</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">From a buyer / customer</div>
             </button>
             <button type="button" onClick={() => { setDirection("out"); setAllocs([]); }}
-              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "out" ? "border-destructive bg-destructive/5" : "hover:bg-muted/40"}`}>
+              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "out" ? "border-destructive bg-background shadow-sm" : "border-transparent hover:bg-background/70"}`}>
               <div className="flex items-center gap-2 text-xs font-medium"><ArrowUpRight className="h-3.5 w-3.5 text-destructive" /> Money out (payment)</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">To a supplier / vendor</div>
             </button>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label className="text-xs">No.</Label>
-              <Input className="font-mono" placeholder="Auto" disabled value="(auto)" /></div>
             <div className="space-y-1.5"><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
             <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">{direction === "in" ? "From buyer" : "To supplier"}</Label>
               <ContactPicker filter={direction === "in" ? "buyer" : "supplier"} value={contactId} onChange={(id, n) => { setContactId(id); setContactName(n); setAllocs([]); }} />

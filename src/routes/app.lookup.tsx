@@ -8,7 +8,7 @@ import { Empty } from "@/components/empty";
 import { Badge } from "@/components/ui/badge";
 import { fmt, fmtDate, inr } from "@/lib/format";
 import { lookupDoc, prefixOf, type DocLookupResult } from "@/lib/doc-lookup";
-import { Search, Printer, Wallet, Truck, X, ArrowRight, Command, Landmark } from "lucide-react";
+import { Search, Printer, Wallet, Truck, X, ArrowRight, Landmark } from "lucide-react";
 import { toast } from "sonner";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
@@ -219,9 +219,6 @@ function LookupView(p: LookupViewProps) {
                   <X className="h-4 w-4" />
                 </button>
               )}
-              <div className="hidden sm:flex items-center gap-1 text-[11px] text-muted-foreground border-l pl-2 ml-1">
-                <Command className="h-3 w-3" /> <span>↵</span>
-              </div>
               <Button size="sm" onClick={() => { p.setShowSuggest(false); p.run(); }} disabled={p.busy} className="rounded-full">
                 Find <ArrowRight className="h-4 w-4 ml-1" />
               </Button>
@@ -269,7 +266,7 @@ function LookupView(p: LookupViewProps) {
 
       {/* Doc preview dialog */}
       <Dialog open={!!p.doc} onOpenChange={(o) => !o && p.setDoc(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&>button]:hidden">
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Document preview</DialogTitle>
             <button className="rounded-md p-1 hover:bg-muted" onClick={() => p.setDoc(null)} aria-label="Close"><X className="h-4 w-4" /></button>
@@ -494,7 +491,7 @@ export function DocDetail({ doc }: { doc: DocLookupResult }) {
             {doc.kind === "tp" && doc.supplierOutstanding && doc.supplierOutstanding.balance > 0 && (
               <Button size="sm" variant="secondary" onClick={goPaySupplier}><Wallet className="h-3 w-3" /> Pay supplier {inr(doc.supplierOutstanding.balance)}</Button>
             )}
-            {doc.kind !== "payment" && doc.kind !== "deposit" && (
+            {!printable && doc.kind !== "payment" && doc.kind !== "deposit" && (
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PDF" onClick={() => exportStoneWorldDocument(doc, company)}>
                 <Printer className="h-3.5 w-3.5" />
               </Button>

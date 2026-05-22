@@ -264,12 +264,10 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
-  // Whole-screen pull-down close: capture the drag globally, write transforms
-  // directly to the sheet, and use release velocity so short flicks close too.
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const blockClickUntilRef = useRef(0);
   const stateRef = useRef({
-    tracking: false, dragging: false, startY: 0, lastY: 0, lastT: 0, lastV: 0, height: 0,
+    tracking: false, dragging: false, startY: 0, lastY: 0, lastT: 0, lastV: 0, height: 0, closing: false,
   });
 
   const setTransform = (y: number) => {
@@ -277,7 +275,7 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     if (!el) return;
     if (y <= 0) {
       el.style.transform = "";
-      el.style.transition = "transform 360ms cubic-bezier(.2,1.2,.2,1)";
+      el.style.transition = "transform 260ms cubic-bezier(.18,1.15,.24,1)";
       return;
     }
     const max = Math.max(420, stateRef.current.height || 640);
@@ -289,10 +287,12 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
   const animateClose = () => {
     const el = sheetRef.current;
     if (!el) return;
+    stateRef.current.closing = true;
     const h = stateRef.current.height || el.getBoundingClientRect().height || 600;
-    el.style.transition = "transform 180ms cubic-bezier(.32,.72,.18,1)";
+    el.style.transition = "transform 170ms cubic-bezier(.32,.72,.18,1)";
     el.style.transform = `translate3d(0, ${h}px, 0)`;
-    window.setTimeout(() => onOpenChange(false), 140);
+    blockClickUntilRef.current = Date.now() + 700;
+    window.setTimeout(() => onOpenChange(false), 135);
   };
 
   useEffect(() => {
@@ -301,14 +301,17 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     if (!el) return;
     el.style.transform = "";
     el.style.transition = "";
+    stateRef.current.closing = false;
+    stateRef.current.tracking = false;
+    stateRef.current.dragging = false;
 
     const isEditableTarget = (target: EventTarget | null) =>
       target instanceof HTMLElement && !!target.closest("input, textarea, select, [contenteditable='true']");
     const begin = (y: number, target: EventTarget | null) => {
-      if (isEditableTarget(target)) return;
+      if (stateRef.current.closing || isEditableTarget(target)) return;
       stateRef.current = {
         tracking: true, dragging: false, startY: y, lastY: y, lastT: performance.now(),
-        lastV: 0, height: el.getBoundingClientRect().height,
+        lastV: 0, height: el.getBoundingClientRect().height, closing: false,
       };
     };
     const move = (y: number, ev: Event) => {
@@ -317,9 +320,9 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
       const dy = y - s.startY;
       if (!s.dragging) {
         if (dy < -10) { s.tracking = false; return; }
-        if (dy < 2) return;
+        if (dy < 1) return;
         s.dragging = true;
-        s.startY = y - 0.5;
+        s.startY = y - 0.25;
         s.lastY = y;
         s.lastT = performance.now();
         s.lastV = 0;
@@ -342,33 +345,42 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
       s.dragging = false;
       const dy = s.lastY - s.startY;
       const v = s.lastV;
-      const shouldClose = dy > 42 || (dy > 12 && v > 0.12) || v > 0.34;
+      const shouldClose = dy > 24 || (dy > 8 && v > 0.08) || v > 0.22;
       if (shouldClose) animateClose();
       else setTransform(0);
     };
 
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      begin(e.clientY, e.target);
+    };
+    const onPointerMove = (e: PointerEvent) => { if (stateRef.current.tracking) move(e.clientY, e); };
+    const onPointerEnd = () => end();
     const onTouchStart = (e: TouchEvent) => { const touch = e.touches[0]; if (touch) begin(touch.clientY, e.target); };
     const onTouchMove = (e: TouchEvent) => { const touch = e.touches[0]; if (touch) move(touch.clientY, e); };
     const onTouchEnd = () => end();
-    const onMouseDown = (e: MouseEvent) => begin(e.clientY, e.target);
-    const onMouseMove = (e: MouseEvent) => { if (stateRef.current.tracking) move(e.clientY, e); };
-    const onMouseUp = () => end();
 
-    document.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
-    document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
-    document.addEventListener("touchend", onTouchEnd, { passive: true, capture: true });
-    document.addEventListener("touchcancel", onTouchEnd, { passive: true, capture: true });
-    document.addEventListener("mousedown", onMouseDown, true);
-    window.addEventListener("mousemove", onMouseMove);
-    window.addEventListener("mouseup", onMouseUp);
+    const usePointer = "PointerEvent" in window;
+    if (usePointer) {
+      document.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
+      document.addEventListener("pointermove", onPointerMove, { passive: false, capture: true });
+      document.addEventListener("pointerup", onPointerEnd, { passive: true, capture: true });
+      document.addEventListener("pointercancel", onPointerEnd, { passive: true, capture: true });
+    } else {
+      document.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
+      document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+      document.addEventListener("touchend", onTouchEnd, { passive: true, capture: true });
+      document.addEventListener("touchcancel", onTouchEnd, { passive: true, capture: true });
+    }
     return () => {
+      document.removeEventListener("pointerdown", onPointerDown, true);
+      document.removeEventListener("pointermove", onPointerMove, true);
+      document.removeEventListener("pointerup", onPointerEnd, true);
+      document.removeEventListener("pointercancel", onPointerEnd, true);
       document.removeEventListener("touchstart", onTouchStart, true);
       document.removeEventListener("touchmove", onTouchMove, true);
       document.removeEventListener("touchend", onTouchEnd, true);
       document.removeEventListener("touchcancel", onTouchEnd, true);
-      document.removeEventListener("mousedown", onMouseDown, true);
-      window.removeEventListener("mousemove", onMouseMove);
-      window.removeEventListener("mouseup", onMouseUp);
     };
   }, [open, onOpenChange]);
 
@@ -387,14 +399,13 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
         className="p-0 h-[88vh] rounded-t-2xl flex flex-col [&>button]:hidden"
         style={{
           willChange: "transform",
-          touchAction: "pan-y",
+          touchAction: "none",
         }}
         onClickCapture={suppressClickAfterDrag}
       >
-        {/* Drag handle + aligned header */}
         <div className="px-5 pt-2 pb-3 border-b select-none">
-          <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted-foreground/30" />
-          <div className="min-w-0 text-center">
+          <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted-foreground/25" />
+          <div className="min-w-0 text-left">
             <div className="text-base font-semibold tracking-tight">StoneWorld</div>
             <div className="text-xs text-muted-foreground truncate">{email}</div>
           </div>
@@ -431,10 +442,10 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="h-11 w-11 grid place-items-center rounded-full border bg-background shadow-sm active:scale-95 transition-transform"
+            className="h-10 w-10 grid place-items-center rounded-full text-muted-foreground hover:bg-muted active:scale-95 transition-all"
             aria-label="Close menu"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
       </SheetContent>
