@@ -14,6 +14,7 @@ import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { exportStoneWorldDocument } from "@/lib/pdf-theme";
+import { loadPrintDesign } from "@/lib/print-customizer";
 
 export const Route = createFileRoute("/app/lookup")({
   component: LookupPage,
@@ -492,7 +493,7 @@ export function DocDetail({ doc }: { doc: DocLookupResult }) {
               <Button size="sm" variant="secondary" onClick={goPaySupplier}><Wallet className="h-3 w-3" /> Pay supplier {inr(doc.supplierOutstanding.balance)}</Button>
             )}
             {!printable && doc.kind !== "payment" && doc.kind !== "deposit" && (
-              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PDF" onClick={() => exportStoneWorldDocument(doc, company)}>
+              <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PDF" onClick={() => exportStoneWorldDocument(doc, company, loadPrintDesign())}>
                 <Printer className="h-3.5 w-3.5" />
               </Button>
             )}
