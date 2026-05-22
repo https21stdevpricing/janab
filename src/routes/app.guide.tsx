@@ -696,6 +696,17 @@ function GuidePage() {
         <h1 className="mt-1 text-3xl md:text-4xl font-semibold tracking-tight leading-[1.05]">
           A 90-second tour of every feature
         </h1>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <a href="#help-centre" className="inline-flex items-center gap-1 text-[11px] rounded-full border border-border bg-background px-2.5 py-1 hover:bg-muted transition-colors">
+            Skip to FAQ ↓
+          </a>
+          <Link to="/app/bank" className="inline-flex items-center gap-1 text-[11px] rounded-full border border-border bg-background px-2.5 py-1 hover:bg-muted transition-colors">
+            Bank & cheques
+          </Link>
+          <Link to="/app/reports" className="inline-flex items-center gap-1 text-[11px] rounded-full border border-border bg-background px-2.5 py-1 hover:bg-muted transition-colors">
+            Reconcile accounts
+          </Link>
+        </div>
         <div className="mt-5 flex items-center gap-3">
           <span className="text-[11px] text-muted-foreground tabular-nums font-medium">
             {String(i + 1).padStart(2, "0")} <span className="text-muted-foreground/40">/</span> {String(slides.length).padStart(2, "0")}
@@ -804,6 +815,7 @@ function GuidePage() {
         <ArrowDown className="h-3 w-3" /> Revisit anytime from More → Tools → Quick guide
       </div>
 
+      <div id="help-centre" />
       <GuideFAQ />
     </div>
   );
