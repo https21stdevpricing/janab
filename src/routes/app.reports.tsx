@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import { ReconcileGuide, buildReconcileSignals } from "@/components/reconcile-guide";
 import { useLiveSync } from "@/hooks/use-live-sync";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 export const Route = createFileRoute("/app/reports")({ component: ReportsPage });
 
@@ -46,6 +47,10 @@ const REPORTS_LIVE_TABLES = [
   "stock_adjustments",
   "settings",
 ];
+
+type DbResult<T> = PromiseLike<{ data: T[] | null; error: { message: string } | null }>;
+
+const paged = <T,>(query: DbResult<T>) => query;
 
 function ReportsPage() {
   const [rows, setRows] = useState<any[]>([]);
