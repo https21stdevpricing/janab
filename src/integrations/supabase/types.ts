@@ -63,6 +63,7 @@ export type Database = {
           id: string
           kind: string
           notes: string | null
+          status: string
           transfer_no: string | null
           txn_id: string | null
           updated_at: string
@@ -80,6 +81,7 @@ export type Database = {
           id?: string
           kind: string
           notes?: string | null
+          status?: string
           transfer_no?: string | null
           txn_id?: string | null
           updated_at?: string
@@ -97,6 +99,7 @@ export type Database = {
           id?: string
           kind?: string
           notes?: string | null
+          status?: string
           transfer_no?: string | null
           txn_id?: string | null
           updated_at?: string
@@ -369,6 +372,7 @@ export type Database = {
           created_at: string
           date: string
           id: string
+          is_opening: boolean
           narration: string | null
           source_id: string
           source_kind: string
@@ -379,6 +383,7 @@ export type Database = {
           created_at?: string
           date: string
           id?: string
+          is_opening?: boolean
           narration?: string | null
           source_id: string
           source_kind: string
@@ -389,6 +394,7 @@ export type Database = {
           created_at?: string
           date?: string
           id?: string
+          is_opening?: boolean
           narration?: string | null
           source_id?: string
           source_kind?: string
@@ -1141,6 +1147,7 @@ export type Database = {
           fy_start: string | null
           gstin: string | null
           low_stock_threshold: number | null
+          onboarding_done: boolean
           phone: string | null
           prefix_delivery: string
           prefix_payment: string
@@ -1163,6 +1170,7 @@ export type Database = {
           fy_start?: string | null
           gstin?: string | null
           low_stock_threshold?: number | null
+          onboarding_done?: boolean
           phone?: string | null
           prefix_delivery?: string
           prefix_payment?: string
@@ -1185,6 +1193,7 @@ export type Database = {
           fy_start?: string | null
           gstin?: string | null
           low_stock_threshold?: number | null
+          onboarding_done?: boolean
           phone?: string | null
           prefix_delivery?: string
           prefix_payment?: string

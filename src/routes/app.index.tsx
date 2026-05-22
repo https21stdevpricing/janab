@@ -102,13 +102,44 @@ function MorphChart({
   labels,
   accent,
   variant,
+  formatValue,
 }: {
   values: number[];
   labels: string[];
   accent: string;
   variant: "bars" | "area";
+  formatValue?: (v: number) => string;
 }) {
   const max = Math.max(1, ...values.map((v) => Math.abs(v)));
+  const [hover, setHover] = useState<number | null>(null);
+  const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const x = Math.max(0, Math.min(rect.width, e.clientX - rect.left));
+    if (values.length === 0) return;
+    const idx = Math.min(values.length - 1, Math.max(0, Math.round((x / rect.width) * (values.length - 1))));
+    setHover(idx);
+  };
+  const onLeave = () => setHover(null);
+  const fmt = formatValue ?? ((v: number) => v.toLocaleString());
+
+  const tooltip = hover != null && values[hover] != null ? (
+    <div
+      className="absolute -top-1 -translate-y-full z-10 pointer-events-none rounded-lg border bg-popover/95 backdrop-blur-md shadow-md px-3 py-2 text-xs animate-in fade-in zoom-in-95 duration-150"
+      style={{ left: `calc(${(hover / Math.max(1, values.length - 1)) * 100}% - 50px)`, width: 100 }}
+    >
+      <div className="text-[10px] text-muted-foreground tracking-wide">{labels[hover]}</div>
+      <div className="font-semibold tabular-nums" style={{ color: accent }}>{fmt(values[hover])}</div>
+    </div>
+  ) : null;
+
+  const crosshair = hover != null ? (
+    <div
+      className="absolute top-0 bottom-5 w-px bg-foreground/30 pointer-events-none transition-[left] duration-100"
+      style={{ left: `${(hover / Math.max(1, values.length - 1)) * 100}%` }}
+    />
+  ) : null;
+
   if (variant === "area") {
     // Smooth area line for "stock" metrics (running balances).
     const w = 100, h = 100;
@@ -122,7 +153,8 @@ function MorphChart({
       .join(" ");
     const areaD = `${d} L ${w} ${h} L 0 ${h} Z`;
     return (
-      <div className="relative h-[200px] sm:h-[240px] w-full">
+      <div className="relative h-[200px] sm:h-[240px] w-full touch-none"
+        onPointerMove={onMove} onPointerLeave={onLeave} onPointerDown={onMove}>
         <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="absolute inset-0 w-full h-full">
           <defs>
             <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
@@ -133,18 +165,25 @@ function MorphChart({
           <path d={areaD} fill="url(#areaFill)" className="transition-all duration-[600ms] ease-[cubic-bezier(.22,1,.36,1)]" />
           <path d={d} fill="none" stroke={accent} strokeWidth="1.4" strokeLinejoin="round" strokeLinecap="round"
             className="transition-all duration-[600ms] ease-[cubic-bezier(.22,1,.36,1)]" vectorEffect="non-scaling-stroke" />
+          {hover != null && points[hover] && (
+            <circle cx={points[hover][0]} cy={points[hover][1]} r="1.6" fill={accent} stroke="var(--background)" strokeWidth="0.6" vectorEffect="non-scaling-stroke" />
+          )}
         </svg>
         <div className="absolute left-0 right-0 bottom-0 h-px bg-border/60" />
+        {crosshair}
+        {tooltip}
         <Ticks labels={labels} />
       </div>
     );
   }
   return (
-    <div className="relative h-[200px] sm:h-[240px] w-full">
+    <div className="relative h-[200px] sm:h-[240px] w-full touch-none"
+      onPointerMove={onMove} onPointerLeave={onLeave} onPointerDown={onMove}>
       <div className="absolute inset-x-0 top-0 bottom-5 flex items-end gap-[3px] sm:gap-1.5">
         {values.map((v, i) => {
           const pct = (Math.abs(v) / max) * 100;
           const neg = v < 0;
+          const isHover = hover === i;
           return (
             <div key={i} className="flex-1 h-full flex items-end">
               <div
@@ -152,7 +191,7 @@ function MorphChart({
                 style={{
                   height: `${Math.max(2, pct)}%`,
                   background: neg ? "var(--destructive)" : accent,
-                  opacity: 0.22 + (pct / 100) * 0.78,
+                  opacity: isHover ? 1 : 0.22 + (pct / 100) * 0.78,
                 }}
               />
             </div>
@@ -160,6 +199,8 @@ function MorphChart({
         })}
       </div>
       <div className="absolute left-0 right-0 bottom-5 h-px bg-border/60" />
+      {crosshair}
+      {tooltip}
       <Ticks labels={labels} />
     </div>
   );
@@ -526,7 +567,7 @@ function Dashboard() {
           </div>
 
           {/* Morphing chart — bars for flows, smooth area for running balances */}
-          <MorphChart values={current.data} labels={current.labels} accent={accent} variant={current.variant} />
+          <MorphChart values={current.data} labels={current.labels} accent={accent} variant={current.variant} formatValue={inr} />
         </div>
       </section>
 

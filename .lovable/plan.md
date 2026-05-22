@@ -1,68 +1,74 @@
-# Build plan — Buyers, Suppliers, Analytics, GST fix, Smart Lookup
+Five focused workstreams. Goal: a calmer, Apple-grade UI with zero accounting friction for first-time users.
 
-This is a multi-turn build. I'll ship in 3 focused turns so each lands cleanly without breaking the app.
+## 1. Money page (`src/routes/app.bills.tsx`) — clean rebuild
 
-## Turn 1 — Data layer + GST fix (foundation)
+Replace the current dense layout with a 3-zone structure:
 
-**Fix GST Summary (root cause found)**
-- `gst_summary_view` filters `account LIKE 'GST %'`, but the actual journal accounts are `Output CGST/SGST/IGST` and `Input CGST/SGST/IGST` (no `GST ` prefix). That's why no rows show.
-- Rewrite the view to match real account names.
+```text
+┌───────────────────────────────────────────┐
+│ Header · Receipt | Payment (primary CTAs) │
+├───────────────────────────────────────────┤
+│ ┌─────────────┐  ┌─────────────┐          │
+│ │ RECEIVABLE  │  │  PAYABLE    │  Net pos │
+│ │ ₹ amount    │  │  ₹ amount   │  Overdue │
+│ └─────────────┘  └─────────────┘          │
+├───────────────────────────────────────────┤
+│ Tabs: Receivables · Payables · History    │
+│ Ageing chips · Filters · Search           │
+│                                           │
+│ Bill row → tap → pre-filled dialog        │
+└───────────────────────────────────────────┘
+```
 
-**New views to power buyers/suppliers/analytics**
-- `party_aging_view` — buckets per party (0-30, 31-60, 61-90, 90+ days) for receivables and payables
-- `monthly_party_view` — sales/purchases/payments per party per month (for "best buyer/supplier of month")
-- `monthly_product_view` — qty + revenue per product per month (for "best products")
-- `dashboard_top_view` — convenience view used by the dashboard tiles
+- Strip duplicate KPI tiles; collapse to one neat 2×2 stat block with quiet borders, no color noise.
+- Each row: party name (bold) · doc no · due-in chip · paid bar · balance (tabular). Tap = settle dialog auto-filled (party, balance, allocation).
+- New transaction dialog: 3 clear sections — **Who & how much**, **Method** (Cash/Bank/UPI/Cheque with smart fields), **Allocate to bills** (auto-allocate oldest toggle).
+- Empty states with one-line guidance + CTA.
 
-**Indexes** on hot columns (sales.buyer_id, purchases.supplier_id, payments.contact_id, journal_lines.date, journal_lines.account) for speed.
+## 2. Bank & cash page (`src/routes/app.bank.tsx`) — make it useful
 
-## Turn 2 — Buyers / Suppliers / Analytics pages
+- Add **Pending cheques** section at top (separate from cleared list) with one-tap **Mark cleared / Bounced** actions and inline edit of cheque no / date.
+- Add **status edit** on every row (Pending → Cleared / Bounced) — currently missing.
+- Tighten layout: balance tiles → segmented filter → table-like rows with consistent columns (No · Date · Type · Ref · Amount · Status · Actions).
+- Add link explaining how cash/bank flows from sales/payments so users see *why* it's useful.
 
-**`/app/buyers`** — dedicated buyers page
-- Sortable, searchable Excel-style table of all buyers (+ "both" contacts)
-- Columns: Code, Name, State, GSTIN, Phone, Total Sales, Receivable, Last Txn, Aging badge
-- Row click → drawer with invoices, payments, deliveries, ledger, aging breakdown
-- Quick actions: **Receive Payment** (deep-links to /app/payments with party+dir=in), **New Sale**, **Open Deliveries**, **Statement (Excel)**
+## 3. Lookup page (`src/routes/app.lookup.tsx`) — Apple-style redesign
 
-**`/app/suppliers`** — mirror of buyers for supplier-side
-- Columns: Code, Name, State, GSTIN, Phone, Total Purchases, Payable, Last Txn, Aging
-- Row drawer: POs, TPs (as supplier), payments out, ledger
-- Quick actions: **Pay Supplier**, **New Purchase**, **Statement**
+- Big centered search hero, calm typography, generous whitespace.
+- Result groups (Bills, Parties, Products, Payments) as distinct sections with subtle dividers, not cards-in-cards.
+- Keyboard hints (↑↓ ↵) right-aligned.
+- Recent searches chip row.
 
-**`/app/analytics`** — bird's-eye monthly/yearly view
-- Period toggle: This month / Last month / FY / Custom
-- Top tiles: Revenue, Purchases, Cash earned, Cash spent, Best month, Margin %
-- Best products / Best buyers / Best suppliers leaderboards (top 5 each, with sparkline-ish bars)
-- Realtime: subscribe to `sales/purchases/payments` Postgres changes → refresh
+## 4. New-user onboarding wizard
 
-**Nav updates** in `src/routes/app.tsx`: add Buyers, Suppliers, Analytics under "Masters" / "Books".
+New route `src/routes/app.onboarding.tsx` + a `needs_onboarding` flag on `settings`:
 
-## Turn 3 — Smart Lookup + Excel auto-import + speed
+- 5 steps: **Business info → Opening cash & bank → Opening stock → Opening receivables (who owes you) → Opening payables (who you owe)**.
+- All entries written as a single **"Opening balances" journal voucher** dated 1 day before today, tagged `is_opening=true`, so trial balance stays balanced (debits = credits via Owner's Equity / Opening Balance Equity account).
+- Stock opening: writes to `stock_adjustments` as `kind='opening'` so stock_view stays consistent (no fake sales).
+- Skippable per step; resumable. Existing users access via **Settings → Opening balances** button.
+- Auto-redirect first-time users to `/app/onboarding` after signup until completed or skipped.
 
-**Smart Lookup hits**
-- Each contact hit now shows: receivable / payable / open-doc count + state + GSTIN inline
-- Each product hit shows: on-hand stock, low-stock badge if below reorder
-- Each doc hit shows: balance + paid badge
+Migration: add `settings.onboarding_done boolean`, `journal_entries.is_opening boolean`, `stock_adjustments.kind` enum extension to include `opening`, and an `opening_balance_equity` virtual account in chart-of-accounts logic.
 
-**Auto Excel import**
-- Generic header normalizer in `src/lib/excel.ts`: lowercases, strips spaces/underscores/punct, supports aliases per field (e.g. "Mobile" → phone, "GST No" → gstin, "Party" → name, "₹/Amount/Total" → amount).
-- Per-entity column auto-mapping with smart defaults; unknown columns saved into `notes` JSON.
-- Date parsing: ISO / dd-mm-yyyy / Excel serial all accepted.
-- Row-level validation report (errors per row) instead of fail-fast.
+## 5. Interactive charts (dashboard graphical view)
 
-**Performance pass**
-- React Query for `/app/buyers`, `/app/suppliers`, `/app/analytics`, dashboard tiles — cached, instant on revisit.
-- Realtime subscriptions auto-invalidate the relevant queries (no full reloads).
-- Skeleton loaders so screens never look blank.
-- Memoize heavy tables, virtualize only if a list exceeds 200 rows (otherwise plain table is faster on mobile).
+Upgrade the bar chart in `src/routes/app.index.tsx`:
 
----
+- Crosshair line + floating tooltip on touch/hover (like the Instagram-style screenshot) showing date + exact value.
+- Pinch/drag brush strip below the chart for zooming time range.
+- Smooth value-morph when switching metric (locked, no autoplay — already done).
+- Use Recharts `<Tooltip>` with custom content + `<Brush>` component.
 
-### Technical notes
+## Technical notes
 
-- All migrations use `CREATE OR REPLACE VIEW` with `security_invoker=on`. RLS on base tables already scopes to `auth.uid()`.
-- Deep-link contract reused from earlier turn: `/app/payments?ref=<doc>&dir=in|out` plus a new `?party=<id>&dir=...` for "Pay party" from buyers/suppliers pages.
-- No business-logic changes to existing sales/purchases/payments code — only views + new pages + smarter lookup/import.
-- Mobile-first: tables get sticky first column + horizontal scroll; cards collapse to two-line summary on `<sm`.
+- All new UI uses existing semantic tokens (`bg-card`, `border`, `text-muted-foreground`, `primary`). No new colors.
+- Money dialog reuses existing payment insert path (no business-logic rewrite).
+- Onboarding posts via a single `createServerFn` `postOpeningBalances` for atomicity.
+- Cheque status edit hits existing `bank_transfers` row with new `status` column (`pending|cleared|bounced`) replacing the bare `cleared` boolean (migration keeps backward compat).
+- Add FAQ entries for: "How do I mark a cheque cleared?", "I'm new — where do I enter opening balances?", "Why is my trial balance off after adding products?" — pointing to onboarding/bank actions.
 
-Reply **continue** and I'll start with Turn 1 (GST fix + new views) so the rest builds on solid data.
+## Out of scope
+
+- No changes to invoice/sales/purchase flows beyond what onboarding requires.
+- No new auth or roles work.
