@@ -19,6 +19,7 @@ import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { Filter, ChevronDown, ChevronUp } from "lucide-react";
 import { useLiveSync } from "@/hooks/use-live-sync";
+import { fetchAllPages } from "@/lib/fetch-all-pages";
 
 export const Route = createFileRoute("/app/ledger")({ component: LedgerPage });
 
@@ -36,8 +37,20 @@ const LEDGER_LIVE_TABLES = [
   "stock_adjustments",
 ];
 
+type LedgerRow = {
+  user_id: string;
+  date: string;
+  account: string | null;
+  party: string | null;
+  ref_no: string | null;
+  narration: string | null;
+  source_id?: string | null;
+  debit: number | string | null;
+  credit: number | string | null;
+};
+
 function LedgerPage() {
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<LedgerRow[]>([]);
   const [account, setAccount] = useState<string>("__all__");
   const [party, setParty] = useState("");
   const [refQ, setRefQ] = useState("");
@@ -54,13 +67,15 @@ function LedgerPage() {
       setRows([]);
       return;
     }
-    const { data, error } = await supabase
-      .from("ledger_view")
-      .select("*")
-      .eq("user_id", auth.user.id)
-      .order("date", { ascending: false });
-    if (error) throw error;
-    setRows(data ?? []);
+    const data = await fetchAllPages<LedgerRow>((from, to) =>
+      supabase
+        .from("ledger_view")
+        .select("*")
+        .eq("user_id", auth.user.id)
+        .order("date", { ascending: false })
+        .range(from, to),
+    );
+    setRows(data);
   }, []);
   const { isLive, isRefreshing, lastSyncedAt, lastError, refresh } = useLiveSync({
     channelName: "ledger-live",
