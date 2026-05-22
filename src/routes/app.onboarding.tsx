@@ -436,3 +436,46 @@ function Line({ label, value, side }: { label: string; value: string; side: stri
     </div>
   );
 }
+
+function InlineContacts({ kind, rows, setRows }: {
+  kind: "buyer" | "supplier";
+  rows: Array<{ id?: string; name: string; type: "buyer" | "supplier"; opening_balance: number; phone?: string; _dirty?: boolean }>;
+  setRows: (r: any) => void;
+}) {
+  const list = rows.filter(r => r.type === kind);
+  const label = kind === "buyer" ? "Buyers (Receivable)" : "Suppliers (Payable)";
+  const tone = kind === "buyer" ? "text-primary" : "text-destructive";
+  return (
+    <div className="rounded-lg border bg-muted/10">
+      <div className="px-3 py-2 border-b text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+        <span>{label}</span>
+        <span className={`tabular-nums ${tone}`}>{inrLocal(list.reduce((a, r) => a + Number(r.opening_balance || 0), 0))}</span>
+      </div>
+      <div className="max-h-[28vh] overflow-y-auto divide-y">
+        {list.length === 0 && <div className="px-3 py-4 text-center text-xs text-muted-foreground">No {kind}s yet.</div>}
+        {list.map((r) => {
+          const idx = rows.indexOf(r);
+          return (
+            <div key={r.id ?? `n-${idx}`} className="grid grid-cols-[1fr_110px_130px_32px] gap-2 px-3 py-1.5 items-center">
+              <Input className="h-8 text-sm" value={r.name} placeholder="Name" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], name: e.target.value, _dirty: true }; setRows(c); }} />
+              <Input className="h-8 text-sm" value={r.phone ?? ""} placeholder="Phone" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], phone: e.target.value, _dirty: true }; setRows(c); }} />
+              <Input className="h-8 text-sm text-right tabular-nums" type="number" value={r.opening_balance} onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], opening_balance: +e.target.value, _dirty: true }; setRows(c); }} />
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => {
+                if (r.id) { if (!confirm(`Delete "${r.name}"?`)) return; await supabase.from("contacts").delete().eq("id", r.id); }
+                setRows(rows.filter((_, j) => j !== idx));
+              }}><X className="h-3.5 w-3.5" /></Button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="border-t px-3 py-2 bg-card">
+        <Button size="sm" variant="outline" onClick={() => setRows([...rows, { name: "", type: kind, opening_balance: 0, phone: "", _dirty: true }])}>
+          <Plus className="h-3.5 w-3.5" /> Add {kind}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// local re-export to keep InlineContacts self-contained without re-importing inr
+function inrLocal(n: number) { return inr(n); }
