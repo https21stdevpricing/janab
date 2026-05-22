@@ -103,31 +103,51 @@ export function drawStoneWorldFooter(doc: jsPDF, company: PdfCompany | null | un
   }
 }
 
-export function drawCustomWatermark(doc: jsPDF, text?: string | null) {
+export function drawCustomWatermark(doc: jsPDF, text?: string | null, opacityPct: number = 35, layer: "back" | "front" = "back") {
   if (!text) return;
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const pageCount = doc.getNumberOfPages();
+  const alpha = Math.max(0, Math.min(100, opacityPct)) / 100;
+  // jsPDF text gray ≈ 255*(1-alpha) gives "back" feel for back layer.
+  const gray = Math.round(255 - alpha * 200);
   for (let page = 1; page <= pageCount; page++) {
     doc.setPage(page);
-    doc.setFont("helvetica", "bold").setFontSize(54).setTextColor(230, 235, 240);
+    doc.setFont("helvetica", "bold").setFontSize(64).setTextColor(gray, gray, gray);
+    // Note: jsPDF lacks z-ordering; "front" is approximated by stronger contrast.
+    if (layer === "front") doc.setTextColor(Math.max(0, gray - 60), Math.max(0, gray - 60), Math.max(0, gray - 60));
     doc.text(String(text).toUpperCase().slice(0, 24), W / 2, H / 2, { align: "center", angle: -28 });
   }
 }
 
-export function drawFooterBrandLogos(doc: jsPDF, logos: string[] | undefined, margin = 34) {
+export function drawFooterBrandLogos(
+  doc: jsPDF,
+  logos: string[] | undefined,
+  margin = 34,
+  opts: { rows?: 1 | 2 | 3; logoHeightPx?: number; position?: "above-signature" | "page-bottom"; signatureY?: number } = {},
+) {
   if (!logos?.length) return;
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const count = Math.min(20, logos.length);
-  const cols = Math.min(5, Math.max(2, Math.ceil(Math.sqrt(count))));
-  const rows = Math.ceil(count / cols);
+  const rows = Math.max(1, Math.min(3, opts.rows ?? 1));
+  const cols = Math.max(1, Math.ceil(count / rows));
   const cellW = (W - margin * 2) / cols;
-  const startY = H - 92 - (rows - 1) * 18;
+  // Uniform logo size: convert px (HTML) to pt approximation (1px ≈ 0.75pt).
+  const cellH = Math.max(10, Math.round((opts.logoHeightPx ?? 36) * 0.6));
+  const totalH = rows * (cellH + 6);
+  const position = opts.position ?? "above-signature";
+  const startY = position === "page-bottom"
+    ? H - 56 - totalH
+    : Math.max(margin + 80, (opts.signatureY ?? H - 100) - totalH - 8);
   logos.slice(0, count).forEach((logo, i) => {
     const c = i % cols;
     const r = Math.floor(i / cols);
-    try { doc.addImage(logo, imageFormat(logo) as any, margin + c * cellW + cellW / 2 - 18, startY + r * 20, 36, 14); } catch {}
+    // Center each logo in its cell at uniform height; width auto-derived to a square-ish box.
+    const wPt = Math.min(cellW - 6, cellH * 2.4);
+    const x = margin + c * cellW + cellW / 2 - wPt / 2;
+    const y = startY + r * (cellH + 6);
+    try { doc.addImage(logo, imageFormat(logo) as any, x, y, wPt, cellH); } catch {}
   });
 }
 
@@ -290,8 +310,13 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   doc.line(M, blockY + 18, M + 172, blockY + 18);
   doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
   doc.text(`For ${company?.company_name || "StoneWorld Traders"} - Authorised Signatory`, M, blockY + 33);
-  drawCustomWatermark(doc, design?.watermarkText);
-  drawFooterBrandLogos(doc, design?.footerLogos, M);
+  drawCustomWatermark(doc, design?.watermarkText, design?.watermarkOpacity ?? 35, design?.watermarkLayer ?? "back");
+  drawFooterBrandLogos(doc, design?.footerLogos, M, {
+    rows: (design?.footerRows ?? 1) as 1 | 2 | 3,
+    logoHeightPx: design?.footerLogoSize ?? 36,
+    position: design?.footerPosition ?? "above-signature",
+    signatureY: blockY,
+  });
   drawStoneWorldFooter(doc, company, M);
   doc.save(`${String(no || result.kind).replace(/\s+/g, "_")}.pdf`);
 }

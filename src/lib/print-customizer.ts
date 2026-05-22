@@ -1,12 +1,19 @@
 export type PrintHeaderStyle = "classic" | "editorial" | "compact";
 export type PrintBodyLayout = "balanced" | "spacious" | "dense";
+export type PrintFooterPosition = "above-signature" | "page-bottom";
+export type PrintWatermarkLayer = "back" | "front";
 
 export type PrintDesign = {
   headerStyle: PrintHeaderStyle;
   bodyLayout: PrintBodyLayout;
   logoDataUrl?: string | null;
   watermarkText?: string;
+  watermarkOpacity: number;          // 0-100
+  watermarkLayer: PrintWatermarkLayer;
   footerLogos: string[];
+  footerRows: 1 | 2 | 3;             // arrangement of brand logos
+  footerLogoSize: number;            // uniform height in px (HTML) / pt (PDF scaled)
+  footerPosition: PrintFooterPosition;
 };
 
 export const DEFAULT_PRINT_DESIGN: PrintDesign = {
@@ -14,7 +21,12 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   bodyLayout: "balanced",
   logoDataUrl: null,
   watermarkText: "",
+  watermarkOpacity: 35,
+  watermarkLayer: "back",
   footerLogos: [],
+  footerRows: 1,
+  footerLogoSize: 36,
+  footerPosition: "above-signature",
 };
 
 const KEY = "stoneworld_print_design";

@@ -302,10 +302,15 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
             </div>
           ))}
         </div>
-        <div className="border-t p-3 grid grid-cols-[1fr_auto] items-center gap-2">
-          <Button variant="ghost" size="sm" className="justify-start gap-2 px-2 text-muted-foreground hover:text-foreground" onClick={onSignOut}>
-            <LogOut className="h-4 w-4" /> Sign out
-          </Button>
+        <div className="border-t p-3 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={onSignOut}
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md text-[12px] text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
+            aria-label="Sign out of your account"
+          >
+            <LogOut className="h-3.5 w-3.5" /> Sign out
+          </button>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
