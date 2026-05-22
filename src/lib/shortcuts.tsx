@@ -55,12 +55,12 @@ export function ShortcutsProvider({ children }: { children: React.ReactNode }) {
       // Global navigation
       const map: Record<string, string> = {
         h: "/app", s: "/app/sales", u: "/app/purchases", t: "/app/third-party",
-        q: "/app/quotations", d: "/app/deliveries", p: "/app/payments",
+        q: "/app/quotations", d: "/app/deliveries", p: "/app/bills",
         b: "/app/bills", l: "/app/lookup", x: "/app/expenses",
         i: "/app/stock", g: "/app/ledger", a: "/app/audit",
       };
       // r — open Receipt dialog on Payments
-      if (k === "r") { e.preventDefault(); navigate({ to: "/app/payments", search: { new: "in" } as any }); return; }
+      if (k === "r") { e.preventDefault(); navigate({ to: "/app/bills", search: { new: "in" } as any }); return; }
       if (map[k]) { e.preventDefault(); navigate({ to: map[k] as any }); }
     };
     window.addEventListener("keydown", onKey);
