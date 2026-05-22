@@ -446,6 +446,7 @@ function Dashboard() {
           <div className="text-sm font-medium tabular-nums">
             {new Date().toLocaleDateString(undefined, { day: "numeric", month: "short" })}
           </div>
+          {updatedAt && <div className="mt-0.5 text-[10px] text-muted-foreground">Updated {updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>}
         </div>
       </header>
 
@@ -496,7 +497,7 @@ function Dashboard() {
       </section>
 
       {/* ─────────── Section 2 · TRENDS — graphical view with filters ─────────── */}
-      <section className="rounded-3xl border border-border/70 bg-card overflow-hidden">
+      <section className="surface overflow-hidden">
         <div className="p-5 sm:p-7 space-y-5">
           {/* Top row: title + tap-to-lock pill */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -597,9 +598,7 @@ function Dashboard() {
               <Link
                 key={a.to}
                 to={a.to}
-                className={cn(
-                  "group rounded-2xl border border-border/70 bg-card p-4 sm:p-5 transition-all hover:border-foreground/30 hover:shadow-sm active:scale-[0.99]",
-                )}
+                  className="group surface p-4 sm:p-5 transition-all hover:border-foreground/30 hover:shadow-sm active:scale-[0.99]"
               >
                 <div className="flex items-center justify-between">
                   <div
@@ -648,7 +647,7 @@ function Dashboard() {
 
       {/* New-user tip — only first session */}
       {s && s.revenue === 0 && s.purchases === 0 && (
-        <section className="rounded-2xl border border-dashed border-border/70 p-4 flex items-start gap-3 bg-muted/20">
+        <section className="surface-muted border-dashed p-4 flex items-start gap-3">
           <div className="h-8 w-8 rounded-xl bg-background border grid place-items-center shrink-0">
             <Sparkles className="h-4 w-4 text-primary" />
           </div>
