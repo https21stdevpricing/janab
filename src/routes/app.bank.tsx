@@ -145,8 +145,8 @@ function BankPage() {
   return (
     <div>
       <PageHeader
-        title="Bank & cash"
-        description="Deposits, withdrawals and cheques between your cash drawer and bank"
+        title="Deposits"
+        description="Cash, bank, and cheque movements with pending clearance kept separate from account balances."
         actions={
           <>
             <Button size="sm" variant="outline" onClick={() => startNew("cash_deposit")}><ArrowDownToLine className="h-4 w-4" /> Cash deposit</Button>
@@ -170,7 +170,7 @@ function BankPage() {
       </div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-3">
-        <TabsList className="w-full sm:w-auto flex-wrap h-auto">
+        <TabsList className="scroll-tabs w-full justify-start sm:w-auto">
           <TabsTrigger value="all" className="flex-1 sm:flex-none">All</TabsTrigger>
           <TabsTrigger value="cash_deposit" className="flex-1 sm:flex-none">Deposits</TabsTrigger>
           <TabsTrigger value="cheque_deposit" className="flex-1 sm:flex-none">Cheques</TabsTrigger>
@@ -220,7 +220,7 @@ function BankPage() {
                 )}
 
                 {/* Bottom: status control + delete */}
-                <div className="mt-3 flex items-center gap-2 pt-2 border-t border-border/50">
+                <div className="mt-3 flex flex-col gap-2 border-t border-border/50 pt-2 sm:flex-row sm:items-center">
                   <Select value={st} onValueChange={(v) => changeStatus(r, v as Status)}>
                     <SelectTrigger className="h-8 flex-1 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
