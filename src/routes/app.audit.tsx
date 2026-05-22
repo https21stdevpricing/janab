@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
@@ -234,7 +234,7 @@ function AuditDetailPanel({
   selected: Row;
   entityLabel: Record<string, string>;
   actionTone: (a: string) => string;
-  ActionIcon: (props: { a: string }) => JSX.Element;
+  ActionIcon: (props: { a: string }) => ReactElement;
   restoring: Record<string, boolean>;
   onRestore: (id: string) => void;
 }) {
@@ -325,7 +325,7 @@ function AuditDetailPanel({
   );
 }
 
-function MetaRow({ icon, label, value }: { icon: JSX.Element; label: string; value: React.ReactNode }) {
+function MetaRow({ icon, label, value }: { icon: ReactElement; label: string; value: ReactNode }) {
   return (
     <div className="min-w-0">
       <dt className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold flex items-center gap-1">{icon}{label}</dt>
