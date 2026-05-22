@@ -392,23 +392,11 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
         onClickCapture={suppressClickAfterDrag}
       >
         {/* Drag handle + aligned header */}
-        <div
-          className="px-5 pt-2 pb-3 border-b select-none"
-        >
+        <div className="px-5 pt-2 pb-3 border-b select-none">
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted-foreground/30" />
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-base font-semibold tracking-tight">StoneWorld</div>
-              <div className="text-xs text-muted-foreground truncate">{email}</div>
-            </div>
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted active:scale-95 transition-all shrink-0"
-              aria-label="Close menu"
-            >
-              <X className="h-[18px] w-[18px]" />
-            </button>
+          <div className="min-w-0 text-center">
+            <div className="text-base font-semibold tracking-tight">StoneWorld</div>
+            <div className="text-xs text-muted-foreground truncate">{email}</div>
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain">
@@ -436,10 +424,18 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
             </div>
           ))}
         </div>
-        <div className="border-t p-3">
-          <Button variant="ghost" size="sm" className="w-full justify-center gap-2" onClick={onSignOut}>
+        <div className="border-t p-3 grid grid-cols-[1fr_auto] items-center gap-2">
+          <Button variant="ghost" size="sm" className="justify-start gap-2 px-2 text-muted-foreground hover:text-foreground" onClick={onSignOut}>
             <LogOut className="h-4 w-4" /> Sign out
           </Button>
+          <button
+            type="button"
+            onClick={() => onOpenChange(false)}
+            className="h-11 w-11 grid place-items-center rounded-full border bg-background shadow-sm active:scale-95 transition-transform"
+            aria-label="Close menu"
+          >
+            <X className="h-5 w-5" />
+          </button>
         </div>
       </SheetContent>
     </Sheet>
