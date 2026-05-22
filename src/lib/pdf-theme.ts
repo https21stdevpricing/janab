@@ -98,6 +98,18 @@ export function drawStoneWorldHeader(doc: jsPDF, company: PdfCompany | null | un
     doc.text(v, W - M, y, { align: "right" });
   });
 
+  const qr = design?.qrPlacement === "header" ? design?.qrCodeDataUrl : null;
+  const barcode = design?.barcodePlacement === "header" ? design?.barcodeDataUrl : null;
+  if (qr || barcode) {
+    const yCode = top + 82;
+    if (qr) {
+      try { doc.addImage(qr, imageFormat(qr) as any, W - M - 42, yCode - 18, 42, 42); } catch {}
+    }
+    if (barcode) {
+      try { doc.addImage(barcode, imageFormat(barcode) as any, W - M - 180, yCode - 10, 126, 24); } catch {}
+    }
+  }
+
   // Thin double rule (hairline + teal accent)
   doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
   doc.line(M, 110, W - M, 110);
