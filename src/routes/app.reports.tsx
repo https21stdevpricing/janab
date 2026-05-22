@@ -81,7 +81,9 @@ function ReportsPage() {
     const [ledger, prods, salesLines, purchaseLines, purchaseLots, assets, pay, allocs, settings] =
       await Promise.all([
         fetchAllPages((from, to) =>
-          paged(supabase.from("ledger_view").select("*").eq("user_id", auth.user.id).range(from, to)),
+          paged(
+            supabase.from("ledger_view").select("*").eq("user_id", auth.user.id).range(from, to),
+          ),
         ),
         fetchAllPages((from, to) =>
           paged(
@@ -92,7 +94,9 @@ function ReportsPage() {
               .range(from, to),
           ),
         ),
-        fetchAllPages((from, to) => paged(supabase.from("sale_items").select("product_id,qty").range(from, to))),
+        fetchAllPages((from, to) =>
+          paged(supabase.from("sale_items").select("product_id,qty").range(from, to)),
+        ),
         fetchAllPages((from, to) =>
           paged(supabase.from("purchase_items").select("product_id,qty,rate").range(from, to)),
         ),
@@ -104,10 +108,19 @@ function ReportsPage() {
               .range(from, to),
           ),
         ),
-        fetchAllPages((from, to) => paged((supabase as any).from("fixed_assets").select("*").range(from, to))),
-        fetchAllPages((from, to) => paged(supabase.from("payments").select("id,amount,direction").range(from, to))),
         fetchAllPages((from, to) =>
-          paged((supabase as any).from("payment_allocations").select("payment_id,amount").range(from, to)),
+          paged((supabase as any).from("fixed_assets").select("*").range(from, to)),
+        ),
+        fetchAllPages((from, to) =>
+          paged(supabase.from("payments").select("id,amount,direction").range(from, to)),
+        ),
+        fetchAllPages((from, to) =>
+          paged(
+            (supabase as any)
+              .from("payment_allocations")
+              .select("payment_id,amount")
+              .range(from, to),
+          ),
         ),
         (supabase as any).from("settings").select("cogs_method").maybeSingle(),
       ]);
