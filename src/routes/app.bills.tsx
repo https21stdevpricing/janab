@@ -375,7 +375,7 @@ function BillsPage() {
       />
 
       {/* Top KPIs — always visible across all tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-3">
         <KpiTile label="Receivable" sub={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "On track"}
           value={inr(kpis.recv)} tone="good" onClick={() => setTab("receivable")} active={tab === "receivable"} />
         <KpiTile label="Payable" sub={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "On track"}
@@ -395,7 +395,7 @@ function BillsPage() {
       </Tabs>
 
       {tab !== "history" && (
-      <div className="grid grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <MiniBucket label="0–30 d" value={totals.b1} />
         <MiniBucket label="31–60 d" value={totals.b2} tone="warn" />
         <MiniBucket label="61–90 d" value={totals.b3} tone="warn" />
