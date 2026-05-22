@@ -45,38 +45,42 @@ function ReportsPage() {
   const [allocations, setAllocations] = useState<any[]>([]);
   const [reportTab, setReportTab] = useState("outlook");
 
-  useEffect(() => {
-    const loadAll = () => {
-      supabase.from("ledger_view").select("*").then(({ data }) => setRows(data ?? []));
-      supabase.from("products").select("id,name,kind,opening_stock,purchase_rate,sale_rate,hsn").then(({ data }) => setProducts(data ?? []));
-      supabase.from("sale_items").select("product_id,qty").then(({ data }) => setSaleItems(data ?? []));
-      supabase.from("purchase_items").select("product_id,qty,rate").then(({ data }) => setPurchaseItems(data ?? []));
-      (supabase as any).from("purchase_items").select("product_id,qty,rate,purchases!inner(date)").then(({ data }: any) => setPurchaseHdr(data ?? []));
-      (supabase as any).from("fixed_assets").select("*").then(({ data }: any) => setFixedAssets(data ?? []));
-      supabase.from("payments").select("id,amount,direction").then(({ data }) => setPayments(data ?? []));
-      (supabase as any).from("payment_allocations").select("payment_id,amount").then(({ data }: any) => setAllocations(data ?? []));
-      (supabase as any).from("settings").select("cogs_method").maybeSingle().then(({ data }: any) => {
-        if (data?.cogs_method) setCogsMethod(data.cogs_method);
-      });
-    };
-    let refreshTimer: number | undefined;
-    const scheduleLoad = () => {
-      window.clearTimeout(refreshTimer);
-      refreshTimer = window.setTimeout(loadAll, 180);
-    };
-    loadAll();
-    const ch = supabase.channel("reports-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "journal_lines" }, scheduleLoad)
-      .on("postgres_changes", { event: "*", schema: "public", table: "journal_entries" }, scheduleLoad)
-      .on("postgres_changes", { event: "*", schema: "public", table: "sale_items" }, scheduleLoad)
-      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_items" }, scheduleLoad)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, scheduleLoad)
-      .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, scheduleLoad)
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, scheduleLoad)
-      .on("postgres_changes", { event: "*", schema: "public", table: "fixed_assets" }, scheduleLoad)
-      .subscribe();
-    return () => { window.clearTimeout(refreshTimer); supabase.removeChannel(ch); };
+  const loadAll = useCallback(async () => {
+    const { data: auth, error: authError } = await supabase.auth.getUser();
+    if (authError || !auth.user) {
+      setRows([]); setProducts([]); setSaleItems([]); setPurchaseItems([]); setPurchaseHdr([]); setFixedAssets([]); setPayments([]); setAllocations([]);
+      return;
+    }
+
+    const [ledger, prods, salesLines, purchaseLines, purchaseLots, assets, pay, allocs, settings] = await Promise.all([
+      supabase.from("ledger_view").select("*").eq("user_id", auth.user.id),
+      supabase.from("products").select("id,name,kind,opening_stock,purchase_rate,sale_rate,hsn").order("name"),
+      supabase.from("sale_items").select("product_id,qty"),
+      supabase.from("purchase_items").select("product_id,qty,rate"),
+      (supabase as any).from("purchase_items").select("product_id,qty,rate,purchases!inner(date)"),
+      (supabase as any).from("fixed_assets").select("*"),
+      supabase.from("payments").select("id,amount,direction"),
+      (supabase as any).from("payment_allocations").select("payment_id,amount"),
+      (supabase as any).from("settings").select("cogs_method").maybeSingle(),
+    ]);
+
+    const firstError = [ledger, prods, salesLines, purchaseLines, purchaseLots, assets, pay, allocs, settings].find((r: any) => r.error)?.error;
+    if (firstError) throw firstError;
+    setRows(ledger.data ?? []);
+    setProducts(prods.data ?? []);
+    setSaleItems(salesLines.data ?? []);
+    setPurchaseItems(purchaseLines.data ?? []);
+    setPurchaseHdr(purchaseLots.data ?? []);
+    setFixedAssets(assets.data ?? []);
+    setPayments(pay.data ?? []);
+    setAllocations(allocs.data ?? []);
+    if (settings.data?.cogs_method) setCogsMethod(settings.data.cogs_method);
   }, []);
+  const { isLive, isRefreshing, lastSyncedAt, lastError, refresh } = useLiveSync({
+    channelName: "reports-live",
+    tables: REPORTS_LIVE_TABLES,
+    load: loadAll,
+  });
 
   const saveCogsMethod = async (m: "weighted_average" | "fifo") => {
     setCogsMethod(m);
