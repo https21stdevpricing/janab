@@ -204,8 +204,8 @@ function SettingsSection({
 }: {
   title: string;
   description?: string;
-  icon?: React.ReactNode;
-  action?: React.ReactNode;
+  icon?: ReactNode;
+  action?: ReactNode;
   children: ReactNode;
 }) {
   return (
