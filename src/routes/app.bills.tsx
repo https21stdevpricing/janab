@@ -762,6 +762,21 @@ function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; 
   );
 }
 
+function HeroCell({ label, value, tone, active, onClick }: { label: string; value: string; tone?: "good" | "bad"; active?: boolean; onClick?: () => void }) {
+  const clr = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "text-foreground";
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className={`text-left px-3 py-3 sm:px-4 sm:py-4 transition-colors ${onClick ? "hover:bg-muted/40 active:bg-muted/60" : ""} ${active ? "bg-primary/5" : ""}`}
+    >
+      <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{label}</div>
+      <div className={`mt-1 font-semibold tabular-nums leading-tight text-[15px] sm:text-lg ${clr}`} style={{ wordBreak: "break-word" }}>{value}</div>
+    </button>
+  );
+}
+
 function MiniBucket({ label, value, tone }: { label: string; value: number; tone?: "warn" | "bad" }) {
   const clr = tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : "text-foreground";
   return (
