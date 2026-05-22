@@ -146,7 +146,7 @@ function BankPage() {
     const { error } = await supabase.from("bank_transfers" as never)
       .update({ status, cleared: nextCleared, cleared_at: nextCleared ? todayISO() : null } as never).eq("id" as never, r.id);
     if (error) toast.error(error.message);
-    else { toast.success(status === "cleared" ? "Marked cleared" : status === "bounced" ? "Marked bounced" : "Set to pending"); load(); }
+    else { toast.success(status === "cleared" ? "Marked cleared" : status === "bounced" ? "Marked bounced" : "Set to pending"); setViewRow(viewRow?.id === r.id ? { ...r, status, cleared: nextCleared, cleared_at: nextCleared ? todayISO() : null } : viewRow); load(); }
   };
 
   return (
