@@ -185,7 +185,7 @@ export function KpiGrid({
     cols === 4
       ? "grid-cols-2 md:grid-cols-4"
       : cols === 3
-        ? "grid-cols-[repeat(3,minmax(136px,1fr))] overflow-x-auto no-scrollbar snap-x"
+        ? "grid-cols-3"
         : "grid-cols-2";
   return <div className={cn("grid gap-2.5 max-w-full min-w-0", grid, className)}>{children}</div>;
 }
