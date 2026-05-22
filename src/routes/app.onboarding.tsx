@@ -4,10 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/page-header";
 import { inr, todayISO } from "@/lib/format";
 import { toast } from "sonner";
-import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText } from "lucide-react";
+import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X } from "lucide-react";
 
 export const Route = createFileRoute("/app/onboarding")({
   component: OnboardingPage,
@@ -18,15 +19,22 @@ export const Route = createFileRoute("/app/onboarding")({
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
+type Partner = { name: string; share: number; pan?: string };
+
 function OnboardingPage() {
   const nav = useNavigate();
   const [step, setStep] = useState<Step>(1);
   const [busy, setBusy] = useState(false);
 
-  // Step 1 — business info
-  const [biz, setBiz] = useState({ company_name: "", gstin: "", state: "Rajasthan", phone: "", email: "", address: "" });
+  // Step 1 — business identity (legal + tax)
+  const [biz, setBiz] = useState({
+    company_name: "", business_type: "proprietorship", owner_name: "",
+    pan: "", gstin: "", state: "Rajasthan", phone: "", email: "", address: "",
+  });
+  const [partners, setPartners] = useState<Partner[]>([]);
 
-  // Step 2 — opening balances
+  // Step 2 — bank + opening cash/bank
+  const [bank, setBank] = useState({ bank_name: "", bank_account_no: "", bank_ifsc: "" });
   const [cashOpen, setCashOpen] = useState(0);
   const [bankOpen, setBankOpen] = useState(0);
 
@@ -37,9 +45,19 @@ function OnboardingPage() {
     (async () => {
       const { data: st } = await supabase.from("settings").select("*").maybeSingle();
       if (st) setBiz({
-        company_name: st.company_name ?? "", gstin: st.gstin ?? "", state: st.state ?? "Rajasthan",
+        company_name: st.company_name ?? "",
+        business_type: (st as any).business_type ?? "proprietorship",
+        owner_name: (st as any).owner_name ?? "",
+        pan: (st as any).pan ?? "",
+        gstin: st.gstin ?? "", state: st.state ?? "Rajasthan",
         phone: st.phone ?? "", email: st.email ?? "", address: st.address ?? "",
       });
+      if (st) setBank({
+        bank_name: (st as any).bank_name ?? "",
+        bank_account_no: (st as any).bank_account_no ?? "",
+        bank_ifsc: (st as any).bank_ifsc ?? "",
+      });
+      if (st && Array.isArray((st as any).partners)) setPartners((st as any).partners as Partner[]);
       const { data: ps } = await supabase.from("products").select("opening_stock,purchase_rate");
       const osv = (ps ?? []).reduce((a: number, p: any) => a + Number(p.opening_stock || 0) * Number(p.purchase_rate || 0), 0);
       const { data: cs } = await supabase.from("contacts").select("type,opening_balance");
@@ -49,13 +67,35 @@ function OnboardingPage() {
     })();
   }, []);
 
+  const validatePAN = (p: string) => !p || /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(p.toUpperCase());
+  const validateGSTIN = (g: string) => !g || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]{3}$/.test(g.toUpperCase());
+  const validateIFSC = (i: string) => !i || /^[A-Z]{4}0[A-Z0-9]{6}$/.test(i.toUpperCase());
+  const needsPartners = biz.business_type === "partnership" || biz.business_type === "llp";
+
   const saveBiz = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
     if (!biz.company_name.trim()) { toast.error("Company name is required"); return; }
-    const { error } = await supabase.from("settings").upsert({ user_id: user.id, ...biz } as never, { onConflict: "user_id" } as never);
+    if (!biz.owner_name.trim() && !needsPartners) { toast.error("Owner / proprietor name is required"); return; }
+    if (!validatePAN(biz.pan)) { toast.error("PAN looks invalid (e.g. ABCDE1234F)"); return; }
+    if (!validateGSTIN(biz.gstin)) { toast.error("GSTIN looks invalid (15 chars)"); return; }
+    if (needsPartners && partners.length < 2) { toast.error("Partnership/LLP needs at least 2 partners"); return; }
+    if (needsPartners) {
+      const total = partners.reduce((a, p) => a + Number(p.share || 0), 0);
+      if (Math.abs(total - 100) > 0.01) { toast.error(`Partner shares must total 100% (currently ${total}%)`); return; }
+    }
+    const payload: any = { user_id: user.id, ...biz, partners };
+    const { error } = await supabase.from("settings").upsert(payload as never, { onConflict: "user_id" } as never);
     if (error) { toast.error(error.message); return; }
     setStep(2);
+  };
+
+  const saveBank = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    if (bank.bank_ifsc && !validateIFSC(bank.bank_ifsc)) { toast.error("IFSC looks invalid (e.g. HDFC0001234)"); return; }
+    await supabase.from("settings").update({ ...bank } as never).eq("user_id" as never, user.id);
+    setStep(3);
   };
 
   const finish = async () => {
@@ -66,7 +106,6 @@ function OnboardingPage() {
       // Mark onboarding done; opening balances are posted only if user provided
       const hasAny = cashOpen > 0 || bankOpen > 0 || counts.openingStockValue > 0 || counts.recv > 0 || counts.pay > 0;
       if (hasAny) {
-        const date = todayISO();
         // Use yesterday so it sits before normal txns
         const d = new Date(); d.setDate(d.getDate() - 1);
         const yday = d.toISOString().slice(0, 10);
@@ -87,15 +126,17 @@ function OnboardingPage() {
         };
         if (cashOpen > 0) push("Cash", cashOpen, 0);
         if (bankOpen > 0) push("Bank", bankOpen, 0);
-        if (counts.openingStockValue > 0) push("Inventory", counts.openingStockValue, 0);
+        // Note: opening inventory is auto-balanced on the Balance Sheet via
+        // "Opening Capital" — no journal needed (avoids double-counting with
+        // the inventory valuation engine that reads products.opening_stock).
         if (counts.recv > 0) push("Accounts Receivable", counts.recv, 0);
         if (counts.pay > 0)  push("Accounts Payable", 0, counts.pay);
 
         const totalDr = lines.reduce((a, l) => a + l.debit, 0);
         const totalCr = lines.reduce((a, l) => a + l.credit, 0);
-        const equity = totalDr - totalCr; // positive = credit equity to balance
-        if (equity > 0) push("Opening Balance Equity", 0, equity);
-        else if (equity < 0) push("Opening Balance Equity", -equity, 0);
+        const equity = totalDr - totalCr; // positive = credit owner's capital to balance
+        if (equity > 0) push("Owner's Capital", 0, equity);
+        else if (equity < 0) push("Owner's Capital", -equity, 0);
 
         const { error: lErr } = await supabase.from("journal_lines").insert(lines as never);
         if (lErr) throw lErr;
@@ -132,15 +173,58 @@ function OnboardingPage() {
       <div className="rounded-2xl border bg-card p-6 sm:p-8 space-y-5">
         {step === 1 && (
           <>
-            <Header n={1} title="Your business" hint="Goes on invoices, quotes and reports." />
+            <Header n={1} title="Your business" hint="Legal identity for invoices, GST returns and reports." icon={Building2} />
             <div className="grid sm:grid-cols-2 gap-3">
               <Field label="Company name *"><Input value={biz.company_name} onChange={e => setBiz({ ...biz, company_name: e.target.value })} placeholder="StoneWorld Marble" /></Field>
+              <Field label="Business type *">
+                <Select value={biz.business_type} onValueChange={v => setBiz({ ...biz, business_type: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="proprietorship">Sole Proprietorship</SelectItem>
+                    <SelectItem value="partnership">Partnership</SelectItem>
+                    <SelectItem value="llp">LLP</SelectItem>
+                    <SelectItem value="pvtltd">Private Limited</SelectItem>
+                    <SelectItem value="public">Public Limited</SelectItem>
+                    <SelectItem value="huf">HUF</SelectItem>
+                  </SelectContent>
+                </Select>
+              </Field>
+              {!needsPartners && (
+                <Field label="Proprietor name *"><Input value={biz.owner_name} onChange={e => setBiz({ ...biz, owner_name: e.target.value })} placeholder="Full legal name" /></Field>
+              )}
+              <Field label="PAN"><Input value={biz.pan} onChange={e => setBiz({ ...biz, pan: e.target.value.toUpperCase() })} placeholder="ABCDE1234F" maxLength={10} /></Field>
               <Field label="GSTIN"><Input value={biz.gstin} onChange={e => setBiz({ ...biz, gstin: e.target.value })} placeholder="08AAAAA0000A1Z5" /></Field>
               <Field label="State"><Input value={biz.state} onChange={e => setBiz({ ...biz, state: e.target.value })} /></Field>
               <Field label="Phone"><Input value={biz.phone} onChange={e => setBiz({ ...biz, phone: e.target.value })} /></Field>
               <Field label="Email"><Input value={biz.email} onChange={e => setBiz({ ...biz, email: e.target.value })} /></Field>
-              <Field label="Address"><Input value={biz.address} onChange={e => setBiz({ ...biz, address: e.target.value })} /></Field>
+              <div className="sm:col-span-2"><Field label="Address"><Input value={biz.address} onChange={e => setBiz({ ...biz, address: e.target.value })} /></Field></div>
             </div>
+
+            {needsPartners && (
+              <div className="rounded-lg border p-3 space-y-2 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm font-medium">Partners ({biz.business_type === "llp" ? "LLP" : "Partnership"})</div>
+                  <Button size="sm" variant="outline" onClick={() => setPartners([...partners, { name: "", share: 0 }])}><Plus className="h-3.5 w-3.5" /> Add partner</Button>
+                </div>
+                {partners.length === 0 && <div className="text-xs text-muted-foreground">Add at least 2 partners. Shares must total 100%.</div>}
+                {partners.map((p, i) => (
+                  <div key={i} className="grid grid-cols-[1fr_80px_110px_auto] gap-2 items-end">
+                    <Field label={i === 0 ? "Name" : ""}><Input value={p.name} onChange={e => { const c = [...partners]; c[i] = { ...c[i], name: e.target.value }; setPartners(c); }} /></Field>
+                    <Field label={i === 0 ? "Share %" : ""}><Input type="number" value={p.share} onChange={e => { const c = [...partners]; c[i] = { ...c[i], share: +e.target.value }; setPartners(c); }} /></Field>
+                    <Field label={i === 0 ? "PAN" : ""}><Input value={p.pan ?? ""} onChange={e => { const c = [...partners]; c[i] = { ...c[i], pan: e.target.value.toUpperCase() }; setPartners(c); }} maxLength={10} /></Field>
+                    <Button size="icon" variant="ghost" onClick={() => setPartners(partners.filter((_, j) => j !== i))}><X className="h-4 w-4" /></Button>
+                  </div>
+                ))}
+                {partners.length > 0 && (
+                  <div className="text-[11px] text-muted-foreground">
+                    Total share: <span className={Math.abs(partners.reduce((a, p) => a + Number(p.share || 0), 0) - 100) < 0.01 ? "text-primary font-medium" : "text-destructive font-medium"}>
+                      {partners.reduce((a, p) => a + Number(p.share || 0), 0)}%
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
             <Foot>
               <Button variant="ghost" onClick={skip}>Skip setup</Button>
               <Button onClick={saveBiz}>Next <ArrowRight className="h-4 w-4" /></Button>
@@ -150,15 +234,24 @@ function OnboardingPage() {
 
         {step === 2 && (
           <>
-            <Header n={2} title="Opening cash & bank" hint="How much you have on hand today. Leave blank for zero." />
+            <Header n={2} title="Bank & cash" hint="Your primary bank account plus opening balances. Used on invoices and bank reconciliation." icon={Landmark} />
+            <div className="rounded-lg border p-3 bg-muted/10 space-y-3">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Primary bank account</div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <Field label="Bank name"><Input value={bank.bank_name} onChange={e => setBank({ ...bank, bank_name: e.target.value })} placeholder="HDFC Bank" /></Field>
+                <Field label="Account number"><Input value={bank.bank_account_no} onChange={e => setBank({ ...bank, bank_account_no: e.target.value })} /></Field>
+                <Field label="IFSC"><Input value={bank.bank_ifsc} onChange={e => setBank({ ...bank, bank_ifsc: e.target.value.toUpperCase() })} placeholder="HDFC0001234" maxLength={11} /></Field>
+              </div>
+            </div>
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide pt-1">Opening balances</div>
             <div className="grid sm:grid-cols-2 gap-3">
               <Field label="Cash on hand (₹)"><Input type="number" value={cashOpen} onChange={e => setCashOpen(+e.target.value)} /></Field>
               <Field label="Bank balance (₹)"><Input type="number" value={bankOpen} onChange={e => setBankOpen(+e.target.value)} /></Field>
             </div>
-            <Note>These post as a single "Opening balances" journal voucher dated yesterday. Your trial balance will start balanced.</Note>
+            <Note>These post as a single "Opening balances" journal voucher dated yesterday with Owner's Capital as the matching credit. Your trial balance stays balanced.</Note>
             <Foot>
               <Button variant="ghost" onClick={() => setStep(1)}><ArrowLeft className="h-4 w-4" /> Back</Button>
-              <Button onClick={() => setStep(3)}>Next <ArrowRight className="h-4 w-4" /></Button>
+              <Button onClick={saveBank}>Next <ArrowRight className="h-4 w-4" /></Button>
             </Foot>
           </>
         )}
