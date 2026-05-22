@@ -18,6 +18,12 @@ import { useDraft } from "@/hooks/use-draft";
 
 export const Route = createFileRoute("/app/bank")({ component: BankPage });
 
+function StatusPill({ status }: { status: "pending" | "cleared" | "bounced" }) {
+  if (status === "cleared") return <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-400">✓ Cleared</Badge>;
+  if (status === "bounced") return <Badge variant="outline" className="text-[10px] border-destructive/50 text-destructive">✗ Bounced</Badge>;
+  return <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">⏳ Pending</Badge>;
+}
+
 type Kind = "cash_deposit" | "cash_withdrawal" | "cheque_deposit";
 type Status = "pending" | "cleared" | "bounced";
 type Row = {
