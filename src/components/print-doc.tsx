@@ -362,6 +362,9 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                     <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadQr(e.target.files?.[0])} />
                   </label>
                 )}
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.qrPlacement} onChange={(e) => updateDesign({ ...design, qrPlacement: e.target.value as PrintCodePlacement })} disabled={design.qrMode === "off"}>
+                  {(Object.keys(codePlacementLabels) as PrintCodePlacement[]).map((key) => <option key={key} value={key}>{codePlacementLabels[key]}</option>)}
+                </select>
               </label>
               <label className="flex flex-col gap-1">
                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Barcode</span>
@@ -377,6 +380,9 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                     <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadBarcode(e.target.files?.[0])} />
                   </label>
                 )}
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.barcodePlacement} onChange={(e) => updateDesign({ ...design, barcodePlacement: e.target.value as PrintCodePlacement })} disabled={design.barcodeMode === "off"}>
+                  {(Object.keys(codePlacementLabels) as PrintCodePlacement[]).map((key) => <option key={key} value={key}>{codePlacementLabels[key]}</option>)}
+                </select>
               </label>
               <label className="sm:col-span-2 flex items-center gap-2 text-[11px]">
                 <span className="w-28 text-muted-foreground">Signatory name</span>
