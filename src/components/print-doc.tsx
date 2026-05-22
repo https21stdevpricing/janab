@@ -9,6 +9,7 @@ import { lookupDocById } from "@/lib/doc-lookup";
 import { amountInWords } from "@/lib/amount-words";
 import { DEFAULT_PRINT_DESIGN, fileToDataUrl, loadPrintDesign, savePrintDesign, type PrintDesign } from "@/lib/print-customizer";
 import { digitalCopyUrl, generateBarcodeDataUrl, generateQrDataUrl, upiPayString } from "@/lib/doc-codes";
+import { stateWithCode } from "@/lib/india-states";
 
 export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }) {
   const [doc, setDoc] = useState<any>(null);
@@ -51,6 +52,24 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const title = kind === "invoice" ? "Tax Invoice" : "Quotation";
   const address = [company?.address, company?.state].filter(Boolean).join(", ");
   const partyAddress = [buyer?.address, buyer?.state].filter(Boolean).join(", ");
+  const shipToText = (design.shipToOverride?.trim() || partyAddress || "Same as Bill-To");
+
+  // HSN/SAC-wise tax summary (Tally style). Groups item taxable value and
+  // splits CGST/SGST (intra-state) or IGST (inter-state) per HSN row.
+  const hsnSummary = useMemo(() => {
+    const map = new Map<string, { hsn: string; taxable: number; rate: number; tax: number }>();
+    for (const it of items) {
+      const hsn = String((it as any).hsn ?? (it as any).hsn_code ?? "—");
+      const taxable = Number(it.qty || 0) * Number(it.rate || 0);
+      const rate = Number(it.gst_pct ?? 0);
+      const tax = taxable * rate / 100;
+      const key = `${hsn}|${rate}`;
+      const prev = map.get(key);
+      if (prev) { prev.taxable += taxable; prev.tax += tax; }
+      else map.set(key, { hsn, taxable, rate, tax });
+    }
+    return Array.from(map.values());
+  }, [items]);
 
   // -----------------------------------------------------------------
   // Auto-generated codes (QR for digital copy / UPI pay, Code-128 barcode).
