@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
-import { ExternalLink, RotateCcw, Search, Plus, Pencil, Trash2, Clock, ListMusic, FileText, Hash, User as UserIcon } from "lucide-react";
+import { ExternalLink, RotateCcw, Search, Plus, Pencil, Trash2, Clock, FileText, Hash, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/audit")({ component: AuditPage });
