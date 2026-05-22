@@ -11,11 +11,12 @@ export type PdfRgb = [number, number, number];
 export const swPdf = {
   teal: [0, 171, 181] as PdfRgb,
   tealDark: [0, 126, 135] as PdfRgb,
-  ink: [18, 24, 38] as PdfRgb,
-  muted: [86, 96, 112] as PdfRgb,
-  faint: [235, 240, 244] as PdfRgb,
-  soft: [244, 252, 253] as PdfRgb,
-  rule: [214, 222, 230] as PdfRgb,
+  ink: [17, 22, 33] as PdfRgb,
+  inkSoft: [55, 64, 80] as PdfRgb,
+  muted: [110, 120, 134] as PdfRgb,
+  faint: [232, 236, 242] as PdfRgb,
+  soft: [248, 250, 252] as PdfRgb,
+  rule: [220, 226, 234] as PdfRgb,
 };
 
 export type PdfCompany = {
@@ -25,6 +26,11 @@ export type PdfCompany = {
   email?: string | null;
   gstin?: string | null;
   state?: string | null;
+  pan?: string | null;
+  owner_name?: string | null;
+  bank_name?: string | null;
+  bank_account_no?: string | null;
+  bank_ifsc?: string | null;
 };
 
 export type PdfDocMeta = {
@@ -50,43 +56,53 @@ export function newStoneWorldPdf() {
 
 export function drawStoneWorldHeader(doc: jsPDF, company: PdfCompany | null | undefined, meta: PdfDocMeta, top = 30, design?: Partial<PrintDesign>) {
   const W = doc.internal.pageSize.getWidth();
-  const M = 34;
+  const M = 36;
   const co = company ?? {};
   const name = co.company_name || "StoneWorld Traders";
 
+  // Minimal, editorial-style header. Thin teal accent rule only.
   doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, W, 124, "F");
-  doc.setFillColor(...swPdf.teal);
-  doc.rect(0, 0, W, 7, "F");
+  doc.rect(0, 0, W, 130, "F");
 
-  try { doc.addImage(design?.logoDataUrl || swLogo, imageFormat(design?.logoDataUrl) as any, M, top + 7, 54, 54); } catch {}
-
-  doc.setFont("helvetica", "bold").setFontSize(20).setTextColor(...swPdf.ink);
-  doc.text(name, M + 68, top + 29, { maxWidth: 255 });
-  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...swPdf.muted);
-  const address = [co.address, co.state].filter(Boolean).join(", ");
-  const addressLines = address ? doc.splitTextToSize(address, 275).slice(0, 2) : [];
-  if (addressLines.length) doc.text(addressLines, M + 68, top + 44);
-  const contactLine = [co.phone && `Ph: ${co.phone}`, co.email, co.gstin && `GSTIN: ${co.gstin}`].filter(Boolean).join("  |  ");
-  if (contactLine) doc.text(doc.splitTextToSize(contactLine, 360).slice(0, 1), M + 68, top + 66);
-
-  doc.setFont("helvetica", "bold").setFontSize(24).setTextColor(...swPdf.ink);
-  doc.text(meta.title.toUpperCase(), W - M, top + 28, { align: "right" });
+  // Big title on the right, very tight letter spacing
+  doc.setFont("helvetica", "bold").setFontSize(22).setTextColor(...swPdf.ink);
+  doc.text(meta.title.toUpperCase(), W - M, top + 14, { align: "right" });
   if (meta.subtitle) {
-    doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.tealDark);
-    doc.text(String(meta.subtitle).toUpperCase(), W - M, top + 45, { align: "right", maxWidth: 190 });
+    doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
+    doc.text(String(meta.subtitle).toUpperCase(), W - M, top + 28, { align: "right" });
   }
-  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...swPdf.muted);
-  const metaLines = [
-    meta.reference ? `Ref: ${meta.reference}` : null,
-    meta.date ? `Date: ${fmtDate(meta.date)}` : null,
-    meta.validUntil ? `Valid until: ${fmtDate(meta.validUntil)}` : null,
-  ].filter(Boolean) as string[];
-  metaLines.slice(0, 3).forEach((line, index) => doc.text(line, W - M, top + 61 + index * 12, { align: "right" }));
 
-  doc.setDrawColor(...swPdf.rule).setLineWidth(0.6);
-  doc.line(M, 116, W - M, 116);
-  return { margin: M, y: 136 };
+  // Logo + company block (left)
+  try { doc.addImage(design?.logoDataUrl || swLogo, imageFormat(design?.logoDataUrl) as any, M, top, 46, 46); } catch {}
+  doc.setFont("helvetica", "bold").setFontSize(14).setTextColor(...swPdf.ink);
+  doc.text(name, M + 58, top + 14, { maxWidth: 280 });
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.inkSoft);
+  const address = [co.address, co.state].filter(Boolean).join(", ");
+  const addressLines = address ? doc.splitTextToSize(address, 290).slice(0, 2) : [];
+  if (addressLines.length) doc.text(addressLines, M + 58, top + 27);
+  const contactLine = [co.phone && `Tel: ${co.phone}`, co.email, co.gstin && `GSTIN ${co.gstin}`, co.pan && `PAN ${co.pan}`].filter(Boolean).join("   ·   ");
+  if (contactLine) doc.text(doc.splitTextToSize(contactLine, 290).slice(0, 2), M + 58, top + (addressLines.length > 1 ? 49 : 41));
+
+  // Meta lines under title
+  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...swPdf.inkSoft);
+  const metaLines: Array<[string, string]> = [];
+  if (meta.reference) metaLines.push(["No.", String(meta.reference)]);
+  if (meta.date) metaLines.push(["Date", fmtDate(meta.date)]);
+  if (meta.validUntil) metaLines.push(["Valid", fmtDate(meta.validUntil)]);
+  metaLines.slice(0, 3).forEach(([k, v], i) => {
+    const y = top + 44 + i * 12;
+    doc.setFont("helvetica", "normal").setTextColor(...swPdf.muted);
+    doc.text(k, W - M - 110, y);
+    doc.setFont("helvetica", "bold").setTextColor(...swPdf.ink);
+    doc.text(v, W - M, y, { align: "right" });
+  });
+
+  // Thin double rule (hairline + teal accent)
+  doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
+  doc.line(M, 110, W - M, 110);
+  doc.setDrawColor(...swPdf.teal).setLineWidth(1.4);
+  doc.line(M, 114, M + 64, 114);
+  return { margin: M, y: 134 };
 }
 
 export function drawStoneWorldFooter(doc: jsPDF, company: PdfCompany | null | undefined, margin = 34) {
@@ -104,20 +120,32 @@ export function drawStoneWorldFooter(doc: jsPDF, company: PdfCompany | null | un
   }
 }
 
-export function drawCustomWatermark(doc: jsPDF, text?: string | null, opacityPct: number = 35, layer: "back" | "front" = "back") {
-  if (!text) return;
+export function drawCustomWatermark(doc: jsPDF, text?: string | null, opacityPct: number = 35, layer: "back" | "front" = "back", logoDataUrl?: string | null, logoScalePct: number = 55) {
+  if (!text && !logoDataUrl) return;
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const pageCount = doc.getNumberOfPages();
   const alpha = Math.max(0, Math.min(100, opacityPct)) / 100;
-  // jsPDF text gray ≈ 255*(1-alpha) gives "back" feel for back layer.
-  const gray = Math.round(255 - alpha * 200);
+  const supportsGState = typeof (doc as any).GState === "function";
   for (let page = 1; page <= pageCount; page++) {
     doc.setPage(page);
-    doc.setFont("helvetica", "bold").setFontSize(64).setTextColor(gray, gray, gray);
-    // Note: jsPDF lacks z-ordering; "front" is approximated by stronger contrast.
-    if (layer === "front") doc.setTextColor(Math.max(0, gray - 60), Math.max(0, gray - 60), Math.max(0, gray - 60));
-    doc.text(String(text).toUpperCase().slice(0, 24), W / 2, H / 2, { align: "center", angle: -28 });
+    if (supportsGState) {
+      const gs = new (doc as any).GState({ opacity: alpha });
+      (doc as any).setGState(gs);
+    }
+    if (logoDataUrl) {
+      const size = Math.max(120, Math.min(W - 80, (W * Math.max(20, Math.min(90, logoScalePct))) / 100));
+      try { doc.addImage(logoDataUrl, imageFormat(logoDataUrl) as any, (W - size) / 2, (H - size) / 2, size, size); } catch {}
+    }
+    if (text) {
+      const gray = supportsGState ? 90 : Math.round(255 - alpha * 200);
+      doc.setFont("helvetica", "bold").setFontSize(72).setTextColor(gray, gray, gray);
+      if (!supportsGState && layer === "front") doc.setTextColor(Math.max(0, gray - 60), Math.max(0, gray - 60), Math.max(0, gray - 60));
+      doc.text(String(text).toUpperCase().slice(0, 24), W / 2, H / 2, { align: "center", angle: -26 });
+    }
+    if (supportsGState) {
+      (doc as any).setGState(new (doc as any).GState({ opacity: 1 }));
+    }
   }
 }
 
@@ -160,72 +188,91 @@ export function ensurePdfSpace(doc: jsPDF, y: number, needed: number, margin = 3
 }
 
 export function drawKeyValuePanel(doc: jsPDF, x: number, y: number, w: number, title: string, rows: Array<[string, string | null | undefined]>, height = 92) {
-  doc.setFillColor(...swPdf.soft);
-  doc.setDrawColor(...swPdf.faint).setLineWidth(0.7);
-  doc.roundedRect(x, y, w, height, 5, 5, "FD");
-  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...swPdf.tealDark);
-  doc.text(title.toUpperCase(), x + 14, y + 18);
-  let cy = y + 36;
+  // Minimal: no fill, top thin rule, label-stack rows
+  doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
+  doc.line(x, y, x + w, y);
+  doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...swPdf.muted);
+  doc.text(title.toUpperCase(), x, y + 14, { charSpace: 0.6 } as any);
+  let cy = y + 30;
   for (const [label, value] of rows.filter(([, v]) => v)) {
-    doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
-    doc.text(`${label}:`, x + 14, cy);
+    doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...swPdf.muted);
+    doc.text(label, x, cy);
     doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.ink);
-    const lines = doc.splitTextToSize(String(value), w - 92).slice(0, 2);
-    doc.text(lines, x + 74, cy);
-    cy += Math.max(13, lines.length * 10);
-    if (cy > y + height - 12) break;
+    const lines = doc.splitTextToSize(String(value), w).slice(0, 2);
+    doc.text(lines, x, cy + 11);
+    cy += 12 + Math.max(11, lines.length * 11);
+    if (cy > y + height - 4) break;
   }
   return y + height;
 }
 
 export function drawTotalsBlock(doc: jsPDF, x: number, y: number, w: number, rows: Array<[string, string]>, totalLabel: string, totalValue: string) {
-  doc.setDrawColor(...swPdf.rule).setLineWidth(0.7);
-  doc.roundedRect(x, y, w, 34 + rows.length * 18, 5, 5, "S");
+  // Minimal totals: borderless rows + single thick rule + grand total
   rows.forEach(([label, value], i) => {
-    const cy = y + 18 + i * 18;
+    const cy = y + 12 + i * 16;
     doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...swPdf.muted);
-    doc.text(label, x + 14, cy);
-    doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.ink);
-    doc.text(value, x + w - 14, cy, { align: "right" });
+    doc.text(label, x, cy);
+    doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...swPdf.ink);
+    doc.text(value, x + w, cy, { align: "right" });
   });
-  const gy = y + 22 + rows.length * 18;
-  doc.setFillColor(...swPdf.teal);
-  doc.roundedRect(x + 8, gy - 12, w - 16, 26, 4, 4, "F");
-  doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(255, 255, 255);
-  doc.text(totalLabel, x + 18, gy + 5);
-  doc.text(totalValue, x + w - 18, gy + 5, { align: "right" });
+  const gy = y + 12 + rows.length * 16 + 4;
+  doc.setDrawColor(...swPdf.ink).setLineWidth(0.7);
+  doc.line(x, gy, x + w, gy);
+  doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(...swPdf.ink);
+  doc.text(totalLabel, x, gy + 16);
+  doc.text(totalValue, x + w, gy + 16, { align: "right" });
+  doc.setDrawColor(...swPdf.ink).setLineWidth(0.4);
+  doc.line(x, gy + 22, x + w, gy + 22);
 }
 
 export function stoneWorldTable(doc: jsPDF, options: Parameters<typeof autoTable>[1]) {
   const margin = typeof options.margin === "object" ? options.margin : {};
   const { margin: _margin, styles, headStyles, alternateRowStyles, bodyStyles, ...rest } = options;
   return autoTable(doc, {
-    theme: "grid",
-    margin: { left: 34, right: 34, bottom: 58, ...margin },
+    theme: "plain",
+    margin: { left: 36, right: 36, bottom: 58, ...margin },
     styles: {
       font: "helvetica",
-      fontSize: 8.8,
-      cellPadding: { top: 7, right: 6, bottom: 7, left: 6 },
+      fontSize: 8.6,
+      cellPadding: { top: 8, right: 6, bottom: 8, left: 6 },
       textColor: swPdf.ink,
       lineColor: swPdf.faint,
-      lineWidth: 0.35,
+      lineWidth: 0,
       overflow: "linebreak",
-      valign: "middle",
+      valign: "top",
       minCellHeight: 22,
       ...(styles ?? {}),
     },
     headStyles: {
-      fillColor: swPdf.soft,
-      textColor: swPdf.tealDark,
+      fillColor: [255, 255, 255],
+      textColor: swPdf.muted,
       fontStyle: "bold",
-      fontSize: 8,
-      lineColor: swPdf.rule,
-      lineWidth: 0.45,
-      cellPadding: { top: 7, right: 6, bottom: 7, left: 6 },
+      fontSize: 7.4,
+      lineColor: swPdf.ink,
+      lineWidth: 0,
+      cellPadding: { top: 6, right: 6, bottom: 6, left: 6 },
       ...(headStyles ?? {}),
     },
-    alternateRowStyles: { fillColor: [252, 254, 255], ...(alternateRowStyles ?? {}) },
-    bodyStyles: { lineColor: swPdf.faint, lineWidth: 0.3, ...(bodyStyles ?? {}) },
+    alternateRowStyles: { fillColor: [255, 255, 255], ...(alternateRowStyles ?? {}) },
+    bodyStyles: { lineColor: swPdf.faint, lineWidth: 0, ...(bodyStyles ?? {}) },
+    didDrawCell: (data: any) => {
+      // Draw bottom hairline under each body row, and top/bottom rules around header
+      const d: any = data;
+      const x = d.cell.x;
+      const y = d.cell.y;
+      const w = d.cell.width;
+      const h = d.cell.height;
+      if (d.section === "head") {
+        doc.setDrawColor(...swPdf.ink).setLineWidth(0.6);
+        doc.line(x, y, x + w, y);
+        doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
+        doc.line(x, y + h, x + w, y + h);
+      } else if (d.section === "body") {
+        doc.setDrawColor(...swPdf.faint).setLineWidth(0.3);
+        doc.line(x, y + h, x + w, y + h);
+      }
+      if (typeof options.didDrawCell === "function") options.didDrawCell(data);
+    },
     ...rest,
   });
 }
@@ -241,87 +288,132 @@ export function issuedOn() {
 export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCompany | null | undefined, design?: Partial<PrintDesign>) {
   const doc = newStoneWorldPdf();
   const W = doc.internal.pageSize.getWidth();
+  const isQuote = result.kind === "quote";
+  const docLabel = result.kind === "sale" ? "Tax Invoice" : isQuote ? "Quotation" : result.kind === "purchase" ? "Purchase Bill" : "Third Party Bill";
   const { margin: M, y } = drawStoneWorldHeader(doc, company, {
-    title: result.kind === "sale" ? "Tax Invoice" : result.kind === "quote" ? "Quotation" : result.kind === "purchase" ? "Purchase Bill" : "Third Party Bill",
-    subtitle: result.kind.toUpperCase(),
+    title: docLabel,
+    subtitle: result.kind === "sale" ? "Original for Recipient" : isQuote ? "Proposal · Not a tax invoice" : result.kind.toUpperCase(),
     reference: result.header.invoice_no ?? result.header.quote_no ?? result.header.po_no ?? result.header.tp_no,
     date: result.header.date,
     validUntil: result.header.valid_until,
   }, 30, design);
   const no = result.header.invoice_no ?? result.header.quote_no ?? result.header.po_no ?? result.header.tp_no;
-  const panelW = (W - M * 2 - 14) / 2;
-  drawKeyValuePanel(doc, M, y, panelW, result.kind === "purchase" ? "Supplier" : "Customer", [
+  const sameState = !!(company?.state && result.party?.state && String(company.state).toLowerCase() === String(result.party.state).toLowerCase());
+  const panelW = (W - M * 2 - 18) / 2;
+  const partyTitle = result.kind === "purchase" ? "Supplier" : isQuote ? "Quoted To" : "Bill To";
+  drawKeyValuePanel(doc, M, y, panelW, partyTitle, [
     ["Name", result.header.buyer_name ?? result.header.supplier_name ?? result.party?.name],
-    ["Phone", result.party?.phone],
-    ["GSTIN", result.party?.gstin],
     ["Address", result.party?.address],
-  ], 102);
-  drawKeyValuePanel(doc, M + panelW + 14, y, panelW, "Document Details", [
-    ["No", no],
-    ["Date", fmtDate(result.header.date)],
     ["State", result.party?.state],
-    ["Status", result.outstanding?.status],
-  ], 102);
+    ["GSTIN", result.party?.gstin],
+    ["Phone", result.party?.phone],
+  ], 124);
+  drawKeyValuePanel(doc, M + panelW + 18, y, panelW, isQuote ? "Quotation Info" : "Invoice Info", [
+    [isQuote ? "Quote No" : "Invoice No", no],
+    ["Date", fmtDate(result.header.date)],
+    ...(isQuote && result.header.valid_until ? [["Valid Until", fmtDate(result.header.valid_until)] as [string, string]] : []),
+    ["Place of Supply", result.party?.state ?? "—"],
+    ["GST Treatment", sameState ? "Intra-state (CGST + SGST)" : "Inter-state (IGST)"],
+    ["Reverse Charge", "No"],
+    ...(!isQuote && result.outstanding?.status ? [["Status", result.outstanding.status] as [string, string]] : []),
+  ], 124);
 
   stoneWorldTable(doc, {
-    startY: y + 122,
+    startY: y + 140,
     margin: { left: M, right: M, top: 58, bottom: 66 },
-    head: [["#", "Product / HSN", "Qty", "Unit", "Rate", "GST%", "Amount"]],
+    head: [["#", "Description", "HSN/SAC", "Qty", "Unit", "Rate", "Taxable", "GST", "Amount"]],
     body: result.items.map((it, i) => {
       const rate = Number(it.sale_rate ?? it.rate ?? 0);
       const qty = Number(it.qty ?? 0);
       const taxable = qty * rate;
       const total = taxable * (1 + Number(it.gst_pct ?? 0) / 100);
       const name = it.product_name ?? "-";
-      const hsn = it.hsn ?? it.hsn_code ?? null;
-      return [String(i + 1), hsn ? `${name}\nHSN: ${hsn}` : name, fmt(qty), it.unit ?? "-", pdfMoney(rate), pdfPct(it.gst_pct), pdfMoney(total)];
+      const hsn = it.hsn ?? it.hsn_code ?? "—";
+      return [String(i + 1), name, String(hsn), fmt(qty), it.unit ?? "—", pdfMoney(rate), pdfMoney(taxable), pdfPct(it.gst_pct), pdfMoney(total)];
     }),
     columnStyles: {
-      0: { halign: "center", cellWidth: 22, textColor: swPdf.muted },
-      1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 160 },
-      2: { halign: "right", cellWidth: 46 },
-      3: { halign: "center", cellWidth: 40, textColor: swPdf.muted },
-      4: { halign: "right", cellWidth: 64, fontStyle: "bold" },
-      5: { halign: "right", cellWidth: 42, textColor: swPdf.muted },
-      6: { halign: "right", cellWidth: 86, fontStyle: "bold", textColor: swPdf.tealDark },
+      0: { halign: "center", cellWidth: 20, textColor: swPdf.muted },
+      1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 130 },
+      2: { halign: "center", cellWidth: 52, textColor: swPdf.muted, font: "courier", fontSize: 8 },
+      3: { halign: "right", cellWidth: 36 },
+      4: { halign: "center", cellWidth: 34, textColor: swPdf.muted },
+      5: { halign: "right", cellWidth: 58 },
+      6: { halign: "right", cellWidth: 62 },
+      7: { halign: "right", cellWidth: 34, textColor: swPdf.muted },
+      8: { halign: "right", cellWidth: 72, fontStyle: "bold" },
     },
     didDrawPage: (data: any) => {
       if (data.pageNumber > 1) {
-        doc.setFillColor(...swPdf.teal); doc.rect(0, 0, W, 5, "F");
         doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.ink);
-        doc.text(`${no} - continued`, M, 34);
+        doc.text(`${docLabel} ${no} — continued`, M, 36);
+        doc.setDrawColor(...swPdf.teal).setLineWidth(1.2);
+        doc.line(M, 42, M + 50, 42);
       }
     },
   });
 
   const finalY = (doc as any).lastAutoTable?.finalY ?? y + 260;
-  let blockY = ensurePdfSpace(doc, finalY + 18, 132, M, 66);
-  const totalsW = 232;
-  doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...swPdf.tealDark);
-  doc.text("AMOUNT IN WORDS", M, blockY + 14);
-  doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.ink);
-  doc.text(doc.splitTextToSize(amountInWords(result.totals.total), W - M * 2 - totalsW - 18), M, blockY + 30);
-  doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...swPdf.tealDark);
-  doc.text("NOTES & TERMS", M, blockY + 58);
-  doc.setFont("helvetica", "normal").setFontSize(8.4).setTextColor(...swPdf.muted);
-  const notes = result.header.notes ? `${result.header.notes}\n${defaultTerms(result.kind === "quote" ? "quotation" : "document")}` : defaultTerms(result.kind === "quote" ? "quotation" : "document");
-  doc.text(doc.splitTextToSize(notes, W - M * 2 - totalsW - 18).slice(0, 6), M, blockY + 74);
-  const sameState = !!(company?.state && result.party?.state && String(company.state).toLowerCase() === String(result.party.state).toLowerCase());
+  let blockY = ensurePdfSpace(doc, finalY + 24, 170, M, 66);
+  const totalsW = 220;
+  const leftW = W - M * 2 - totalsW - 22;
+
+  // Amount in words
+  doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...swPdf.muted);
+  doc.text("AMOUNT IN WORDS", M, blockY + 10, { charSpace: 0.6 } as any);
+  doc.setFont("helvetica", "bold").setFontSize(9.5).setTextColor(...swPdf.ink);
+  const wordsLines = doc.splitTextToSize(amountInWords(result.totals.total), leftW).slice(0, 3);
+  doc.text(wordsLines, M, blockY + 24);
+
+  // Bank details (invoice only, when present)
+  let leftY = blockY + 24 + wordsLines.length * 11 + 8;
+  if (!isQuote && (company?.bank_name || company?.bank_account_no || company?.bank_ifsc)) {
+    doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...swPdf.muted);
+    doc.text("BANK DETAILS", M, leftY, { charSpace: 0.6 } as any);
+    doc.setFont("helvetica", "normal").setFontSize(8.4).setTextColor(...swPdf.ink);
+    const bank = [
+      company?.bank_name && `Bank: ${company.bank_name}`,
+      company?.bank_account_no && `A/c No: ${company.bank_account_no}`,
+      company?.bank_ifsc && `IFSC: ${company.bank_ifsc}`,
+      company?.owner_name && `Beneficiary: ${company.owner_name}`,
+    ].filter(Boolean) as string[];
+    bank.forEach((b, i) => doc.text(b, M, leftY + 12 + i * 11));
+    leftY += 12 + bank.length * 11 + 6;
+  }
+
+  // Terms
+  doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...swPdf.muted);
+  doc.text(isQuote ? "TERMS OF PROPOSAL" : "TERMS & CONDITIONS", M, leftY, { charSpace: 0.6 } as any);
+  doc.setFont("helvetica", "normal").setFontSize(7.8).setTextColor(...swPdf.inkSoft);
+  const baseTerms = isQuote
+    ? `Prices valid until the date shown above. Quotation does not constitute a tax invoice or a sale. Stock and lot variation may apply. GST and statutory charges as listed. E&OE.`
+    : `Goods once sold will not be taken back. Interest @18% p.a. on overdue balances. Subject to local jurisdiction. E&OE.`;
+  const notes = result.header.notes ? `${result.header.notes}\n${baseTerms}` : baseTerms;
+  doc.text(doc.splitTextToSize(notes, leftW).slice(0, 5), M, leftY + 12);
+
+  // Totals block (right)
   const gstRows: Array<[string, string]> = sameState
     ? [["CGST", pdfMoney(result.totals.gst / 2)], ["SGST", pdfMoney(result.totals.gst / 2)]]
     : [["IGST", pdfMoney(result.totals.gst)]];
-  drawTotalsBlock(doc, W - M - totalsW, blockY, totalsW, [
+  const totalsRows: Array<[string, string]> = [
     ["Subtotal", pdfMoney(result.totals.subtotal)],
     ...gstRows,
-    ...(result.outstanding ? [["Paid", pdfMoney(result.outstanding.paid)] as [string, string]] : []),
-  ], result.outstanding?.balance && result.outstanding.balance > 0 ? "Balance Due" : "Grand Total", result.outstanding?.balance && result.outstanding.balance > 0 ? pdfMoney(result.outstanding.balance) : pdfMoney(result.totals.total));
+    ...(!isQuote && result.outstanding ? [["Paid", pdfMoney(result.outstanding.paid)] as [string, string]] : []),
+  ];
+  const showBalance = !isQuote && result.outstanding?.balance && result.outstanding.balance > 0;
+  drawTotalsBlock(doc, W - M - totalsW, blockY + 4, totalsW, totalsRows,
+    showBalance ? "Balance Due" : "Grand Total",
+    showBalance ? pdfMoney(result.outstanding!.balance) : pdfMoney(result.totals.total));
 
-  blockY = ensurePdfSpace(doc, blockY + 148, 46, M, 66);
-  doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
-  doc.line(M, blockY + 18, M + 172, blockY + 18);
+  // Signature
+  blockY = ensurePdfSpace(doc, Math.max(leftY + 60, blockY + 170), 56, M, 66);
+  doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
+  doc.line(W - M - 180, blockY + 32, W - M, blockY + 32);
   doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
-  doc.text(`For ${company?.company_name || "StoneWorld Traders"} - Authorised Signatory`, M, blockY + 33);
-  drawCustomWatermark(doc, design?.watermarkText, design?.watermarkOpacity ?? 35, design?.watermarkLayer ?? "back");
+  doc.text(`For ${company?.company_name || "StoneWorld Traders"}`, W - M, blockY + 10, { align: "right" });
+  doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...swPdf.ink);
+  doc.text("Authorised Signatory", W - M, blockY + 44, { align: "right" });
+
+  drawCustomWatermark(doc, design?.watermarkText, design?.watermarkOpacity ?? 35, design?.watermarkLayer ?? "back", design?.watermarkLogoDataUrl, design?.watermarkLogoScale ?? 55);
   drawFooterBrandLogos(doc, design?.footerLogos, M, {
     rows: (design?.footerRows ?? 1) as 1 | 2 | 3,
     logoHeightPx: design?.footerLogoSize ?? 36,
