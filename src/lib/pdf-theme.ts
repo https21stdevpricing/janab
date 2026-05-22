@@ -31,6 +31,7 @@ export type PdfCompany = {
   bank_name?: string | null;
   bank_account_no?: string | null;
   bank_ifsc?: string | null;
+  upi_id?: string | null;
 };
 
 export type PdfDocMeta = {
