@@ -239,7 +239,9 @@ function BankPage() {
                 {form.kind === "cheque_deposit" ? <Banknote className="h-4 w-4" /> : form.kind === "cash_withdrawal" ? <ArrowUpFromLine className="h-4 w-4" /> : <ArrowDownToLine className="h-4 w-4" />}
                 {KIND_LABEL[form.kind]}
               </DialogTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Uncleared cheque deposits stay pending and do not affect Cash or Bank balances.</p>
+              {form.kind === "cheque_deposit" && !form.cleared && (
+                <p className="mt-1 text-xs text-muted-foreground">This cheque will stay pending until bank clearance is confirmed.</p>
+              )}
             </div>
           </DialogHeader>
           <div className="space-y-4 p-4 sm:p-6">
