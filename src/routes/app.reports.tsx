@@ -8,7 +8,20 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SegmentedTabs } from "@/components/ui-tokens";
 import { inr, fmt } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert, Layers, Calculator, Check, Wrench } from "lucide-react";
+import {
+  Info,
+  TrendingDown,
+  AlertTriangle,
+  CheckCircle2,
+  Minus,
+  Wallet,
+  ShieldCheck,
+  ShieldAlert,
+  Layers,
+  Calculator,
+  Check,
+  Wrench,
+} from "lucide-react";
 import { toast } from "sonner";
 import { ReconcileGuide, buildReconcileSignals } from "@/components/reconcile-guide";
 import { useLiveSync } from "@/hooks/use-live-sync";
@@ -49,23 +62,46 @@ function ReportsPage() {
   const loadAll = useCallback(async () => {
     const { data: auth, error: authError } = await supabase.auth.getUser();
     if (authError || !auth.user) {
-      setRows([]); setProducts([]); setSaleItems([]); setPurchaseItems([]); setPurchaseHdr([]); setFixedAssets([]); setPayments([]); setAllocations([]);
+      setRows([]);
+      setProducts([]);
+      setSaleItems([]);
+      setPurchaseItems([]);
+      setPurchaseHdr([]);
+      setFixedAssets([]);
+      setPayments([]);
+      setAllocations([]);
       return;
     }
 
-    const [ledger, prods, salesLines, purchaseLines, purchaseLots, assets, pay, allocs, settings] = await Promise.all([
-      supabase.from("ledger_view").select("*").eq("user_id", auth.user.id),
-      supabase.from("products").select("id,name,kind,opening_stock,purchase_rate,sale_rate,hsn").order("name"),
-      supabase.from("sale_items").select("product_id,qty"),
-      supabase.from("purchase_items").select("product_id,qty,rate"),
-      (supabase as any).from("purchase_items").select("product_id,qty,rate,purchases!inner(date)"),
-      (supabase as any).from("fixed_assets").select("*"),
-      supabase.from("payments").select("id,amount,direction"),
-      (supabase as any).from("payment_allocations").select("payment_id,amount"),
-      (supabase as any).from("settings").select("cogs_method").maybeSingle(),
-    ]);
+    const [ledger, prods, salesLines, purchaseLines, purchaseLots, assets, pay, allocs, settings] =
+      await Promise.all([
+        supabase.from("ledger_view").select("*").eq("user_id", auth.user.id),
+        supabase
+          .from("products")
+          .select("id,name,kind,opening_stock,purchase_rate,sale_rate,hsn")
+          .order("name"),
+        supabase.from("sale_items").select("product_id,qty"),
+        supabase.from("purchase_items").select("product_id,qty,rate"),
+        (supabase as any)
+          .from("purchase_items")
+          .select("product_id,qty,rate,purchases!inner(date)"),
+        (supabase as any).from("fixed_assets").select("*"),
+        supabase.from("payments").select("id,amount,direction"),
+        (supabase as any).from("payment_allocations").select("payment_id,amount"),
+        (supabase as any).from("settings").select("cogs_method").maybeSingle(),
+      ]);
 
-    const firstError = [ledger, prods, salesLines, purchaseLines, purchaseLots, assets, pay, allocs, settings].find((r: any) => r.error)?.error;
+    const firstError = [
+      ledger,
+      prods,
+      salesLines,
+      purchaseLines,
+      purchaseLots,
+      assets,
+      pay,
+      allocs,
+      settings,
+    ].find((r: any) => r.error)?.error;
     if (firstError) throw firstError;
     setRows(ledger.data ?? []);
     setProducts(prods.data ?? []);
@@ -85,20 +121,28 @@ function ReportsPage() {
 
   const saveCogsMethod = async (m: "weighted_average" | "fifo") => {
     setCogsMethod(m);
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (!user) return;
-    const { error } = await (supabase as any).from("settings").update({ cogs_method: m }).eq("user_id", user.id);
-    if (error) toast.error(error.message); else toast.success(`COGS method: ${m === "fifo" ? "FIFO" : "Weighted Average"}`);
+    const { error } = await (supabase as any)
+      .from("settings")
+      .update({ cogs_method: m })
+      .eq("user_id", user.id);
+    if (error) toast.error(error.message);
+    else toast.success(`COGS method: ${m === "fifo" ? "FIFO" : "Weighted Average"}`);
   };
 
   // ---------- AS 2: Inventory valuation (lower of cost or NRV) ----------
   const inventory = useMemo(() => {
     const soldByP: Record<string, number> = {};
-    for (const s of saleItems) if (s.product_id) soldByP[s.product_id] = (soldByP[s.product_id] ?? 0) + Number(s.qty ?? 0);
+    for (const s of saleItems)
+      if (s.product_id) soldByP[s.product_id] = (soldByP[s.product_id] ?? 0) + Number(s.qty ?? 0);
     const purByP: Record<string, { qty: number; val: number }> = {};
     for (const p of purchaseItems) {
       if (!p.product_id) continue;
-      const q = Number(p.qty ?? 0); const r = Number(p.rate ?? 0);
+      const q = Number(p.qty ?? 0);
+      const r = Number(p.rate ?? 0);
       purByP[p.product_id] ??= { qty: 0, val: 0 };
       purByP[p.product_id].qty += q;
       purByP[p.product_id].val += q * r;
@@ -107,12 +151,28 @@ function ReportsPage() {
     const lotsByP: Record<string, { qty: number; rate: number; date: string }[]> = {};
     for (const p of purchaseHdr) {
       if (!p.product_id) continue;
-      (lotsByP[p.product_id] ??= []).push({ qty: Number(p.qty ?? 0), rate: Number(p.rate ?? 0), date: p.purchases?.date ?? "" });
+      (lotsByP[p.product_id] ??= []).push({
+        qty: Number(p.qty ?? 0),
+        rate: Number(p.rate ?? 0),
+        date: p.purchases?.date ?? "",
+      });
     }
 
-    let closingQty = 0, closingValue = 0, openingValue = 0, purchasesValue = 0;
+    let closingQty = 0,
+      closingValue = 0,
+      openingValue = 0,
+      purchasesValue = 0;
     let altClosingValue = 0; // value under the OTHER method, for side-by-side comparison
-    const perSku: { id: string; name: string; onHand: number; unitVal: number; value: number; altUnitVal: number; altValue: number; nrvFloor: boolean }[] = [];
+    const perSku: {
+      id: string;
+      name: string;
+      onHand: number;
+      unitVal: number;
+      value: number;
+      altUnitVal: number;
+      altValue: number;
+      nrvFloor: boolean;
+    }[] = [];
     for (const pr of products) {
       if (pr.kind && pr.kind !== "stocked") continue;
       const opQty = Number(pr.opening_stock ?? 0);
@@ -136,9 +196,10 @@ function ReportsPage() {
         fifoUnit = onHand > 0 ? value / onHand : 0;
       }
       // Weighted average unit cost
-      const avgUnit = (opQty + pur.qty) > 0
-        ? (opQty * Number(pr.purchase_rate ?? 0) + pur.val) / (opQty + pur.qty)
-        : Number(pr.purchase_rate ?? 0);
+      const avgUnit =
+        opQty + pur.qty > 0
+          ? (opQty * Number(pr.purchase_rate ?? 0) + pur.val) / (opQty + pur.qty)
+          : Number(pr.purchase_rate ?? 0);
       const nrv = Number(pr.sale_rate ?? 0);
       const applyNRV = (cost: number) => (nrv > 0 ? Math.min(cost, nrv) : cost);
       const fifoFinal = applyNRV(fifoUnit);
@@ -151,7 +212,17 @@ function ReportsPage() {
       altClosingValue += onHand * altUnitVal;
       openingValue += opQty * Number(pr.purchase_rate ?? 0);
       purchasesValue += pur.val;
-      if (onHand > 0) perSku.push({ id: pr.id, name: pr.name, onHand, unitVal, value: onHand * unitVal, altUnitVal, altValue: onHand * altUnitVal, nrvFloor });
+      if (onHand > 0)
+        perSku.push({
+          id: pr.id,
+          name: pr.name,
+          onHand,
+          unitVal,
+          value: onHand * unitVal,
+          altUnitVal,
+          altValue: onHand * altUnitVal,
+          nrvFloor,
+        });
     }
     perSku.sort((a, b) => b.value - a.value);
     return { closingQty, closingValue, openingValue, purchasesValue, altClosingValue, perSku };
@@ -176,7 +247,8 @@ function ReportsPage() {
   // Fixed assets summary
   const faSummary = useMemo(() => {
     const byCat: Record<string, { gross: number; accDep: number }> = {};
-    let gross = 0, accDep = 0;
+    let gross = 0,
+      accDep = 0;
     for (const a of fixedAssets) {
       if (a.disposed_at) continue;
       const cat = a.category || "Other";
@@ -198,22 +270,30 @@ function ReportsPage() {
   const cogs = directCogs_AS2 + tpCogs;
   const grossProfit = revenue - cogs;
   const grossMarginPct = revenue > 0 ? (grossProfit / revenue) * 100 : 0;
-  const expenseKeys = Object.keys(sums).filter(k => k.startsWith("Expenses:"));
+  const expenseKeys = Object.keys(sums).filter((k) => k.startsWith("Expenses:"));
   const expenses = expenseKeys.reduce((a, k) => a + sums[k].d - sums[k].c, 0);
-  const depreciationExp = sums["Expenses: Depreciation"] ? sums["Expenses: Depreciation"].d - sums["Expenses: Depreciation"].c : 0;
+  const depreciationExp = sums["Expenses: Depreciation"]
+    ? sums["Expenses: Depreciation"].d - sums["Expenses: Depreciation"].c
+    : 0;
   const netProfit = revenue - cogs - expenses;
   const netMarginPct = revenue > 0 ? (netProfit / revenue) * 100 : 0;
 
   const ar = bal("Accounts Receivable");
   const ap = balCr("Accounts Payable");
-  const cash = bal("Cash"); const bank = bal("Bank");
+  const cash = bal("Cash");
+  const bank = bal("Bank");
   const gstInputAccts = ["Input CGST", "Input SGST", "Input IGST", "GST Input"];
   const gstOutputAccts = ["Output CGST", "Output SGST", "Output IGST", "GST Output"];
   const gstIn = sumAcc(gstInputAccts, "d") - sumAcc(gstInputAccts, "c");
   const gstOut = sumAcc(gstOutputAccts, "c") - sumAcc(gstOutputAccts, "d");
   const netGstPayable = gstOut - gstIn;
 
-  const tbAll = Object.entries(sums).map(([acct, v]) => ({ acct, debit: v.d, credit: v.c, net: v.d - v.c }));
+  const tbAll = Object.entries(sums).map(([acct, v]) => ({
+    acct,
+    debit: v.d,
+    credit: v.c,
+    net: v.d - v.c,
+  }));
   const tbTotalD = tbAll.reduce((a, r) => a + r.debit, 0);
   const tbTotalC = tbAll.reduce((a, r) => a + r.credit, 0);
   const tbBalanced = Math.abs(tbTotalD - tbTotalC) < 0.01;
@@ -233,20 +313,32 @@ function ReportsPage() {
   const balanceCheck = Math.abs(totalAssets - (totalLiab + equity)) < 1;
 
   const today = new Date();
-  const dCutoff = (days: number) => { const d = new Date(today); d.setDate(d.getDate() - days); return d.toISOString().slice(0, 10); };
+  const dCutoff = (days: number) => {
+    const d = new Date(today);
+    d.setDate(d.getDate() - days);
+    return d.toISOString().slice(0, 10);
+  };
   const last90 = dCutoff(90);
   const prev90 = dCutoff(180);
 
   const revWindow = (from: string, to: string) =>
-    rows.filter(r => (r.account === "Sales Revenue" || r.account === "TP Sales Revenue") && r.date >= from && r.date < to)
+    rows
+      .filter(
+        (r) =>
+          (r.account === "Sales Revenue" || r.account === "TP Sales Revenue") &&
+          r.date >= from &&
+          r.date < to,
+      )
       .reduce((a, r) => a + Number(r.credit ?? 0), 0);
   const expWindow = (from: string, to: string) =>
-    rows.filter(r => String(r.account).startsWith("Expenses:") && r.date >= from && r.date < to)
+    rows
+      .filter((r) => String(r.account).startsWith("Expenses:") && r.date >= from && r.date < to)
       .reduce((a, r) => a + Number(r.debit ?? 0) - Number(r.credit ?? 0), 0);
 
   const rev90 = revWindow(last90, today.toISOString().slice(0, 10));
   const revPrev90 = revWindow(prev90, last90);
-  const revGrowthPct = revPrev90 > 0 ? ((rev90 - revPrev90) / revPrev90) * 100 : (rev90 > 0 ? 100 : 0);
+  const revGrowthPct =
+    revPrev90 > 0 ? ((rev90 - revPrev90) / revPrev90) * 100 : rev90 > 0 ? 100 : 0;
   const exp90 = expWindow(last90, today.toISOString().slice(0, 10));
   const monthlyOpex = exp90 / 3;
   const liquid = cash + bank;
@@ -263,21 +355,35 @@ function ReportsPage() {
   const ccc = dso + dio - dpo;
 
   const topExpense = expenseKeys
-    .map(k => ({ k: k.replace("Expenses: ", ""), v: sums[k].d - sums[k].c }))
+    .map((k) => ({ k: k.replace("Expenses: ", ""), v: sums[k].d - sums[k].c }))
     .sort((a, b) => b.v - a.v)[0];
 
   const insights = buildInsights({
-    revenue, netProfit, grossMarginPct, netMarginPct, currentRatio, quickRatio,
-    runwayMonths, revGrowthPct, ar, ap, netGstPayable, workingCapital,
-    tbBalanced, balanceCheck, topExpense,
+    revenue,
+    netProfit,
+    grossMarginPct,
+    netMarginPct,
+    currentRatio,
+    quickRatio,
+    runwayMonths,
+    revGrowthPct,
+    ar,
+    ap,
+    netGstPayable,
+    workingCapital,
+    tbBalanced,
+    balanceCheck,
+    topExpense,
   });
 
   // ---------- Reconciliation signals ----------
   const negativeStockSkus = useMemo(() => {
     const soldByP: Record<string, number> = {};
-    for (const s of saleItems) if (s.product_id) soldByP[s.product_id] = (soldByP[s.product_id] ?? 0) + Number(s.qty ?? 0);
+    for (const s of saleItems)
+      if (s.product_id) soldByP[s.product_id] = (soldByP[s.product_id] ?? 0) + Number(s.qty ?? 0);
     const purByP: Record<string, number> = {};
-    for (const p of purchaseItems) if (p.product_id) purByP[p.product_id] = (purByP[p.product_id] ?? 0) + Number(p.qty ?? 0);
+    for (const p of purchaseItems)
+      if (p.product_id) purByP[p.product_id] = (purByP[p.product_id] ?? 0) + Number(p.qty ?? 0);
     let n = 0;
     for (const pr of products) {
       if (pr.kind && pr.kind !== "stocked") continue;
@@ -290,7 +396,9 @@ function ReportsPage() {
   const productsWithoutOpening = useMemo(
     () =>
       products.filter(
-        (p: any) => (!p.kind || p.kind === "stocked") && (p.opening_stock == null || Number(p.opening_stock) === 0),
+        (p: any) =>
+          (!p.kind || p.kind === "stocked") &&
+          (p.opening_stock == null || Number(p.opening_stock) === 0),
       ).length,
     [products],
   );
@@ -336,9 +444,18 @@ function ReportsPage() {
         productsWithoutOpening,
       }),
     [
-      tbTotalD, tbTotalC, totalAssets, totalLiab, equity, inventoryAsset,
-      negativeStockSkus, unallocatedPaymentsAmt, unallocatedPaymentsCount,
-      netGstPayable, missingHsnCount, productsWithoutOpening,
+      tbTotalD,
+      tbTotalC,
+      totalAssets,
+      totalLiab,
+      equity,
+      inventoryAsset,
+      negativeStockSkus,
+      unallocatedPaymentsAmt,
+      unallocatedPaymentsCount,
+      netGstPayable,
+      missingHsnCount,
+      productsWithoutOpening,
     ],
   );
 
@@ -347,20 +464,48 @@ function ReportsPage() {
       <PageHeader
         title="Reports"
         description={`Clean financial summaries · ${isLive ? "live" : "syncing"}${lastSyncedAt ? ` · updated ${lastSyncedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`}
-        actions={<Button variant="outline" size="sm" onClick={refresh} disabled={isRefreshing}>{isRefreshing ? "Syncing…" : "Refresh"}</Button>}
+        actions={
+          <Button variant="outline" size="sm" onClick={refresh} disabled={isRefreshing}>
+            {isRefreshing ? "Syncing…" : "Refresh"}
+          </Button>
+        }
       />
-      {lastError && <div className="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">Reports sync failed: {lastError.message}</div>}
+      {lastError && (
+        <div className="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          Reports sync failed: {lastError.message}
+        </div>
+      )}
 
       <div className="mb-4 surface overflow-hidden">
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-border/60">
           <ReportHeroMetric label="Revenue" value={inr(revenue)} />
-          <ReportHeroMetric label="Net profit" value={inr(netProfit)} tone={netProfit >= 0 ? "good" : "bad"} />
-          <ReportHeroMetric label="Cash + Bank" value={inr(liquid)} tone={liquid >= 0 ? "good" : "bad"} />
-          <ReportHeroMetric label="AR − AP" value={inr(arApDelta)} tone={arApDelta >= 0 ? "good" : "warn"} />
+          <ReportHeroMetric
+            label="Net profit"
+            value={inr(netProfit)}
+            tone={netProfit >= 0 ? "good" : "bad"}
+          />
+          <ReportHeroMetric
+            label="Cash + Bank"
+            value={inr(liquid)}
+            tone={liquid >= 0 ? "good" : "bad"}
+          />
+          <ReportHeroMetric
+            label="AR − AP"
+            value={inr(arApDelta)}
+            tone={arApDelta >= 0 ? "good" : "warn"}
+          />
         </div>
         <div className="px-4 py-2 border-t border-border/60 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-          <IntegrityBadge ok={tbBalanced} okLabel="Trial balance OK" badLabel="Trial balance drift" />
-          <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet OK" badLabel="Balance sheet drift" />
+          <IntegrityBadge
+            ok={tbBalanced}
+            okLabel="Trial balance OK"
+            badLabel="Trial balance drift"
+          />
+          <IntegrityBadge
+            ok={balanceCheck}
+            okLabel="Balance sheet OK"
+            badLabel="Balance sheet drift"
+          />
           <span className="ml-auto">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span>
         </div>
       </div>
@@ -385,110 +530,263 @@ function ReportsPage() {
         <TabsContent value="outlook" className="space-y-3">
           <div className="grid gap-3 lg:grid-cols-[1fr_1.15fr]">
             <div className="surface overflow-hidden">
-              <CompactSignal label="Gross margin" value={`${fmt(grossMarginPct, 1)}%`} status={statusFor(grossMarginPct, 20, 10)} />
-              <CompactSignal label="Current ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} status={statusFor(currentRatio, 1.5, 1)} />
-              <CompactSignal label="Revenue trend" value={`${revGrowthPct >= 0 ? "+" : ""}${fmt(revGrowthPct, 1)}%`} status={statusFor(revGrowthPct, 5, -5)} />
-              <CompactSignal label="GST payable" value={inr(Math.max(0, netGstPayable))} status={netGstPayable <= 0 ? "good" : "warn"} />
+              <CompactSignal
+                label="Gross margin"
+                value={`${fmt(grossMarginPct, 1)}%`}
+                status={statusFor(grossMarginPct, 20, 10)}
+              />
+              <CompactSignal
+                label="Current ratio"
+                value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"}
+                status={statusFor(currentRatio, 1.5, 1)}
+              />
+              <CompactSignal
+                label="Revenue trend"
+                value={`${revGrowthPct >= 0 ? "+" : ""}${fmt(revGrowthPct, 1)}%`}
+                status={statusFor(revGrowthPct, 5, -5)}
+              />
+              <CompactSignal
+                label="GST payable"
+                value={inr(Math.max(0, netGstPayable))}
+                status={netGstPayable <= 0 ? "good" : "warn"}
+              />
             </div>
 
             <div className="surface p-4">
               <div className="eyebrow mb-2">Next actions</div>
               <div className="divide-y divide-border/60">
-              {insights.map((it, i) => (
-                <div key={i} className="flex gap-3 items-start py-2.5 first:pt-0 last:pb-0">
-                  <ToneIcon tone={it.tone} />
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm">{it.title}</div>
-                    <div className="text-xs text-muted-foreground leading-relaxed mt-0.5">{it.body}</div>
+                {insights.map((it, i) => (
+                  <div key={i} className="flex gap-3 items-start py-2.5 first:pt-0 last:pb-0">
+                    <ToneIcon tone={it.tone} />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm">{it.title}</div>
+                      <div className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                        {it.body}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
               </div>
             </div>
           </div>
 
           <div className="surface p-4 text-sm leading-relaxed text-muted-foreground">
-            {outlookNarrative({ revGrowthPct, netProfit, grossMarginPct, runwayMonths, currentRatio, arApDelta, netGstPayable })}
+            {outlookNarrative({
+              revGrowthPct,
+              netProfit,
+              grossMarginPct,
+              runwayMonths,
+              currentRatio,
+              arApDelta,
+              netGstPayable,
+            })}
           </div>
         </TabsContent>
 
         <TabsContent value="pnl">
           <Card>
-            <CardHeader><CardTitle>Profit &amp; Loss</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Profit &amp; Loss</CardTitle>
+            </CardHeader>
             <CardContent>
               <Section title="Revenue (AS 9 — recognised on invoice raise)" />
-              <Row label="Direct Sales Revenue" value={directSales} hint="Sales of your own stock." />
-              <Row label="Third-Party Sales Revenue" value={tpSales} hint="Drop-ship sales — supplier ships directly to your buyer." />
+              <Row
+                label="Direct Sales Revenue"
+                value={directSales}
+                hint="Sales of your own stock."
+              />
+              <Row
+                label="Third-Party Sales Revenue"
+                value={tpSales}
+                hint="Drop-ship sales — supplier ships directly to your buyer."
+              />
               <Row label="Total Revenue" value={revenue} bold />
               <Sep />
-              <Section title={`Cost of Goods Sold (AS 2 · ${cogsMethod === "fifo" ? "FIFO" : "Weighted Avg"})`} />
-              <Row label="Opening Stock" value={-inventory.openingValue} hint="Inventory carried in at the start (at cost, AS 2)." />
-              <Row label="Add: Purchases" value={-directCogs} hint="All stock bought during the period." />
-              <Row label="Less: Closing Stock" value={inventory.closingValue} hint="Unsold inventory at period end (AS 2: lower of cost or NRV)." />
-              <Row label="Direct COGS" value={-directCogs_AS2} bold hint="Opening + Purchases − Closing." />
-              <Row label="TP Purchases (drop-ship cost)" value={-tpCogs} hint="Cost paid to supplier in third-party trades." />
-              <Row label="Gross Profit" value={grossProfit} bold positive hint={`Gross Margin: ${fmt(grossMarginPct, 1)}%.`} />
+              <Section
+                title={`Cost of Goods Sold (AS 2 · ${cogsMethod === "fifo" ? "FIFO" : "Weighted Avg"})`}
+              />
+              <Row
+                label="Opening Stock"
+                value={-inventory.openingValue}
+                hint="Inventory carried in at the start (at cost, AS 2)."
+              />
+              <Row
+                label="Add: Purchases"
+                value={-directCogs}
+                hint="All stock bought during the period."
+              />
+              <Row
+                label="Less: Closing Stock"
+                value={inventory.closingValue}
+                hint="Unsold inventory at period end (AS 2: lower of cost or NRV)."
+              />
+              <Row
+                label="Direct COGS"
+                value={-directCogs_AS2}
+                bold
+                hint="Opening + Purchases − Closing."
+              />
+              <Row
+                label="TP Purchases (drop-ship cost)"
+                value={-tpCogs}
+                hint="Cost paid to supplier in third-party trades."
+              />
+              <Row
+                label="Gross Profit"
+                value={grossProfit}
+                bold
+                positive
+                hint={`Gross Margin: ${fmt(grossMarginPct, 1)}%.`}
+              />
               <Sep />
               <Section title="Operating Expenses" />
-              {expenseKeys.map(k => <Row key={k} label={k.replace("Expenses: ", "")} value={-(sums[k].d - sums[k].c)} />)}
+              {expenseKeys.map((k) => (
+                <Row key={k} label={k.replace("Expenses: ", "")} value={-(sums[k].d - sums[k].c)} />
+              ))}
               <Row label="Total Expenses" value={-expenses} bold />
-              {depreciationExp > 0 && <div className="text-[11px] text-muted-foreground pl-2 mt-1">Includes ₹{fmt(depreciationExp)} depreciation on fixed assets (AS 10).</div>}
+              {depreciationExp > 0 && (
+                <div className="text-[11px] text-muted-foreground pl-2 mt-1">
+                  Includes ₹{fmt(depreciationExp)} depreciation on fixed assets (AS 10).
+                </div>
+              )}
               <Sep />
-              <Row label="Net Profit" value={netProfit} bold positive hint={`Net Margin: ${fmt(netMarginPct, 1)}%.`} />
+              <Row
+                label="Net Profit"
+                value={netProfit}
+                bold
+                positive
+                hint={`Net Margin: ${fmt(netMarginPct, 1)}%.`}
+              />
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="bs">
           <div className="grid md:grid-cols-2 gap-4">
-            <Card><CardHeader><CardTitle>Assets</CardTitle></CardHeader><CardContent>
-              <Section title="Current Assets" />
-              <Row label="Cash in Hand" value={cash} hint="Physical cash with the business." />
-              <Row label="Bank Balance" value={bank} hint="Funds in current/savings accounts." />
-              <Row label="Accounts Receivable" value={ar} hint="Money buyers owe you." />
-              <Row label="Inventory (Closing Stock)" value={inventoryAsset} hint={`AS 2 — lower of cost or NRV. ${fmt(inventory.closingQty, 2)} units on hand.`} />
-              <Row label="GST Input Credit" value={Math.max(0, gstIn)} hint="GST paid on purchases — recoverable." />
-              <Row label="Total Current Assets" value={currentAssets} bold />
-              <Sep />
-              <Section title="Non-Current Assets (Fixed Assets — AS 10)" />
-              {Object.entries(faSummary.byCat).length === 0
-                ? <div className="text-xs text-muted-foreground py-1">No fixed assets recorded. Add machinery, vehicles or equipment in the Fixed Assets page.</div>
-                : Object.entries(faSummary.byCat).map(([cat, v]) => (
-                    <Row key={cat} label={cat} value={v.gross - v.accDep} hint={`Gross ₹${fmt(v.gross)} − Accum dep ₹${fmt(v.accDep)}`} />
-                  ))}
-              {faSummary.gross > 0 && <Row label="Net Block (Fixed Assets)" value={faSummary.netBlock} bold />}
-              <Sep /><Row label="Total Assets" value={totalAssets} bold />
-            </CardContent></Card>
-            <Card><CardHeader><CardTitle>Liabilities &amp; Equity</CardTitle></CardHeader><CardContent>
-              <Section title="Current Liabilities" />
-              <Row label="Accounts Payable" value={ap} hint="Owed to suppliers." />
-              <Row label="GST Output Payable" value={Math.max(0, gstOut)} hint="GST collected on sales — payable to government." />
-              <Row label="Total Current Liabilities" value={currentLiab} bold />
-              <Sep />
-              <Section title="Equity" />
-              {openingCapital > 0 && (
-                <Row label="Opening Capital (Owner's contribution)" value={openingCapital} hint="Value of inventory you brought into the business at start-up. Auto-credited so the books balance." />
-              )}
-              <Row label="Retained Earnings (Net Profit)" value={netProfit} hint="Cumulative profit reinvested." />
-              <Sep /><Row label="Total Liabilities + Equity" value={totalLiab + equity} bold />
-              <div className={`mt-2 text-xs flex items-center gap-1.5 ${balanceCheck ? "text-primary" : "text-destructive"}`}>
-                {balanceCheck ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-                {balanceCheck ? "Balance sheet equation balances (A = L + E)." : `Imbalance of ${inr(totalAssets - (totalLiab + equity))} — review unposted entries.`}
-              </div>
-            </CardContent></Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Assets</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Section title="Current Assets" />
+                <Row label="Cash in Hand" value={cash} hint="Physical cash with the business." />
+                <Row label="Bank Balance" value={bank} hint="Funds in current/savings accounts." />
+                <Row label="Accounts Receivable" value={ar} hint="Money buyers owe you." />
+                <Row
+                  label="Inventory (Closing Stock)"
+                  value={inventoryAsset}
+                  hint={`AS 2 — lower of cost or NRV. ${fmt(inventory.closingQty, 2)} units on hand.`}
+                />
+                <Row
+                  label="GST Input Credit"
+                  value={Math.max(0, gstIn)}
+                  hint="GST paid on purchases — recoverable."
+                />
+                <Row label="Total Current Assets" value={currentAssets} bold />
+                <Sep />
+                <Section title="Non-Current Assets (Fixed Assets — AS 10)" />
+                {Object.entries(faSummary.byCat).length === 0 ? (
+                  <div className="text-xs text-muted-foreground py-1">
+                    No fixed assets recorded. Add machinery, vehicles or equipment in the Fixed
+                    Assets page.
+                  </div>
+                ) : (
+                  Object.entries(faSummary.byCat).map(([cat, v]) => (
+                    <Row
+                      key={cat}
+                      label={cat}
+                      value={v.gross - v.accDep}
+                      hint={`Gross ₹${fmt(v.gross)} − Accum dep ₹${fmt(v.accDep)}`}
+                    />
+                  ))
+                )}
+                {faSummary.gross > 0 && (
+                  <Row label="Net Block (Fixed Assets)" value={faSummary.netBlock} bold />
+                )}
+                <Sep />
+                <Row label="Total Assets" value={totalAssets} bold />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Liabilities &amp; Equity</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Section title="Current Liabilities" />
+                <Row label="Accounts Payable" value={ap} hint="Owed to suppliers." />
+                <Row
+                  label="GST Output Payable"
+                  value={Math.max(0, gstOut)}
+                  hint="GST collected on sales — payable to government."
+                />
+                <Row label="Total Current Liabilities" value={currentLiab} bold />
+                <Sep />
+                <Section title="Equity" />
+                {openingCapital > 0 && (
+                  <Row
+                    label="Opening Capital (Owner's contribution)"
+                    value={openingCapital}
+                    hint="Value of inventory you brought into the business at start-up. Auto-credited so the books balance."
+                  />
+                )}
+                <Row
+                  label="Retained Earnings (Net Profit)"
+                  value={netProfit}
+                  hint="Cumulative profit reinvested."
+                />
+                <Sep />
+                <Row label="Total Liabilities + Equity" value={totalLiab + equity} bold />
+                <div
+                  className={`mt-2 text-xs flex items-center gap-1.5 ${balanceCheck ? "text-primary" : "text-destructive"}`}
+                >
+                  {balanceCheck ? (
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                  ) : (
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                  )}
+                  {balanceCheck
+                    ? "Balance sheet equation balances (A = L + E)."
+                    : `Imbalance of ${inr(totalAssets - (totalLiab + equity))} — review unposted entries.`}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </TabsContent>
 
         <TabsContent value="wc" className="space-y-4">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Kpi label="Working Capital" value={inr(workingCapital)} tone={workingCapital >= 0 ? "good" : "bad"} hint="Current Assets − Current Liabilities." />
-            <Kpi label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} tone={currentRatio >= 1.5 ? "good" : currentRatio >= 1 ? "warn" : "bad"} hint="CA ÷ CL." />
-            <Kpi label="Quick (Acid Test)" value={isFinite(quickRatio) ? fmt(quickRatio, 2) : "∞"} tone={quickRatio >= 1 ? "good" : quickRatio >= 0.7 ? "warn" : "bad"} hint="(Cash+Bank+AR) ÷ CL." />
-            <Kpi label="Cash Conversion Cycle" value={`${fmt(ccc, 0)} days`} tone={ccc <= 60 ? "good" : ccc <= 90 ? "warn" : "bad"} hint="DSO + DIO − DPO." />
+            <Kpi
+              label="Working Capital"
+              value={inr(workingCapital)}
+              tone={workingCapital >= 0 ? "good" : "bad"}
+              hint="Current Assets − Current Liabilities."
+            />
+            <Kpi
+              label="Current Ratio"
+              value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"}
+              tone={currentRatio >= 1.5 ? "good" : currentRatio >= 1 ? "warn" : "bad"}
+              hint="CA ÷ CL."
+            />
+            <Kpi
+              label="Quick (Acid Test)"
+              value={isFinite(quickRatio) ? fmt(quickRatio, 2) : "∞"}
+              tone={quickRatio >= 1 ? "good" : quickRatio >= 0.7 ? "warn" : "bad"}
+              hint="(Cash+Bank+AR) ÷ CL."
+            />
+            <Kpi
+              label="Cash Conversion Cycle"
+              value={`${fmt(ccc, 0)} days`}
+              tone={ccc <= 60 ? "good" : ccc <= 90 ? "warn" : "bad"}
+              hint="DSO + DIO − DPO."
+            />
           </div>
 
           <Card>
-            <CardHeader><CardTitle className="flex items-center gap-2"><Wallet className="h-4 w-4" /> Working capital composition</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="h-4 w-4" /> Working capital composition
+              </CardTitle>
+            </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-6">
                 <div>
@@ -514,32 +812,71 @@ function ReportsPage() {
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Activity ratios (cash cycle)</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Activity ratios (cash cycle)</CardTitle>
+            </CardHeader>
             <CardContent className="space-y-2">
-              <Row label="Days Sales Outstanding (DSO)" value={dso} hint="Average days to collect from buyers. Target: ≤45 days." />
-              <Row label="Days Inventory Outstanding (DIO)" value={dio} hint="Days stock sits before being sold." />
-              <Row label="Days Payable Outstanding (DPO)" value={dpo} hint="Days you take to pay suppliers." />
-              <Row label="Cash Conversion Cycle (CCC)" value={ccc} bold hint="DSO + DIO − DPO. Lower is better." />
+              <Row
+                label="Days Sales Outstanding (DSO)"
+                value={dso}
+                hint="Average days to collect from buyers. Target: ≤45 days."
+              />
+              <Row
+                label="Days Inventory Outstanding (DIO)"
+                value={dio}
+                hint="Days stock sits before being sold."
+              />
+              <Row
+                label="Days Payable Outstanding (DPO)"
+                value={dpo}
+                hint="Days you take to pay suppliers."
+              />
+              <Row
+                label="Cash Conversion Cycle (CCC)"
+                value={ccc}
+                bold
+                hint="DSO + DIO − DPO. Lower is better."
+              />
               <div className="text-xs text-muted-foreground pt-2 border-t mt-2">
-                Suggestion: {ccc > 90
+                Suggestion:{" "}
+                {ccc > 90
                   ? "Cycle is long — push for advance payments, tighten credit terms, clear slow-moving SKUs."
                   : ccc > 60
-                  ? "Cycle is moderate — chase invoices >30 days old and negotiate longer supplier terms."
-                  : "Cycle is tight — cash recycles well. Reinvest the freed-up cash into fast-moving inventory."}
+                    ? "Cycle is moderate — chase invoices >30 days old and negotiate longer supplier terms."
+                    : "Cycle is tight — cash recycles well. Reinvest the freed-up cash into fast-moving inventory."}
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>Fixed Assets snapshot</CardTitle></CardHeader>
+            <CardHeader>
+              <CardTitle>Fixed Assets snapshot</CardTitle>
+            </CardHeader>
             <CardContent>
               {faSummary.gross === 0 ? (
-                <div className="text-sm text-muted-foreground">No fixed assets capitalised yet. Add machinery, vehicles or equipment from the Fixed Assets page.</div>
+                <div className="text-sm text-muted-foreground">
+                  No fixed assets capitalised yet. Add machinery, vehicles or equipment from the
+                  Fixed Assets page.
+                </div>
               ) : (
                 <div className="grid sm:grid-cols-3 gap-3">
-                  <Kpi label="Gross block" value={inr(faSummary.gross)} hint="Total acquisition cost." />
-                  <Kpi label="Accumulated depreciation" value={inr(faSummary.accDep)} tone="warn" hint="Wear-and-tear booked to date (AS 10)." />
-                  <Kpi label="Net block" value={inr(faSummary.netBlock)} tone="good" hint="Gross − Accumulated dep." />
+                  <Kpi
+                    label="Gross block"
+                    value={inr(faSummary.gross)}
+                    hint="Total acquisition cost."
+                  />
+                  <Kpi
+                    label="Accumulated depreciation"
+                    value={inr(faSummary.accDep)}
+                    tone="warn"
+                    hint="Wear-and-tear booked to date (AS 10)."
+                  />
+                  <Kpi
+                    label="Net block"
+                    value={inr(faSummary.netBlock)}
+                    tone="good"
+                    hint="Gross − Accumulated dep."
+                  />
                 </div>
               )}
             </CardContent>
@@ -550,8 +887,13 @@ function ReportsPage() {
           {/* Plain-English intro */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base"><Layers className="h-4 w-4" /> How should your unsold stock be valued?</CardTitle>
-              <div className="text-xs text-muted-foreground">Pick the method that fits how stone moves through your yard. Reports recompute instantly.</div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Layers className="h-4 w-4" /> How should your unsold stock be valued?
+              </CardTitle>
+              <div className="text-xs text-muted-foreground">
+                Pick the method that fits how stone moves through your yard. Reports recompute
+                instantly.
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid md:grid-cols-2 gap-3">
@@ -565,7 +907,11 @@ function ReportsPage() {
                     "Best when stones of one SKU are mixed in the yard and you can't tell which lot was sold.",
                     "Margins look stable even when supplier rates fluctuate week to week.",
                   ]}
-                  result={inr(cogsMethod === "weighted_average" ? inventory.closingValue : inventory.altClosingValue)}
+                  result={inr(
+                    cogsMethod === "weighted_average"
+                      ? inventory.closingValue
+                      : inventory.altClosingValue,
+                  )}
                   resultLabel="Closing stock value"
                 />
                 <MethodCard
@@ -578,12 +924,18 @@ function ReportsPage() {
                     "Best when stock is rotated (older lots dispatched before newer ones).",
                     "Closing stock reflects the most recent purchase prices — closer to today's market.",
                   ]}
-                  result={inr(cogsMethod === "fifo" ? inventory.closingValue : inventory.altClosingValue)}
+                  result={inr(
+                    cogsMethod === "fifo" ? inventory.closingValue : inventory.altClosingValue,
+                  )}
                   resultLabel="Closing stock value"
                 />
               </div>
               <div className="mt-3 text-[11px] text-muted-foreground bg-muted/40 rounded-md px-3 py-2">
-                <span className="font-medium text-foreground">AS 2 rule:</span> closing stock is always valued at the <span className="font-medium">lower of cost or net realisable value</span>. If a SKU's sale rate drops below its cost, we automatically write it down so your profit isn't overstated.
+                <span className="font-medium text-foreground">AS 2 rule:</span> closing stock is
+                always valued at the{" "}
+                <span className="font-medium">lower of cost or net realisable value</span>. If a
+                SKU's sale rate drops below its cost, we automatically write it down so your profit
+                isn't overstated.
               </div>
             </CardContent>
           </Card>
@@ -591,17 +943,38 @@ function ReportsPage() {
           {/* Side-by-side comparison */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-base"><Calculator className="h-4 w-4" /> Method comparison</CardTitle>
-              <div className="text-xs text-muted-foreground">Same stock, different valuation lens. Bigger gap = more sensitive to which method you choose.</div>
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Calculator className="h-4 w-4" /> Method comparison
+              </CardTitle>
+              <div className="text-xs text-muted-foreground">
+                Same stock, different valuation lens. Bigger gap = more sensitive to which method
+                you choose.
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid sm:grid-cols-3 gap-3">
-                <Kpi label="Units on hand" value={fmt(inventory.closingQty, 2)} hint="Total stocked-item units across all SKUs." />
-                <Kpi label={`Closing — ${cogsMethod === "fifo" ? "FIFO" : "Weighted Avg"} (in use)`} value={inr(inventory.closingValue)} tone="good" hint="What your books currently use." />
-                <Kpi label={`Closing — ${cogsMethod === "fifo" ? "Weighted Avg" : "FIFO"} (alt)`} value={inr(inventory.altClosingValue)} hint="What the other method would show." />
+                <Kpi
+                  label="Units on hand"
+                  value={fmt(inventory.closingQty, 2)}
+                  hint="Total stocked-item units across all SKUs."
+                />
+                <Kpi
+                  label={`Closing — ${cogsMethod === "fifo" ? "FIFO" : "Weighted Avg"} (in use)`}
+                  value={inr(inventory.closingValue)}
+                  tone="good"
+                  hint="What your books currently use."
+                />
+                <Kpi
+                  label={`Closing — ${cogsMethod === "fifo" ? "Weighted Avg" : "FIFO"} (alt)`}
+                  value={inr(inventory.altClosingValue)}
+                  hint="What the other method would show."
+                />
               </div>
               <div className="text-xs text-muted-foreground mt-3">
-                Difference: <span className="font-medium text-foreground tabular-nums">{inr(Math.abs(inventory.closingValue - inventory.altClosingValue))}</span>
+                Difference:{" "}
+                <span className="font-medium text-foreground tabular-nums">
+                  {inr(Math.abs(inventory.closingValue - inventory.altClosingValue))}
+                </span>
                 {" — "}
                 {Math.abs(inventory.closingValue - inventory.altClosingValue) < 1
                   ? "Both methods give the same number; choose whichever is easier to explain."
@@ -616,11 +989,15 @@ function ReportsPage() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Per-SKU valuation</CardTitle>
-              <div className="text-xs text-muted-foreground">Every stocked item, valued at its unit cost (after the NRV floor). Sorted by value.</div>
+              <div className="text-xs text-muted-foreground">
+                Every stocked item, valued at its unit cost (after the NRV floor). Sorted by value.
+              </div>
             </CardHeader>
             <CardContent className="p-0 overflow-x-auto">
               {inventory.perSku.length === 0 ? (
-                <div className="p-4 text-sm text-muted-foreground">No stock on hand yet. Add purchases or opening stock to see valuation.</div>
+                <div className="p-4 text-sm text-muted-foreground">
+                  No stock on hand yet. Add purchases or opening stock to see valuation.
+                </div>
               ) : (
                 <table className="w-full text-sm min-w-[640px]">
                   <thead className="bg-muted/50 text-xs uppercase tracking-wide">
@@ -637,20 +1014,30 @@ function ReportsPage() {
                       <tr key={r.id} className="border-t">
                         <td className="p-2">
                           {r.name}
-                          {r.nrvFloor && <span className="ml-2 text-[10px] text-amber-600 dark:text-amber-400">NRV write-down applied</span>}
+                          {r.nrvFloor && (
+                            <span className="ml-2 text-[10px] text-amber-600 dark:text-amber-400">
+                              NRV write-down applied
+                            </span>
+                          )}
                         </td>
                         <td className="p-2 text-right tabular-nums">{fmt(r.onHand, 2)}</td>
                         <td className="p-2 text-right tabular-nums">{inr(r.unitVal)}</td>
                         <td className="p-2 text-right tabular-nums font-medium">{inr(r.value)}</td>
-                        <td className="p-2 text-right tabular-nums text-muted-foreground">{inr(r.altValue)}</td>
+                        <td className="p-2 text-right tabular-nums text-muted-foreground">
+                          {inr(r.altValue)}
+                        </td>
                       </tr>
                     ))}
                     <tr className="border-t bg-muted/30 font-semibold">
                       <td className="p-2">Total</td>
-                      <td className="p-2 text-right tabular-nums">{fmt(inventory.closingQty, 2)}</td>
+                      <td className="p-2 text-right tabular-nums">
+                        {fmt(inventory.closingQty, 2)}
+                      </td>
                       <td className="p-2"></td>
                       <td className="p-2 text-right tabular-nums">{inr(inventory.closingValue)}</td>
-                      <td className="p-2 text-right tabular-nums text-muted-foreground">{inr(inventory.altClosingValue)}</td>
+                      <td className="p-2 text-right tabular-nums text-muted-foreground">
+                        {inr(inventory.altClosingValue)}
+                      </td>
                     </tr>
                   </tbody>
                 </table>
@@ -660,33 +1047,48 @@ function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="tb">
-          <Card><CardContent className="p-0 overflow-x-auto">
-            <table className="w-full text-sm min-w-[520px]">
-              <thead className="bg-muted/50 text-xs uppercase tracking-wide">
-                <tr><th className="text-left p-2">Account</th><th className="text-right p-2">Debit</th><th className="text-right p-2">Credit</th><th className="text-right p-2">Net</th></tr>
-              </thead>
-              <tbody>
-                {tbAll.map(r => (
-                  <tr key={r.acct} className="border-t">
-                    <td className="p-2">{r.acct}</td>
-                    <td className="p-2 text-right tabular-nums">{fmt(r.debit)}</td>
-                    <td className="p-2 text-right tabular-nums">{fmt(r.credit)}</td>
-                    <td className="p-2 text-right tabular-nums font-medium">{fmt(r.net)}</td>
+          <Card>
+            <CardContent className="p-0 overflow-x-auto">
+              <table className="w-full text-sm min-w-[520px]">
+                <thead className="bg-muted/50 text-xs uppercase tracking-wide">
+                  <tr>
+                    <th className="text-left p-2">Account</th>
+                    <th className="text-right p-2">Debit</th>
+                    <th className="text-right p-2">Credit</th>
+                    <th className="text-right p-2">Net</th>
                   </tr>
-                ))}
-                <tr className="border-t bg-muted/30 font-semibold">
-                  <td className="p-2">Totals</td>
-                  <td className="p-2 text-right tabular-nums">{fmt(tbTotalD)}</td>
-                  <td className="p-2 text-right tabular-nums">{fmt(tbTotalC)}</td>
-                  <td className="p-2 text-right tabular-nums">{fmt(tbTotalD - tbTotalC)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div className={`px-4 py-2 text-xs flex items-center gap-1.5 ${tbBalanced ? "text-primary" : "text-destructive"}`}>
-              {tbBalanced ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
-              {tbBalanced ? "Trial balance is in balance." : "Trial balance is OUT of balance. Review recent journal entries."}
-            </div>
-          </CardContent></Card>
+                </thead>
+                <tbody>
+                  {tbAll.map((r) => (
+                    <tr key={r.acct} className="border-t">
+                      <td className="p-2">{r.acct}</td>
+                      <td className="p-2 text-right tabular-nums">{fmt(r.debit)}</td>
+                      <td className="p-2 text-right tabular-nums">{fmt(r.credit)}</td>
+                      <td className="p-2 text-right tabular-nums font-medium">{fmt(r.net)}</td>
+                    </tr>
+                  ))}
+                  <tr className="border-t bg-muted/30 font-semibold">
+                    <td className="p-2">Totals</td>
+                    <td className="p-2 text-right tabular-nums">{fmt(tbTotalD)}</td>
+                    <td className="p-2 text-right tabular-nums">{fmt(tbTotalC)}</td>
+                    <td className="p-2 text-right tabular-nums">{fmt(tbTotalD - tbTotalC)}</td>
+                  </tr>
+                </tbody>
+              </table>
+              <div
+                className={`px-4 py-2 text-xs flex items-center gap-1.5 ${tbBalanced ? "text-primary" : "text-destructive"}`}
+              >
+                {tbBalanced ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : (
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                )}
+                {tbBalanced
+                  ? "Trial balance is in balance."
+                  : "Trial balance is OUT of balance. Review recent journal entries."}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="reconcile" className="space-y-4">
@@ -697,18 +1099,42 @@ function ReportsPage() {
   );
 }
 
-function Row({ label, value, bold, positive, hint }: { label: string; value: number; bold?: boolean; positive?: boolean; hint?: string }) {
-  return <div className={`flex items-center justify-between py-1.5 ${bold ? "border-t font-semibold" : ""}`}>
-    <span className="flex items-center gap-1.5">
-      {label}
-      {hint && <HintTip text={hint} />}
-    </span>
-    <span className={`tabular-nums ${positive ? (value >= 0 ? "text-primary" : "text-destructive") : ""}`}>{inr(value)}</span>
-  </div>;
+function Row({
+  label,
+  value,
+  bold,
+  positive,
+  hint,
+}: {
+  label: string;
+  value: number;
+  bold?: boolean;
+  positive?: boolean;
+  hint?: string;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between py-1.5 ${bold ? "border-t font-semibold" : ""}`}
+    >
+      <span className="flex items-center gap-1.5">
+        {label}
+        {hint && <HintTip text={hint} />}
+      </span>
+      <span
+        className={`tabular-nums ${positive ? (value >= 0 ? "text-primary" : "text-destructive") : ""}`}
+      >
+        {inr(value)}
+      </span>
+    </div>
+  );
 }
-function Sep() { return <div className="h-2" />; }
+function Sep() {
+  return <div className="h-2" />;
+}
 function Section({ title }: { title: string }) {
-  return <div className="text-xs uppercase tracking-wide text-muted-foreground mt-2 mb-1">{title}</div>;
+  return (
+    <div className="text-xs uppercase tracking-wide text-muted-foreground mt-2 mb-1">{title}</div>
+  );
 }
 
 function HintTip({ text, small }: { text: string; small?: boolean }) {
@@ -716,17 +1142,41 @@ function HintTip({ text, small }: { text: string; small?: boolean }) {
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <button type="button" aria-label="More info" className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground focus:outline-none" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          aria-label="More info"
+          className="inline-flex items-center justify-center text-muted-foreground hover:text-foreground focus:outline-none"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Info className={size} />
         </button>
       </PopoverTrigger>
-      <PopoverContent side="top" className="max-w-xs text-xs leading-relaxed">{text}</PopoverContent>
+      <PopoverContent side="top" className="max-w-xs text-xs leading-relaxed">
+        {text}
+      </PopoverContent>
     </Popover>
   );
 }
 
-function Kpi({ label, value, hint, tone }: { label: string; value: string; hint: string; tone?: "good" | "warn" | "bad" }) {
-  const toneCls = tone === "good" ? "text-primary" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : tone === "bad" ? "text-destructive" : "";
+function Kpi({
+  label,
+  value,
+  hint,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone?: "good" | "warn" | "bad";
+}) {
+  const toneCls =
+    tone === "good"
+      ? "text-primary"
+      : tone === "warn"
+        ? "text-amber-600 dark:text-amber-400"
+        : tone === "bad"
+          ? "text-destructive"
+          : "";
   return (
     <Card>
       <CardContent className="p-3">
@@ -740,8 +1190,25 @@ function Kpi({ label, value, hint, tone }: { label: string; value: string; hint:
   );
 }
 
-function Headline({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "warn" | "bad" }) {
-  const toneCls = tone === "good" ? "text-primary" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : tone === "bad" ? "text-destructive" : "";
+function Headline({
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "good" | "warn" | "bad";
+}) {
+  const toneCls =
+    tone === "good"
+      ? "text-primary"
+      : tone === "warn"
+        ? "text-amber-600 dark:text-amber-400"
+        : tone === "bad"
+          ? "text-destructive"
+          : "";
   return (
     <div>
       <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
@@ -751,18 +1218,53 @@ function Headline({ label, value, sub, tone }: { label: string; value: string; s
   );
 }
 
-function ReportHeroMetric({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" | "bad" }) {
-  const toneCls = tone === "good" ? "text-primary" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : tone === "bad" ? "text-destructive" : "text-foreground";
+function ReportHeroMetric({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "good" | "warn" | "bad";
+}) {
+  const toneCls =
+    tone === "good"
+      ? "text-primary"
+      : tone === "warn"
+        ? "text-amber-600 dark:text-amber-400"
+        : tone === "bad"
+          ? "text-destructive"
+          : "text-foreground";
   return (
     <div className="px-3 py-3 sm:px-4 sm:py-4 min-w-0">
-      <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground truncate">{label}</div>
-      <div className={`mt-1 text-base font-semibold tabular-nums leading-tight sm:text-lg ${toneCls}`} style={{ wordBreak: "break-word" }}>{value}</div>
+      <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground truncate">
+        {label}
+      </div>
+      <div
+        className={`mt-1 text-base font-semibold tabular-nums leading-tight sm:text-lg ${toneCls}`}
+        style={{ wordBreak: "break-word" }}
+      >
+        {value}
+      </div>
     </div>
   );
 }
 
-function CompactSignal({ label, value, status }: { label: string; value: string; status: "good" | "warn" | "bad" }) {
-  const toneCls = status === "good" ? "text-primary" : status === "warn" ? "text-amber-600 dark:text-amber-400" : "text-destructive";
+function CompactSignal({
+  label,
+  value,
+  status,
+}: {
+  label: string;
+  value: string;
+  status: "good" | "warn" | "bad";
+}) {
+  const toneCls =
+    status === "good"
+      ? "text-primary"
+      : status === "warn"
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-destructive";
   return (
     <div className="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-3 last:border-b-0">
       <div className="text-sm font-medium">{label}</div>
@@ -771,9 +1273,29 @@ function CompactSignal({ label, value, status }: { label: string; value: string;
   );
 }
 
-function MeterCard({ label, value, status, meaning }: { label: string; value: string; status: "good" | "warn" | "bad"; meaning: string }) {
-  const ring = status === "good" ? "border-l-primary" : status === "warn" ? "border-l-amber-500" : "border-l-destructive";
-  const valueTone = status === "good" ? "text-primary" : status === "warn" ? "text-amber-600 dark:text-amber-400" : "text-destructive";
+function MeterCard({
+  label,
+  value,
+  status,
+  meaning,
+}: {
+  label: string;
+  value: string;
+  status: "good" | "warn" | "bad";
+  meaning: string;
+}) {
+  const ring =
+    status === "good"
+      ? "border-l-primary"
+      : status === "warn"
+        ? "border-l-amber-500"
+        : "border-l-destructive";
+  const valueTone =
+    status === "good"
+      ? "text-primary"
+      : status === "warn"
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-destructive";
   return (
     <Card className={`border-l-4 ${ring}`}>
       <CardContent className="p-3">
@@ -792,9 +1314,22 @@ function statusFor(v: number, goodAt: number, warnAt: number): "good" | "warn" |
   return "bad";
 }
 
-function MethodCard({ active, onClick, title, tagline, bullets, result, resultLabel }: {
-  active: boolean; onClick: () => void; title: string; tagline: string;
-  bullets: string[]; result: string; resultLabel: string;
+function MethodCard({
+  active,
+  onClick,
+  title,
+  tagline,
+  bullets,
+  result,
+  resultLabel,
+}: {
+  active: boolean;
+  onClick: () => void;
+  title: string;
+  tagline: string;
+  bullets: string[];
+  result: string;
+  resultLabel: string;
 }) {
   return (
     <button
@@ -804,26 +1339,48 @@ function MethodCard({ active, onClick, title, tagline, bullets, result, resultLa
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="font-semibold flex items-center gap-2">{title}{active && <span className="inline-flex items-center gap-1 text-[10px] text-primary"><Check className="h-3 w-3" /> in use</span>}</div>
+          <div className="font-semibold flex items-center gap-2">
+            {title}
+            {active && (
+              <span className="inline-flex items-center gap-1 text-[10px] text-primary">
+                <Check className="h-3 w-3" /> in use
+              </span>
+            )}
+          </div>
           <div className="text-xs text-muted-foreground">{tagline}</div>
         </div>
         <div className="text-right">
-          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{resultLabel}</div>
+          <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+            {resultLabel}
+          </div>
           <div className="text-lg font-semibold tabular-nums">{result}</div>
         </div>
       </div>
       <ul className="mt-3 space-y-1.5 text-xs text-muted-foreground">
         {bullets.map((b, i) => (
-          <li key={i} className="flex gap-2 leading-relaxed"><span className="text-primary mt-1">•</span><span>{b}</span></li>
+          <li key={i} className="flex gap-2 leading-relaxed">
+            <span className="text-primary mt-1">•</span>
+            <span>{b}</span>
+          </li>
         ))}
       </ul>
     </button>
   );
 }
 
-function IntegrityBadge({ ok, okLabel, badLabel }: { ok: boolean; okLabel: string; badLabel: string }) {
+function IntegrityBadge({
+  ok,
+  okLabel,
+  badLabel,
+}: {
+  ok: boolean;
+  okLabel: string;
+  badLabel: string;
+}) {
   return (
-    <span className={`inline-flex items-center gap-1.5 ${ok ? "text-primary" : "text-destructive"}`}>
+    <span
+      className={`inline-flex items-center gap-1.5 ${ok ? "text-primary" : "text-destructive"}`}
+    >
       {ok ? <ShieldCheck className="h-3.5 w-3.5" /> : <ShieldAlert className="h-3.5 w-3.5" />}
       <span className="font-medium">{ok ? okLabel : badLabel}</span>
     </span>
@@ -832,66 +1389,199 @@ function IntegrityBadge({ ok, okLabel, badLabel }: { ok: boolean; okLabel: strin
 
 function ToneIcon({ tone }: { tone: "good" | "warn" | "bad" | "info" }) {
   if (tone === "good") return <CheckCircle2 className="h-4 w-4 text-primary mt-0.5" />;
-  if (tone === "warn") return <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />;
+  if (tone === "warn")
+    return <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5" />;
   if (tone === "bad") return <TrendingDown className="h-4 w-4 text-destructive mt-0.5" />;
   return <Minus className="h-4 w-4 text-muted-foreground mt-0.5" />;
 }
 
 type Insight = { tone: "good" | "warn" | "bad" | "info"; title: string; body: string };
 function buildInsights(x: {
-  revenue: number; netProfit: number; grossMarginPct: number; netMarginPct: number;
-  currentRatio: number; quickRatio: number; runwayMonths: number; revGrowthPct: number;
-  ar: number; ap: number; netGstPayable: number; workingCapital: number;
-  tbBalanced: boolean; balanceCheck: boolean;
+  revenue: number;
+  netProfit: number;
+  grossMarginPct: number;
+  netMarginPct: number;
+  currentRatio: number;
+  quickRatio: number;
+  runwayMonths: number;
+  revGrowthPct: number;
+  ar: number;
+  ap: number;
+  netGstPayable: number;
+  workingCapital: number;
+  tbBalanced: boolean;
+  balanceCheck: boolean;
   topExpense?: { k: string; v: number };
 }): Insight[] {
   const out: Insight[] = [];
-  if (x.grossMarginPct >= 20) out.push({ tone: "good", title: `Healthy gross margin (${fmt(x.grossMarginPct, 1)}%)`, body: "Pricing comfortably covers stock cost." });
-  else if (x.grossMarginPct >= 10) out.push({ tone: "warn", title: `Thin gross margin (${fmt(x.grossMarginPct, 1)}%)`, body: "Stone trading typically runs 18–30%. Review buyer-wise discounts and wastage." });
-  else out.push({ tone: "bad", title: `Critically low margin (${fmt(x.grossMarginPct, 1)}%)`, body: "Audit price lists, purchase rates and TP markups before raising more invoices." });
+  if (x.grossMarginPct >= 20)
+    out.push({
+      tone: "good",
+      title: `Healthy gross margin (${fmt(x.grossMarginPct, 1)}%)`,
+      body: "Pricing comfortably covers stock cost.",
+    });
+  else if (x.grossMarginPct >= 10)
+    out.push({
+      tone: "warn",
+      title: `Thin gross margin (${fmt(x.grossMarginPct, 1)}%)`,
+      body: "Stone trading typically runs 18–30%. Review buyer-wise discounts and wastage.",
+    });
+  else
+    out.push({
+      tone: "bad",
+      title: `Critically low margin (${fmt(x.grossMarginPct, 1)}%)`,
+      body: "Audit price lists, purchase rates and TP markups before raising more invoices.",
+    });
 
-  if (x.netProfit >= 0) out.push({ tone: "good", title: `Profitable: net ${inr(x.netProfit)}`, body: `Net margin ${fmt(x.netMarginPct, 1)}%.` });
-  else out.push({ tone: "bad", title: `Operating at a loss (${inr(x.netProfit)})`, body: "Gross profit isn't covering overheads." });
+  if (x.netProfit >= 0)
+    out.push({
+      tone: "good",
+      title: `Profitable: net ${inr(x.netProfit)}`,
+      body: `Net margin ${fmt(x.netMarginPct, 1)}%.`,
+    });
+  else
+    out.push({
+      tone: "bad",
+      title: `Operating at a loss (${inr(x.netProfit)})`,
+      body: "Gross profit isn't covering overheads.",
+    });
 
-  if (x.runwayMonths >= 6) out.push({ tone: "good", title: `Strong cash runway (${fmt(x.runwayMonths, 1)} months)`, body: "Liquid cash covers more than six months of OPEX." });
-  else if (x.runwayMonths >= 3) out.push({ tone: "warn", title: `Moderate runway (${fmt(x.runwayMonths, 1)} months)`, body: "Accelerate receivables; avoid large upfront purchases." });
-  else out.push({ tone: "bad", title: `Tight runway`, body: "Prioritise collecting outstanding invoices and defer non-essential expenses." });
+  if (x.runwayMonths >= 6)
+    out.push({
+      tone: "good",
+      title: `Strong cash runway (${fmt(x.runwayMonths, 1)} months)`,
+      body: "Liquid cash covers more than six months of OPEX.",
+    });
+  else if (x.runwayMonths >= 3)
+    out.push({
+      tone: "warn",
+      title: `Moderate runway (${fmt(x.runwayMonths, 1)} months)`,
+      body: "Accelerate receivables; avoid large upfront purchases.",
+    });
+  else
+    out.push({
+      tone: "bad",
+      title: `Tight runway`,
+      body: "Prioritise collecting outstanding invoices and defer non-essential expenses.",
+    });
 
   if (isFinite(x.currentRatio)) {
-    if (x.currentRatio >= 1.5) out.push({ tone: "good", title: `Liquidity comfortable (CR ${fmt(x.currentRatio, 2)})`, body: "Current assets safely exceed current liabilities." });
-    else if (x.currentRatio >= 1) out.push({ tone: "warn", title: `Liquidity acceptable (${fmt(x.currentRatio, 2)})`, body: "Stay above 1.0; chase older receivables." });
-    else out.push({ tone: "bad", title: `Liquidity strained (${fmt(x.currentRatio, 2)})`, body: "Current liabilities exceed current assets." });
+    if (x.currentRatio >= 1.5)
+      out.push({
+        tone: "good",
+        title: `Liquidity comfortable (CR ${fmt(x.currentRatio, 2)})`,
+        body: "Current assets safely exceed current liabilities.",
+      });
+    else if (x.currentRatio >= 1)
+      out.push({
+        tone: "warn",
+        title: `Liquidity acceptable (${fmt(x.currentRatio, 2)})`,
+        body: "Stay above 1.0; chase older receivables.",
+      });
+    else
+      out.push({
+        tone: "bad",
+        title: `Liquidity strained (${fmt(x.currentRatio, 2)})`,
+        body: "Current liabilities exceed current assets.",
+      });
   }
 
   const arApGap = x.ar - x.ap;
-  if (arApGap > 0) out.push({ tone: "info", title: `Buyers owe ${inr(arApGap)} more than you owe suppliers`, body: "Funding supplier credit out of pocket. Tighten buyer terms." });
-  else if (arApGap < 0) out.push({ tone: "good", title: `Supplier credit funding ${inr(-arApGap)} of WC`, body: "Suppliers are financing operations — good leverage." });
+  if (arApGap > 0)
+    out.push({
+      tone: "info",
+      title: `Buyers owe ${inr(arApGap)} more than you owe suppliers`,
+      body: "Funding supplier credit out of pocket. Tighten buyer terms.",
+    });
+  else if (arApGap < 0)
+    out.push({
+      tone: "good",
+      title: `Supplier credit funding ${inr(-arApGap)} of WC`,
+      body: "Suppliers are financing operations — good leverage.",
+    });
 
-  if (x.revGrowthPct >= 10) out.push({ tone: "good", title: `Revenue growing ${fmt(x.revGrowthPct, 1)}% QoQ`, body: "Sales engine working." });
-  else if (x.revGrowthPct <= -10) out.push({ tone: "bad", title: `Revenue declining ${fmt(Math.abs(x.revGrowthPct), 1)}% QoQ`, body: "Review buyer concentration and quote-conversion." });
+  if (x.revGrowthPct >= 10)
+    out.push({
+      tone: "good",
+      title: `Revenue growing ${fmt(x.revGrowthPct, 1)}% QoQ`,
+      body: "Sales engine working.",
+    });
+  else if (x.revGrowthPct <= -10)
+    out.push({
+      tone: "bad",
+      title: `Revenue declining ${fmt(Math.abs(x.revGrowthPct), 1)}% QoQ`,
+      body: "Review buyer concentration and quote-conversion.",
+    });
 
-  if (x.netGstPayable > 0) out.push({ tone: "info", title: `Net GST payable: ${inr(x.netGstPayable)}`, body: "Set aside before the 20th of next month (GSTR-3B)." });
-  if (x.topExpense && x.topExpense.v > 0) out.push({ tone: "info", title: `Largest expense head: ${x.topExpense.k} (${inr(x.topExpense.v)})`, body: "First place to look for cost savings." });
+  if (x.netGstPayable > 0)
+    out.push({
+      tone: "info",
+      title: `Net GST payable: ${inr(x.netGstPayable)}`,
+      body: "Set aside before the 20th of next month (GSTR-3B).",
+    });
+  if (x.topExpense && x.topExpense.v > 0)
+    out.push({
+      tone: "info",
+      title: `Largest expense head: ${x.topExpense.k} (${inr(x.topExpense.v)})`,
+      body: "First place to look for cost savings.",
+    });
 
-  if (!x.tbBalanced) out.push({ tone: "bad", title: "Trial balance not balanced", body: "Every journal must post equal Dr/Cr." });
-  if (!x.balanceCheck) out.push({ tone: "warn", title: "Balance sheet equation drifting", body: "Usually caused by un-posted inventory or GST entries." });
+  if (!x.tbBalanced)
+    out.push({
+      tone: "bad",
+      title: "Trial balance not balanced",
+      body: "Every journal must post equal Dr/Cr.",
+    });
+  if (!x.balanceCheck)
+    out.push({
+      tone: "warn",
+      title: "Balance sheet equation drifting",
+      body: "Usually caused by un-posted inventory or GST entries.",
+    });
 
   return out;
 }
 
 function outlookNarrative(x: {
-  revGrowthPct: number; netProfit: number; grossMarginPct: number; runwayMonths: number;
-  currentRatio: number; arApDelta: number; netGstPayable: number;
+  revGrowthPct: number;
+  netProfit: number;
+  grossMarginPct: number;
+  runwayMonths: number;
+  currentRatio: number;
+  arApDelta: number;
+  netGstPayable: number;
 }): string {
-  const trend = x.revGrowthPct >= 10 ? "expanding" : x.revGrowthPct >= 0 ? "stable" : x.revGrowthPct >= -10 ? "softening" : "contracting";
-  const profitability = x.netProfit >= 0 && x.grossMarginPct >= 15 ? "profitable" : x.netProfit >= 0 ? "marginally profitable" : "loss-making";
-  const liquidity = isFinite(x.currentRatio) && x.currentRatio >= 1.5 ? "liquid and well-funded" : isFinite(x.currentRatio) && x.currentRatio >= 1 ? "adequately funded" : "liquidity-constrained";
-  const direction = (x.revGrowthPct >= 0 && x.netProfit >= 0 && x.runwayMonths >= 3)
-    ? "trending positively — compound the gains by reinvesting in fast-moving SKUs and tightening AR collection"
-    : (x.netProfit < 0 || x.runwayMonths < 3)
-      ? "heading into a stress zone — focus the next 30 days on collections, cost cuts and pausing low-margin TP deals"
-      : "broadly sideways — protect cash and avoid new fixed overheads until margin improves";
-  const wc = x.arApDelta > 0 ? `Working capital is tied up in buyer credit (${inr(x.arApDelta)} more in AR than AP). ` : "";
-  const gst = x.netGstPayable > 0 ? `Reserve ${inr(x.netGstPayable)} for the upcoming GST cycle. ` : "";
+  const trend =
+    x.revGrowthPct >= 10
+      ? "expanding"
+      : x.revGrowthPct >= 0
+        ? "stable"
+        : x.revGrowthPct >= -10
+          ? "softening"
+          : "contracting";
+  const profitability =
+    x.netProfit >= 0 && x.grossMarginPct >= 15
+      ? "profitable"
+      : x.netProfit >= 0
+        ? "marginally profitable"
+        : "loss-making";
+  const liquidity =
+    isFinite(x.currentRatio) && x.currentRatio >= 1.5
+      ? "liquid and well-funded"
+      : isFinite(x.currentRatio) && x.currentRatio >= 1
+        ? "adequately funded"
+        : "liquidity-constrained";
+  const direction =
+    x.revGrowthPct >= 0 && x.netProfit >= 0 && x.runwayMonths >= 3
+      ? "trending positively — compound the gains by reinvesting in fast-moving SKUs and tightening AR collection"
+      : x.netProfit < 0 || x.runwayMonths < 3
+        ? "heading into a stress zone — focus the next 30 days on collections, cost cuts and pausing low-margin TP deals"
+        : "broadly sideways — protect cash and avoid new fixed overheads until margin improves";
+  const wc =
+    x.arApDelta > 0
+      ? `Working capital is tied up in buyer credit (${inr(x.arApDelta)} more in AR than AP). `
+      : "";
+  const gst =
+    x.netGstPayable > 0 ? `Reserve ${inr(x.netGstPayable)} for the upcoming GST cycle. ` : "";
   return `The business is currently ${profitability}, ${liquidity}, with revenue ${trend} over the last quarter. ${wc}${gst}On this trajectory the business is ${direction}.`;
 }

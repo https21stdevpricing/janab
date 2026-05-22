@@ -234,9 +234,20 @@ function AuditPage() {
       <PageHeader
         title="Audit"
         description={`Every saved change · ${isLive ? "live" : "syncing"}${lastSyncedAt ? ` · updated ${lastSyncedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`}
-        actions={<div className="flex items-center gap-2"><Button variant="outline" size="sm" onClick={refresh} disabled={isRefreshing}>{isRefreshing ? "Syncing…" : "Refresh"}</Button><ExcelBar onExport={onExport} /></div>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={refresh} disabled={isRefreshing}>
+              {isRefreshing ? "Syncing…" : "Refresh"}
+            </Button>
+            <ExcelBar onExport={onExport} />
+          </div>
+        }
       />
-      {lastError && <div className="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">Audit sync failed: {lastError.message}</div>}
+      {lastError && (
+        <div className="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          Audit sync failed: {lastError.message}
+        </div>
+      )}
 
       <KpiGrid cols={4} className="mb-4">
         <KpiTile label="Events" value={String(filtered.length)} hint={`${rows.length} total`} />
