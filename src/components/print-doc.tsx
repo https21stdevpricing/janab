@@ -8,6 +8,7 @@ import { exportStoneWorldDocument } from "@/lib/pdf-theme";
 import { lookupDocById } from "@/lib/doc-lookup";
 import { amountInWords } from "@/lib/amount-words";
 import { DEFAULT_PRINT_DESIGN, fileToDataUrl, loadPrintDesign, savePrintDesign, type PrintDesign } from "@/lib/print-customizer";
+import { digitalCopyUrl, generateBarcodeDataUrl, generateQrDataUrl, upiPayString } from "@/lib/doc-codes";
 
 export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }) {
   const [doc, setDoc] = useState<any>(null);
@@ -15,6 +16,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const [company, setCompany] = useState<any>(null);
   const [buyer, setBuyer] = useState<any>(null);
   const [design, setDesign] = useState<PrintDesign>(DEFAULT_PRINT_DESIGN);
+  const [autoQr, setAutoQr] = useState<string | null>(null);
+  const [autoBarcode, setAutoBarcode] = useState<string | null>(null);
 
   useEffect(() => { (async () => {
     const table = kind === "invoice" ? "sales" : "quotations";
@@ -48,9 +51,73 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const title = kind === "invoice" ? "Tax Invoice" : "Quotation";
   const address = [company?.address, company?.state].filter(Boolean).join(", ");
   const partyAddress = [buyer?.address, buyer?.state].filter(Boolean).join(", ");
+
+  // -----------------------------------------------------------------
+  // Auto-generated codes (QR for digital copy / UPI pay, Code-128 barcode).
+  // We recompute whenever inputs that affect the payload change.
+  // -----------------------------------------------------------------
+  const upiPayload = company?.upi_id && totals.total > 0
+    ? upiPayString({
+        upiId: company.upi_id,
+        payeeName: company?.company_name ?? "StoneWorld Traders",
+        amount: totals.total,
+        note: documentNo,
+      })
+    : null;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (design.qrMode === "off" || design.qrMode === "manual" || !documentNo) {
+        if (!cancelled) setAutoQr(null);
+        return;
+      }
+      const payload =
+        design.qrMode === "upi-pay" && upiPayload
+          ? upiPayload
+          : digitalCopyUrl(documentNo);
+      const url = await generateQrDataUrl(payload);
+      if (!cancelled) setAutoQr(url);
+    })();
+    return () => { cancelled = true; };
+  }, [design.qrMode, documentNo, upiPayload]);
+
+  useEffect(() => {
+    if (design.barcodeMode !== "auto" || !documentNo) { setAutoBarcode(null); return; }
+    setAutoBarcode(generateBarcodeDataUrl(documentNo));
+  }, [design.barcodeMode, documentNo]);
+
+  const renderedQr =
+    design.qrMode === "off"
+      ? null
+      : design.qrMode === "manual"
+        ? design.qrCodeDataUrl ?? null
+        : autoQr;
+  const qrCaption =
+    design.qrMode === "upi-pay" && upiPayload
+      ? "Scan to pay via UPI"
+      : design.qrMode === "digital-copy"
+        ? "Scan for digital copy"
+        : design.qrMode === "manual"
+          ? "Scan to pay / verify"
+          : null;
+  const renderedBarcode =
+    design.barcodeMode === "off"
+      ? null
+      : design.barcodeMode === "manual"
+        ? design.barcodeDataUrl ?? null
+        : autoBarcode;
+
   const downloadPdf = async () => {
     const result = await lookupDocById(kind === "invoice" ? "sale" : "quote", id);
-    if (result) exportStoneWorldDocument(result, company, design);
+    if (result) {
+      // Hand the rendered codes to the branded PDF exporter so the printed
+      // PDF matches the on-screen preview byte-for-byte.
+      exportStoneWorldDocument(result, company, {
+        ...design,
+        qrCodeDataUrl: renderedQr ?? design.qrCodeDataUrl ?? null,
+        barcodeDataUrl: renderedBarcode ?? design.barcodeDataUrl ?? null,
+      });
+    }
   };
 
   const updateDesign = (next: PrintDesign) => { setDesign(next); savePrintDesign(next); };
