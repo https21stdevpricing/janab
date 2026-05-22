@@ -526,10 +526,16 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                   </div>
                 </div>
               )}
-              {renderedBarcode && (
+              {barcodePlacement === "terms" && renderedBarcode && (
                 <div className="mt-4">
                   <img src={renderedBarcode} alt={`barcode ${documentNo}`} className="h-10 object-contain" />
                   <p className="mt-1 text-[9px] text-[#6e7886] tracking-wide">{documentNo}</p>
+                </div>
+              )}
+              {qrPlacement === "terms" && renderedQr && (
+                <div className="mt-4 inline-flex flex-col items-start">
+                  <img src={renderedQr} alt="qr" className="h-20 w-20 object-contain" />
+                  {qrCaption && <span className="text-[9px] text-[#6e7886] mt-1">{qrCaption}</span>}
                 </div>
               )}
               {doc.notes && <p className="mt-4"><span className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Notes</span><br />{doc.notes}</p>}
@@ -542,10 +548,16 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               )}
             </div>
             <div className="text-[11.5px] relative">
-              {renderedQr && (
+              {qrPlacement === "totals" && renderedQr && (
                 <div className="mb-3 flex flex-col items-end">
                   <img src={renderedQr} alt="qr" className="h-24 w-24 object-contain" />
                   {qrCaption && <span className="text-[9px] text-[#6e7886] mt-1">{qrCaption}</span>}
+                </div>
+              )}
+              {barcodePlacement === "totals" && renderedBarcode && (
+                <div className="mb-3 flex flex-col items-end">
+                  <img src={renderedBarcode} alt={`barcode ${documentNo}`} className="h-10 max-w-[180px] object-contain" />
+                  <span className="text-[9px] text-[#6e7886] mt-1">{documentNo}</span>
                 </div>
               )}
               <SummaryLine label="Subtotal" value={totals.subtotal} />
