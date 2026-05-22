@@ -462,9 +462,49 @@ function PaymentsPage() {
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Mode</Label>
               <Select value={mode} onValueChange={setMode}><SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Bank">Bank</SelectItem><SelectItem value="Cash">Cash</SelectItem><SelectItem value="UPI">UPI</SelectItem><SelectItem value="Cheque">Cheque</SelectItem></SelectContent>
+                <SelectContent>
+                  <SelectItem value="Bank">Bank transfer (NEFT/RTGS/IMPS)</SelectItem>
+                  <SelectItem value="UPI">UPI</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Card">Card</SelectItem>
+                </SelectContent>
               </Select></div>
             <div className="col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+
+            {(mode === "Bank" || mode === "UPI" || mode === "Card") && (
+              <>
+                <div className="col-span-2 sm:col-span-1 space-y-1.5">
+                  <Label className="text-xs">Bank / app name</Label>
+                  <Input placeholder={mode === "UPI" ? "GPay, PhonePe…" : "HDFC ****1234"} value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                </div>
+                <div className="col-span-2 sm:col-span-1 space-y-1.5">
+                  <Label className="text-xs">Transaction ID / UTR</Label>
+                  <Input placeholder="UTR / UPI ref no." value={txnId} onChange={(e) => setTxnId(e.target.value)} />
+                </div>
+              </>
+            )}
+
+            {mode === "Cheque" && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Cheque number *</Label>
+                  <Input placeholder="e.g. 045123" value={chequeNo} onChange={(e) => setChequeNo(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Cheque date</Label>
+                  <Input type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-xs">Drawee bank</Label>
+                  <Input placeholder="Bank on the cheque" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                </div>
+                <label className="col-span-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={cleared} onChange={(e) => setCleared(e.target.checked)} />
+                  Already cleared (uncheck if cheque is in transit)
+                </label>
+              </>
+            )}
           </div>
 
           {/* Outstanding docs */}
