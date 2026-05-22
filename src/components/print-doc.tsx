@@ -501,6 +501,9 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               <p className="mt-1 text-[10.5px] leading-4 text-[#6e7886]">{kind === "invoice"
                 ? "Goods once sold will not be taken back. Interest @18% p.a. on overdue balances. Subject to local jurisdiction. E&OE."
                 : "Prices valid until the date shown above. Quotation does not constitute a tax invoice. Stock and lot variation may apply. E&OE."}</p>
+              {design.declaration && design.declaration.trim() && (
+                <p className="mt-1 text-[10.5px] leading-4 text-[#374050] whitespace-pre-line">{design.declaration}</p>
+              )}
             </div>
             <div className="text-[11.5px] relative">
               {renderedQr && (
@@ -517,6 +520,69 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               </div>
             </div>
           </div>
+
+          {kind === "invoice" && design.showHsnSummary && hsnSummary.length > 0 && (
+            <div className="mt-6 break-inside-avoid">
+              <p className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886] mb-2">HSN/SAC tax summary</p>
+              <table className="w-full border-collapse text-[10.5px] leading-4 border border-slate-200">
+                <thead className="bg-slate-50 text-[#6e7886] uppercase text-[9px] tracking-[0.08em]">
+                  <tr>
+                    <th className="text-left py-1.5 px-2 border-b border-slate-200 font-bold">HSN/SAC</th>
+                    <th className="text-right py-1.5 px-2 border-b border-slate-200 font-bold">Taxable Value</th>
+                    {sameState ? (
+                      <>
+                        <th className="text-center py-1.5 px-2 border-b border-slate-200 font-bold" colSpan={2}>CGST</th>
+                        <th className="text-center py-1.5 px-2 border-b border-slate-200 font-bold" colSpan={2}>SGST</th>
+                      </>
+                    ) : (
+                      <th className="text-center py-1.5 px-2 border-b border-slate-200 font-bold" colSpan={2}>IGST</th>
+                    )}
+                    <th className="text-right py-1.5 px-2 border-b border-slate-200 font-bold">Total Tax</th>
+                  </tr>
+                  <tr className="text-[9px]">
+                    <th></th><th></th>
+                    {sameState ? (<><th className="text-center py-1 px-2 border-b border-slate-200">Rate</th><th className="text-right py-1 px-2 border-b border-slate-200">Amount</th><th className="text-center py-1 px-2 border-b border-slate-200">Rate</th><th className="text-right py-1 px-2 border-b border-slate-200">Amount</th></>) : (<><th className="text-center py-1 px-2 border-b border-slate-200">Rate</th><th className="text-right py-1 px-2 border-b border-slate-200">Amount</th></>)}
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {hsnSummary.map((r, i) => (
+                    <tr key={i} className="border-b border-slate-100">
+                      <td className="py-1.5 px-2 font-mono">{r.hsn}</td>
+                      <td className="py-1.5 px-2 text-right tabular-nums">{fmt(r.taxable, 2)}</td>
+                      {sameState ? (
+                        <>
+                          <td className="py-1.5 px-2 text-center tabular-nums">{fmt(r.rate / 2, r.rate % 2 === 0 ? 0 : 2)}%</td>
+                          <td className="py-1.5 px-2 text-right tabular-nums">{fmt(r.tax / 2, 2)}</td>
+                          <td className="py-1.5 px-2 text-center tabular-nums">{fmt(r.rate / 2, r.rate % 2 === 0 ? 0 : 2)}%</td>
+                          <td className="py-1.5 px-2 text-right tabular-nums">{fmt(r.tax / 2, 2)}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td className="py-1.5 px-2 text-center tabular-nums">{fmt(r.rate, r.rate % 1 === 0 ? 0 : 2)}%</td>
+                          <td className="py-1.5 px-2 text-right tabular-nums">{fmt(r.tax, 2)}</td>
+                        </>
+                      )}
+                      <td className="py-1.5 px-2 text-right tabular-nums font-semibold">{fmt(r.tax, 2)}</td>
+                    </tr>
+                  ))}
+                  <tr className="bg-slate-50 font-bold">
+                    <td className="py-1.5 px-2">Total</td>
+                    <td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.subtotal, 2)}</td>
+                    {sameState ? (
+                      <><td></td><td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.gst / 2, 2)}</td><td></td><td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.gst / 2, 2)}</td></>
+                    ) : (
+                      <><td></td><td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.gst, 2)}</td></>
+                    )}
+                    <td className="py-1.5 px-2 text-right tabular-nums">{fmt(totals.gst, 2)}</td>
+                  </tr>
+                </tbody>
+              </table>
+              {design.showTaxInWords && totals.gst > 0 && (
+                <p className="mt-2 text-[10.5px] text-[#374050]"><span className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Tax amount in words: </span><span className="font-semibold text-[#111621]">{amountInWords(totals.gst)}</span></p>
+              )}
+            </div>
+          )}
 
           {design.footerPosition === "above-signature" && !design.footerOnEveryPage && footerLogoBlock}
           <div className="mt-14 grid grid-cols-2 text-[11px] text-[#6e7886] break-inside-avoid">
