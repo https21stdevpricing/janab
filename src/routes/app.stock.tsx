@@ -6,11 +6,14 @@ import { Empty } from "@/components/empty";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
 import { fmt, fmtDate, inr } from "@/lib/format";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
-import { ArrowDownToLine, ArrowUpFromLine, Boxes, X, History } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Boxes, X, History, Wrench } from "lucide-react";
 import { lookupDoc, type DocLookupResult } from "@/lib/doc-lookup";
 import { DocDetail } from "@/routes/app.lookup";
 import { CollapseFilters } from "@/components/collapse-filters";
@@ -24,7 +27,7 @@ type StockRow = {
 };
 type ProdMeta = { purchase_rate: number; sale_rate: number };
 type Move = {
-  date: string; kind: "Purchase" | "Sale"; doc_no: string; party: string;
+  date: string; kind: "Purchase" | "Sale" | "Adjustment"; doc_no: string; party: string;
   qty: number; rate: number;
 };
 
@@ -36,18 +39,31 @@ function StockPage() {
   const [selected, setSelected] = useState<StockRow | null>(null);
   const [moves, setMoves] = useState<Move[]>([]);
   const [preview, setPreview] = useState<DocLookupResult | null>(null);
+  const [adjustFor, setAdjustFor] = useState<StockRow | null>(null);
+  const [adjQty, setAdjQty] = useState<number>(1);
+  const [adjReason, setAdjReason] = useState<"damage" | "theft" | "sample" | "correction" | "other">("damage");
+  const [adjNotes, setAdjNotes] = useState("");
+  const [adjDate, setAdjDate] = useState(new Date().toISOString().slice(0, 10));
+
+  const loadAll = async () => {
+    const [{ data: sv }, { data: ps }] = await Promise.all([
+      supabase.from("stock_view").select("*").order("name"),
+      supabase.from("products").select("id,purchase_rate,sale_rate"),
+    ]);
+    setRows((sv ?? []) as any);
+    const m: Record<string, ProdMeta> = {};
+    for (const p of (ps ?? []) as any[]) m[p.id] = { purchase_rate: Number(p.purchase_rate ?? 0), sale_rate: Number(p.sale_rate ?? 0) };
+    setMeta(m);
+  };
 
   useEffect(() => {
-    (async () => {
-      const [{ data: sv }, { data: ps }] = await Promise.all([
-        supabase.from("stock_view").select("*").order("name"),
-        supabase.from("products").select("id,purchase_rate,sale_rate"),
-      ]);
-      setRows((sv ?? []) as any);
-      const m: Record<string, ProdMeta> = {};
-      for (const p of (ps ?? []) as any[]) m[p.id] = { purchase_rate: Number(p.purchase_rate ?? 0), sale_rate: Number(p.sale_rate ?? 0) };
-      setMeta(m);
-    })();
+    loadAll();
+    const ch = supabase.channel("stock-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "stock_adjustments" as any }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_items" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "sale_items" }, () => loadAll())
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
   }, []);
 
   const filtered = useMemo(() => rows.filter(r => {
@@ -69,13 +85,15 @@ function StockPage() {
 
   const openMovements = async (r: StockRow) => {
     setSelected(r); setMoves([]);
-    const [{ data: pi }, { data: si }] = await Promise.all([
+    const [{ data: pi }, { data: si }, { data: sa }] = await Promise.all([
       supabase.from("purchase_items").select("qty,rate,purchases!inner(po_no,date,supplier_name)").eq("product_id", r.product_id) as any,
       supabase.from("sale_items").select("qty,rate,sales!inner(invoice_no,date,buyer_name)").eq("product_id", r.product_id) as any,
+      supabase.from("stock_adjustments" as never).select("date,qty,reason,notes,unit_cost").eq("product_id" as never, r.product_id) as any,
     ]);
     const arr: Move[] = [];
     for (const x of (pi ?? []) as any[]) arr.push({ date: x.purchases.date, kind: "Purchase", doc_no: x.purchases.po_no, party: x.purchases.supplier_name ?? "—", qty: Number(x.qty), rate: Number(x.rate ?? 0) });
     for (const x of (si ?? []) as any[]) arr.push({ date: x.sales.date, kind: "Sale", doc_no: x.sales.invoice_no, party: x.sales.buyer_name ?? "—", qty: Number(x.qty), rate: Number(x.rate ?? 0) });
+    for (const x of (sa ?? []) as any[]) arr.push({ date: x.date, kind: "Adjustment", doc_no: `ADJ · ${x.reason}`, party: x.notes ?? "—", qty: Number(x.qty), rate: Number(x.unit_cost ?? 0) });
     arr.sort((a, b) => (a.date < b.date ? 1 : -1));
     setMoves(arr);
   };
@@ -100,11 +118,37 @@ function StockPage() {
     const chrono = [...moves].sort((a, b) => (a.date < b.date ? -1 : 1));
     let run = opening;
     const annotated = chrono.map(m => {
-      run += m.kind === "Purchase" ? m.qty : -m.qty;
+      run += m.kind === "Purchase" ? m.qty : -m.qty; // Sale & Adjustment both reduce stock
       return { ...m, running: run };
     });
     return annotated.reverse();
   }, [moves, selected]);
+
+  const openAdjust = (r: StockRow) => {
+    setAdjustFor(r);
+    setAdjQty(1); setAdjReason("damage"); setAdjNotes("");
+    setAdjDate(new Date().toISOString().slice(0, 10));
+  };
+  const saveAdjust = async () => {
+    if (!adjustFor) return;
+    if (!adjQty || adjQty === 0) { toast.error("Quantity must not be zero"); return; }
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const cost = meta[adjustFor.product_id]?.purchase_rate ?? 0;
+    const { error } = await supabase.from("stock_adjustments" as never).insert({
+      user_id: user.id,
+      product_id: adjustFor.product_id,
+      date: adjDate,
+      qty: adjQty,        // positive = out (loss); enter negative for "found"
+      reason: adjReason,
+      notes: adjNotes || null,
+      unit_cost: cost,
+    } as never);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Stock adjusted (${adjQty > 0 ? "−" : "+"}${Math.abs(adjQty)})`);
+    setAdjustFor(null); loadAll();
+    if (selected?.product_id === adjustFor.product_id) openMovements(adjustFor);
+  };
 
   return (
     <div>
@@ -168,6 +212,7 @@ function StockPage() {
                     <td className="p-2 text-right tabular-nums">{inr(saleV)}</td>
                     <td className="p-2 text-right">
                       <Button size="sm" variant="ghost" onClick={() => openMovements(r)}><History className="h-3.5 w-3.5" /> Movements</Button>
+                      <Button size="sm" variant="ghost" onClick={() => openAdjust(r)} title="Write off / adjust stock"><Wrench className="h-3.5 w-3.5" /> Adjust</Button>
                     </td>
                   </tr>
                 );
@@ -183,7 +228,10 @@ function StockPage() {
             <DialogTitle className="text-sm font-medium">
               {selected?.name} <span className="font-mono text-xs text-muted-foreground">{selected?.code}</span>
             </DialogTitle>
-            <button className="rounded-md p-1 hover:bg-muted" onClick={() => setSelected(null)} aria-label="Close"><X className="h-4 w-4" /></button>
+            <div className="flex items-center gap-2">
+              {selected && <Button size="sm" variant="outline" onClick={() => openAdjust(selected)}><Wrench className="h-3.5 w-3.5" /> Adjust</Button>}
+              <button className="rounded-md p-1 hover:bg-muted" onClick={() => setSelected(null)} aria-label="Close"><X className="h-4 w-4" /></button>
+            </div>
           </div>
           {selected && (
             <div className="p-4 space-y-3">
@@ -214,10 +262,14 @@ function StockPage() {
                           <td className="p-2">
                             {m.kind === "Purchase"
                               ? <Badge variant="secondary"><ArrowDownToLine className="h-3 w-3 mr-1" /> In</Badge>
-                              : <Badge variant="outline" className="text-destructive border-destructive/40"><ArrowUpFromLine className="h-3 w-3 mr-1" /> Out</Badge>}
+                              : m.kind === "Adjustment"
+                                ? <Badge variant="outline" className="text-amber-700 border-amber-500/40 dark:text-amber-300"><Wrench className="h-3 w-3 mr-1" /> Adj</Badge>
+                                : <Badge variant="outline" className="text-destructive border-destructive/40"><ArrowUpFromLine className="h-3 w-3 mr-1" /> Out</Badge>}
                           </td>
                           <td className="p-2">
-                            <button className="font-mono text-primary hover:underline" onClick={async () => { const r = await lookupDoc(m.doc_no); if (r) setPreview(r); }}>{m.doc_no}</button>
+                            {m.kind === "Adjustment"
+                              ? <span className="font-mono text-xs text-muted-foreground">{m.doc_no}</span>
+                              : <button className="font-mono text-primary hover:underline" onClick={async () => { const r = await lookupDoc(m.doc_no); if (r) setPreview(r); }}>{m.doc_no}</button>}
                           </td>
                           <td className="p-2 truncate max-w-[200px]">{m.party}</td>
                           <td className={`p-2 text-right tabular-nums ${m.kind === "Purchase" ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}>
@@ -233,6 +285,52 @@ function StockPage() {
               )}
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Stock adjustment dialog */}
+      <Dialog open={!!adjustFor} onOpenChange={o => !o && setAdjustFor(null)}>
+        <DialogContent className="max-w-md">
+          <DialogTitle className="text-base flex items-center gap-2"><Wrench className="h-4 w-4" /> Adjust stock · {adjustFor?.name}</DialogTitle>
+          <div className="text-xs text-muted-foreground">Current on-hand: <span className="font-semibold text-foreground tabular-nums">{adjustFor ? fmt(adjustFor.on_hand) : "—"}</span> {adjustFor?.unit}</div>
+          <div className="grid grid-cols-2 gap-3 mt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs">Quantity lost</Label>
+              <Input type="number" step="0.01" value={adjQty} onChange={e => setAdjQty(+e.target.value)} />
+              <p className="text-[10px] text-muted-foreground">Enter a positive number to reduce stock; negative to add stock you found.</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Date</Label>
+              <Input type="date" value={adjDate} onChange={e => setAdjDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label className="text-xs">Reason</Label>
+              <Select value={adjReason} onValueChange={(v) => setAdjReason(v as any)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="damage">Damage / breakage</SelectItem>
+                  <SelectItem value="theft">Theft / shrinkage</SelectItem>
+                  <SelectItem value="sample">Sample / giveaway</SelectItem>
+                  <SelectItem value="correction">Count correction</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label className="text-xs">Notes (optional)</Label>
+              <Input value={adjNotes} onChange={e => setAdjNotes(e.target.value)} placeholder="e.g. dropped slab during loading" />
+            </div>
+            {adjustFor && (
+              <div className="col-span-2 rounded-md border bg-muted/30 p-2.5 text-xs">
+                After save · on-hand will become <span className="font-semibold tabular-nums">{fmt(Number(adjustFor.on_hand) - Number(adjQty || 0))}</span> {adjustFor.unit}.
+                Cost moved out of stock: <span className="font-semibold">{inr(Math.abs((meta[adjustFor.product_id]?.purchase_rate ?? 0) * (adjQty || 0)))}</span>.
+              </div>
+            )}
+          </div>
+          <DialogFooter className="mt-3">
+            <Button variant="ghost" onClick={() => setAdjustFor(null)}>Cancel</Button>
+            <Button onClick={saveAdjust}>Save adjustment</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
