@@ -776,15 +776,6 @@ function HeroCell({ label, value, tone, active, onClick }: { label: string; valu
   );
 }
 
-function MiniBucket({ label, value, tone }: { label: string; value: number; tone?: "warn" | "bad" }) {
-  const clr = tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : "text-foreground";
-  return (
-    <div className="rounded-2xl border bg-card px-2.5 py-2">
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`text-xs sm:text-sm font-semibold tabular-nums truncate ${clr}`}>{inr(value)}</div>
-    </div>
-  );
-}
 
 function PayProgress({ pct, tab }: { pct: number; tab: "receivable" | "payable" | "history" }) {
   const bar = tab === "receivable" ? "bg-primary" : "bg-destructive";
