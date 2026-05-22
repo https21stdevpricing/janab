@@ -76,6 +76,11 @@ function PaymentsPage() {
   const [amount, setAmount] = useState(0);
   const [mode, setMode] = useState("Bank");
   const [notes, setNotes] = useState("");
+  const [chequeNo, setChequeNo] = useState("");
+  const [chequeDate, setChequeDate] = useState("");
+  const [txnId, setTxnId] = useState("");
+  const [bankName, setBankName] = useState("");
+  const [cleared, setCleared] = useState(true);
   const [refLookup, setRefLookup] = useState("");
   const [openDocs, setOpenDocs] = useState<any[]>([]);
   const [allocs, setAllocs] = useState<Alloc[]>([]);
@@ -196,6 +201,7 @@ function PaymentsPage() {
   const startNew = (dir: "in" | "out") => {
     setDirection(dir); setDate(todayISO()); setContactId(null); setContactName(null);
     setAmount(0); setMode("Bank"); setNotes(""); setRefLookup(""); setOpenDocs([]); setAllocs([]);
+    setChequeNo(""); setChequeDate(""); setTxnId(""); setBankName(""); setCleared(true);
     setOpen(true);
   };
 
@@ -224,10 +230,17 @@ function PaymentsPage() {
     if (!user) return;
     if (!contactId) { toast.error("Pick a contact"); return; }
     if (amount <= 0) { toast.error("Amount must be > 0"); return; }
+    if (mode === "Cheque" && !chequeNo.trim()) { toast.error("Cheque number is required"); return; }
     const { data: pay, error } = await supabase.from("payments").insert({
       user_id: user.id, direction, date, amount, mode, notes: notes || null,
       contact_id: contactId, contact_name: contactName,
       ref_doc: allocs.map(a => a.doc_no).join(", ") || null,
+      cheque_no: chequeNo || null,
+      cheque_date: chequeDate || null,
+      txn_id: txnId || null,
+      bank_name: bankName || null,
+      cleared,
+      cleared_at: cleared ? date : null,
     } as never).select().single() as { data: any; error: any };
     if (error) { toast.error(error.message); return; }
     if (allocs.length) {
@@ -449,9 +462,49 @@ function PaymentsPage() {
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Mode</Label>
               <Select value={mode} onValueChange={setMode}><SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="Bank">Bank</SelectItem><SelectItem value="Cash">Cash</SelectItem><SelectItem value="UPI">UPI</SelectItem><SelectItem value="Cheque">Cheque</SelectItem></SelectContent>
+                <SelectContent>
+                  <SelectItem value="Bank">Bank transfer (NEFT/RTGS/IMPS)</SelectItem>
+                  <SelectItem value="UPI">UPI</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Card">Card</SelectItem>
+                </SelectContent>
               </Select></div>
             <div className="col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+
+            {(mode === "Bank" || mode === "UPI" || mode === "Card") && (
+              <>
+                <div className="col-span-2 sm:col-span-1 space-y-1.5">
+                  <Label className="text-xs">Bank / app name</Label>
+                  <Input placeholder={mode === "UPI" ? "GPay, PhonePe…" : "HDFC ****1234"} value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                </div>
+                <div className="col-span-2 sm:col-span-1 space-y-1.5">
+                  <Label className="text-xs">Transaction ID / UTR</Label>
+                  <Input placeholder="UTR / UPI ref no." value={txnId} onChange={(e) => setTxnId(e.target.value)} />
+                </div>
+              </>
+            )}
+
+            {mode === "Cheque" && (
+              <>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Cheque number *</Label>
+                  <Input placeholder="e.g. 045123" value={chequeNo} onChange={(e) => setChequeNo(e.target.value)} />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Cheque date</Label>
+                  <Input type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} />
+                </div>
+                <div className="col-span-2 space-y-1.5">
+                  <Label className="text-xs">Drawee bank</Label>
+                  <Input placeholder="Bank on the cheque" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+                </div>
+                <label className="col-span-2 flex items-center gap-2 text-xs text-muted-foreground">
+                  <input type="checkbox" checked={cleared} onChange={(e) => setCleared(e.target.checked)} />
+                  Already cleared (uncheck if cheque is in transit)
+                </label>
+              </>
+            )}
           </div>
 
           {/* Outstanding docs */}

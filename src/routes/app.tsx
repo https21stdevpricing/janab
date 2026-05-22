@@ -47,6 +47,12 @@ const moreGroups: { label: string; items: { to: string; label: string; icon: any
     ],
   },
   {
+    label: "Money",
+    items: [
+      { to: "/app/bank", label: "Bank & cash", icon: Wallet },
+    ],
+  },
+  {
     label: "Catalog",
     items: [
       { to: "/app/products", label: "Products", icon: Package },

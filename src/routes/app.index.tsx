@@ -5,8 +5,8 @@ import { inr } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import {
-  ShoppingCart, Truck, Wallet, Boxes, ArrowRight, ArrowUpRight, ArrowDownRight,
-  TrendingUp, AlertTriangle, Sparkles, Lock, Play, Receipt, ArrowDownLeft, ArrowUpLeft,
+  ShoppingCart, Truck, Wallet, ArrowRight, ArrowUpRight, ArrowDownRight,
+  TrendingUp, AlertTriangle, Sparkles, Receipt, ArrowDownLeft, ArrowUpLeft, HelpCircle, Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +53,8 @@ const METRICS = [
 type MetricKey = (typeof METRICS)[number]["key"];
 
 const RANGES = [
+  { key: "7d",  label: "7 days",   days: 7,   buckets: 7,  unit: "day" as const },
+  { key: "30d", label: "30 days",  days: 30,  buckets: 30, unit: "day" as const },
   { key: "4w",  label: "4 weeks",  days: 28,  buckets: 4,  unit: "week" as const },
   { key: "12w", label: "12 weeks", days: 84,  buckets: 12, unit: "week" as const },
   { key: "6m",  label: "6 months", days: 182, buckets: 6,  unit: "month" as const },
@@ -185,8 +187,7 @@ function Dashboard() {
   const [daily, setDaily] = useState<DailyRow[] | null>(null);
   const [today, setToday] = useState<Today | null>(null);
   const [metric, setMetric] = useState<MetricKey>("revenue");
-  const [range, setRange] = useState<RangeKey>("12w");
-  const [locked, setLocked] = useState(false);
+  const [range, setRange] = useState<RangeKey>("30d");
 
   // First-time intro tour
   useEffect(() => {
@@ -199,21 +200,7 @@ function Dashboard() {
     } catch {}
   }, [navigate]);
 
-  // Auto-cycle through metrics every 5s. Tap any metric/range to lock the
-  // view in place — small "Locked" pill explains it and offers Resume.
-  useEffect(() => {
-    if (locked) return;
-    const id = setInterval(() => {
-      setMetric((m) => {
-        const idx = METRICS.findIndex((x) => x.key === m);
-        return METRICS[(idx + 1) % METRICS.length].key;
-      });
-    }, 5500);
-    return () => clearInterval(id);
-  }, [locked]);
-
-  useEffect(() => {
-    (async () => {
+  const loadAll = async () => {
       const [{ data: ledger }, { data: stock }, { data: jl }] = await Promise.all([
         supabase.from("ledger_view").select("account,debit,credit"),
         supabase.from("stock_view").select("on_hand,reorder_level"),
@@ -278,7 +265,23 @@ function Dashboard() {
       tStats.saleCount = sc ?? 0;
       tStats.purchaseCount = pc ?? 0;
       setToday(tStats);
-    })();
+  };
+
+  useEffect(() => {
+    loadAll();
+    // Realtime: refresh when anything that affects the dashboard changes.
+    const ch = supabase.channel("dash-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchases" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "bank_transfers" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "journal_lines" }, () => loadAll())
+      .subscribe();
+    // Refresh on tab focus too, in case realtime is throttled.
+    const onFocus = () => loadAll();
+    window.addEventListener("focus", onFocus);
+    return () => { supabase.removeChannel(ch); window.removeEventListener("focus", onFocus); };
   }, []);
 
   // Re-aggregate the raw lines into buckets matching the chosen range.
@@ -291,7 +294,14 @@ function Dashboard() {
     // Bucket boundaries
     const buckets: { start: Date; label: string }[] = [];
     const now = new Date();
-    if (range_.unit === "week") {
+    if (range_.unit === "day") {
+      const cur = startOfDay(now);
+      for (let i = range_.buckets - 1; i >= 0; i--) {
+        const d = new Date(cur);
+        d.setDate(d.getDate() - i);
+        buckets.push({ start: d, label: `${d.getDate()}/${d.getMonth() + 1}` });
+      }
+    } else if (range_.unit === "week") {
       const cur = startOfWeek(now);
       for (let i = range_.buckets - 1; i >= 0; i--) {
         const d = new Date(cur);
@@ -356,7 +366,7 @@ function Dashboard() {
     { to: "/app/sales", label: "New sale", icon: ShoppingCart, primary: true },
     { to: "/app/purchases", label: "New purchase", icon: Truck },
     { to: "/app/payments", label: "Record payment", icon: Wallet },
-    { to: "/app/stock", label: "Check stock", icon: Boxes },
+    { to: "/app/bank", label: "Bank & cash", icon: Landmark },
   ];
 
   const periodLabel = RANGES.find((r) => r.key === range)!.label;
@@ -437,10 +447,9 @@ function Dashboard() {
               <div className="eyebrow">Trends · {periodLabel}</div>
               <h2 className="text-[15px] font-semibold tracking-tight mt-1">Graphical view</h2>
             </div>
-            <LockPill
-              locked={locked}
-              onResume={() => setLocked(false)}
-            />
+            <Link to="/app/guide" className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-full hover:bg-muted">
+              <HelpCircle className="h-3 w-3" /> Help & FAQ
+            </Link>
           </div>
 
           {/* Filter rail — metric on top, time range below. Tapping any chip locks. */}
@@ -453,7 +462,7 @@ function Dashboard() {
                     key={m.key}
                     role="tab"
                     aria-selected={active}
-                    onClick={() => { setMetric(m.key); setLocked(true); }}
+                    onClick={() => setMetric(m.key)}
                     className={cn(
                       "px-3 py-1.5 rounded-full text-[12px] font-medium transition-all",
                       active
@@ -474,7 +483,7 @@ function Dashboard() {
                     key={r.key}
                     role="tab"
                     aria-selected={active}
-                    onClick={() => { setRange(r.key); setLocked(true); }}
+                    onClick={() => setRange(r.key)}
                     className={cn(
                       "px-2.5 py-1 rounded-full text-[11px] font-medium border transition-all",
                       active
@@ -637,28 +646,6 @@ function TodayTile({
       <div className={cn("text-[15px] sm:text-base font-semibold tabular-nums mt-0.5 truncate", toneClass)}>{value}</div>
       {hint && <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{hint}</div>}
     </Link>
-  );
-}
-
-function LockPill({ locked, onResume }: { locked: boolean; onResume: () => void }) {
-  if (!locked) {
-    return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground px-2 py-1 rounded-full bg-muted/60">
-        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-        Auto-cycling
-      </div>
-    );
-  }
-  return (
-    <button
-      onClick={onResume}
-      className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border/60 hover:border-foreground/30 hover:bg-muted transition-all"
-    >
-      <Lock className="h-3 w-3" />
-      Locked
-      <span className="text-muted-foreground">·</span>
-      <span className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"><Play className="h-3 w-3" /> Resume</span>
-    </button>
   );
 }
 

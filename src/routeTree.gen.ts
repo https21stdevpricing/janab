@@ -36,6 +36,7 @@ import { Route as AppDeliveriesRouteImport } from './routes/app.deliveries'
 import { Route as AppContactsRouteImport } from './routes/app.contacts'
 import { Route as AppBuyersRouteImport } from './routes/app.buyers'
 import { Route as AppBillsRouteImport } from './routes/app.bills'
+import { Route as AppBankRouteImport } from './routes/app.bank'
 import { Route as AppAuditRouteImport } from './routes/app.audit'
 import { Route as AppAnalyticsRouteImport } from './routes/app.analytics'
 import { Route as AppPrintQuoteIdRouteImport } from './routes/app.print.quote.$id'
@@ -176,6 +177,11 @@ const AppBillsRoute = AppBillsRouteImport.update({
   path: '/bills',
   getParentRoute: () => AppRoute,
 } as any)
+const AppBankRoute = AppBankRouteImport.update({
+  id: '/bank',
+  path: '/bank',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppAuditRoute = AppAuditRouteImport.update({
   id: '/audit',
   path: '/audit',
@@ -204,6 +210,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/audit': typeof AppAuditRoute
+  '/app/bank': typeof AppBankRoute
   '/app/bills': typeof AppBillsRoute
   '/app/buyers': typeof AppBuyersRoute
   '/app/contacts': typeof AppContactsRoute
@@ -236,6 +243,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/audit': typeof AppAuditRoute
+  '/app/bank': typeof AppBankRoute
   '/app/bills': typeof AppBillsRoute
   '/app/buyers': typeof AppBuyersRoute
   '/app/contacts': typeof AppContactsRoute
@@ -270,6 +278,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/app/analytics': typeof AppAnalyticsRoute
   '/app/audit': typeof AppAuditRoute
+  '/app/bank': typeof AppBankRoute
   '/app/bills': typeof AppBillsRoute
   '/app/buyers': typeof AppBuyersRoute
   '/app/contacts': typeof AppContactsRoute
@@ -305,6 +314,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/analytics'
     | '/app/audit'
+    | '/app/bank'
     | '/app/bills'
     | '/app/buyers'
     | '/app/contacts'
@@ -337,6 +347,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/analytics'
     | '/app/audit'
+    | '/app/bank'
     | '/app/bills'
     | '/app/buyers'
     | '/app/contacts'
@@ -370,6 +381,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/app/analytics'
     | '/app/audit'
+    | '/app/bank'
     | '/app/bills'
     | '/app/buyers'
     | '/app/contacts'
@@ -595,6 +607,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppBillsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/bank': {
+      id: '/app/bank'
+      path: '/bank'
+      fullPath: '/app/bank'
+      preLoaderRoute: typeof AppBankRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/audit': {
       id: '/app/audit'
       path: '/audit'
@@ -643,6 +662,7 @@ const AppPrintRouteWithChildren = AppPrintRoute._addFileChildren(
 interface AppRouteChildren {
   AppAnalyticsRoute: typeof AppAnalyticsRoute
   AppAuditRoute: typeof AppAuditRoute
+  AppBankRoute: typeof AppBankRoute
   AppBillsRoute: typeof AppBillsRoute
   AppBuyersRoute: typeof AppBuyersRoute
   AppContactsRoute: typeof AppContactsRoute
@@ -671,6 +691,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppAnalyticsRoute: AppAnalyticsRoute,
   AppAuditRoute: AppAuditRoute,
+  AppBankRoute: AppBankRoute,
   AppBillsRoute: AppBillsRoute,
   AppBuyersRoute: AppBuyersRoute,
   AppContactsRoute: AppContactsRoute,
