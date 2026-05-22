@@ -17,6 +17,7 @@ import { ArrowDownToLine, ArrowUpFromLine, Boxes, X, History, Wrench } from "luc
 import { lookupDoc, type DocLookupResult } from "@/lib/doc-lookup";
 import { DocDetail } from "@/routes/app.lookup";
 import { CollapseFilters } from "@/components/collapse-filters";
+import { KpiGrid, KpiTile } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/stock")({ component: StockPage });
 
@@ -157,12 +158,12 @@ function StockPage() {
         actions={<ExcelBar onExport={onExport} />}
       />
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-        <Tile label="Total units on hand" value={fmt(summary.onHand)} />
-        <Tile label="Inventory value (cost)" value={inr(summary.valueCost)} />
-        <Tile label="Inventory value (sale)" value={inr(summary.valueSale)} tone="good" />
-        <Tile label="Low-stock items" value={String(summary.lowCount)} tone={summary.lowCount > 0 ? "bad" : undefined} />
-      </div>
+      <KpiGrid cols={4} className="mb-3">
+        <KpiTile label="Total units on hand" value={fmt(summary.onHand)} />
+        <KpiTile label="Inventory value (cost)" value={inr(summary.valueCost)} />
+        <KpiTile label="Inventory value (sale)" value={inr(summary.valueSale)} tone="good" />
+        <KpiTile label="Low-stock items" value={String(summary.lowCount)} tone={summary.lowCount > 0 ? "bad" : undefined} />
+      </KpiGrid>
 
       <CollapseFilters
         summary={`${filtered.length} of ${rows.length} SKUs`}
