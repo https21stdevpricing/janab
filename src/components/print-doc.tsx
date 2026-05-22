@@ -156,6 +156,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
       : design.barcodeMode === "manual"
         ? design.barcodeDataUrl ?? null
         : autoBarcode;
+  const qrPlacement = renderedQr ? design.qrPlacement : "hidden";
+  const barcodePlacement = renderedBarcode ? design.barcodePlacement : "hidden";
 
   if (!doc) return <div className="text-sm text-muted-foreground p-4">Loading…</div>;
 
@@ -173,6 +175,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   };
 
   const updateDesign = (next: PrintDesign) => { setDesign(next); savePrintDesign(next); };
+  const updatePreset = (preset: PrintPreset) => updateDesign(applyPrintPreset(design, preset));
   const uploadLogo = async (file?: File) => { if (file) updateDesign({ ...design, logoDataUrl: await fileToDataUrl(file) }); };
   const uploadWatermarkLogo = async (file?: File) => { if (file) updateDesign({ ...design, watermarkLogoDataUrl: await fileToDataUrl(file) }); };
   const uploadQr = async (file?: File) => { if (file) updateDesign({ ...design, qrCodeDataUrl: await fileToDataUrl(file) }); };
