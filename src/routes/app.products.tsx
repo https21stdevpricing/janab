@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus, ChevronRight, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus, ChevronRight, AlertTriangle, Pencil } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
@@ -44,6 +44,7 @@ function ProductsPage() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Row | null>(null);
+  const [preview, setPreview] = useState<Row | null>(null);
   const [form, setForm] = useState<Omit<Row, "id">>(empty);
   // bulk add
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -73,16 +74,16 @@ function ProductsPage() {
       const ob = isOrderBasis(r);
       if (tab === "stocked" && ob) return false;
       if (tab === "order" && !ob) return false;
-      if (ql && !`${r.code} ${r.name} ${r.hsn ?? ""}`.toLowerCase().includes(ql)) return false;
+      if (ql && !`${r.code} ${r.name} ${r.category ?? ""} ${r.hsn ?? ""}`.toLowerCase().includes(ql)) return false;
       return true;
     });
-  }, [rows, stock, tab, q]);
+  }, [rows, tab, q]);
 
   const counts = useMemo(() => {
     let stocked = 0, order = 0;
     for (const r of rows) (isOrderBasis(r) ? order++ : stocked++);
     return { stocked, order };
-  }, [rows, stock]);
+  }, [rows]);
 
   const summary = useMemo(() => {
     let onHand = 0, valueCost = 0, valueSale = 0, low = 0, skus = rows.length;
@@ -101,6 +102,7 @@ function ProductsPage() {
   };
   const startEdit = (r: Row) => {
     setEdit(r);
+    setPreview(null);
     setForm({ code: r.code, name: r.name, unit: r.unit, hsn: r.hsn, purchase_rate: r.purchase_rate, sale_rate: r.sale_rate, opening_stock: r.opening_stock, reorder_level: r.reorder_level, kind: r.kind ?? "stocked", category: r.category ?? "" });
     setDim({ l: 0, b: 0, pieces: 1, unit: "in" });
     setOpen(true);
@@ -127,7 +129,7 @@ function ProductsPage() {
   const del = async (id: string) => {
     if (!confirm("Delete this product?")) return;
     const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
+    if (error) toast.error(error.message); else { toast.success("Deleted"); setPreview(null); load(); }
   };
 
   const onExport = () => {
