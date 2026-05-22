@@ -31,6 +31,7 @@ export type PdfCompany = {
   bank_name?: string | null;
   bank_account_no?: string | null;
   bank_ifsc?: string | null;
+  upi_id?: string | null;
 };
 
 export type PdfDocMeta = {
@@ -388,6 +389,7 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
       company?.bank_name && `Bank: ${company.bank_name}`,
       company?.bank_account_no && `A/c No: ${company.bank_account_no}`,
       company?.bank_ifsc && `IFSC: ${company.bank_ifsc}`,
+      company?.upi_id && (design?.showUpi ?? true) && `UPI: ${company.upi_id}`,
       company?.owner_name && `Beneficiary: ${company.owner_name}`,
     ].filter(Boolean) as string[];
     bank.forEach((b, i) => doc.text(b, M, leftY + 12 + i * 11));

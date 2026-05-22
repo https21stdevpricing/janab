@@ -2,6 +2,8 @@ export type PrintHeaderStyle = "classic" | "editorial" | "compact";
 export type PrintBodyLayout = "balanced" | "spacious" | "dense";
 export type PrintFooterPosition = "above-signature" | "page-bottom";
 export type PrintWatermarkLayer = "back" | "front";
+export type PrintQrMode = "digital-copy" | "upi-pay" | "manual" | "off";
+export type PrintBarcodeMode = "auto" | "manual" | "off";
 
 export type PrintDesign = {
   headerStyle: PrintHeaderStyle;
@@ -17,9 +19,12 @@ export type PrintDesign = {
   footerLogoSize: number;            // uniform height in px (HTML) / pt (PDF scaled)
   footerPosition: PrintFooterPosition;
   footerOnEveryPage: boolean;        // strict footer logos on every page
-  qrCodeDataUrl?: string | null;     // UPI/payment/website QR
-  barcodeDataUrl?: string | null;    // invoice barcode
+  qrMode: PrintQrMode;               // how to generate the corner QR
+  qrCodeDataUrl?: string | null;     // manual fallback (qrMode === "manual")
+  barcodeMode: PrintBarcodeMode;     // auto Code-128 from doc no, manual, or off
+  barcodeDataUrl?: string | null;    // manual fallback (barcodeMode === "manual")
   showBankDetails: boolean;          // pre-filled bank block (invoice)
+  showUpi: boolean;                  // pre-filled UPI line in bank block
   showGstSummary: boolean;           // CGST/SGST/IGST breakdown line
   signatoryName?: string;            // override authorised signatory line
 };
@@ -38,9 +43,12 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   footerLogoSize: 36,
   footerPosition: "above-signature",
   footerOnEveryPage: true,
+  qrMode: "digital-copy",
   qrCodeDataUrl: null,
+  barcodeMode: "auto",
   barcodeDataUrl: null,
   showBankDetails: true,
+  showUpi: true,
   showGstSummary: true,
   signatoryName: "",
 };

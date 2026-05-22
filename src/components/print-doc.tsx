@@ -8,6 +8,7 @@ import { exportStoneWorldDocument } from "@/lib/pdf-theme";
 import { lookupDocById } from "@/lib/doc-lookup";
 import { amountInWords } from "@/lib/amount-words";
 import { DEFAULT_PRINT_DESIGN, fileToDataUrl, loadPrintDesign, savePrintDesign, type PrintDesign } from "@/lib/print-customizer";
+import { digitalCopyUrl, generateBarcodeDataUrl, generateQrDataUrl, upiPayString } from "@/lib/doc-codes";
 
 export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }) {
   const [doc, setDoc] = useState<any>(null);
@@ -15,6 +16,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const [company, setCompany] = useState<any>(null);
   const [buyer, setBuyer] = useState<any>(null);
   const [design, setDesign] = useState<PrintDesign>(DEFAULT_PRINT_DESIGN);
+  const [autoQr, setAutoQr] = useState<string | null>(null);
+  const [autoBarcode, setAutoBarcode] = useState<string | null>(null);
 
   useEffect(() => { (async () => {
     const table = kind === "invoice" ? "sales" : "quotations";
@@ -48,9 +51,73 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const title = kind === "invoice" ? "Tax Invoice" : "Quotation";
   const address = [company?.address, company?.state].filter(Boolean).join(", ");
   const partyAddress = [buyer?.address, buyer?.state].filter(Boolean).join(", ");
+
+  // -----------------------------------------------------------------
+  // Auto-generated codes (QR for digital copy / UPI pay, Code-128 barcode).
+  // We recompute whenever inputs that affect the payload change.
+  // -----------------------------------------------------------------
+  const upiPayload = company?.upi_id && totals.total > 0
+    ? upiPayString({
+        upiId: company.upi_id,
+        payeeName: company?.company_name ?? "StoneWorld Traders",
+        amount: totals.total,
+        note: documentNo,
+      })
+    : null;
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      if (design.qrMode === "off" || design.qrMode === "manual" || !documentNo) {
+        if (!cancelled) setAutoQr(null);
+        return;
+      }
+      const payload =
+        design.qrMode === "upi-pay" && upiPayload
+          ? upiPayload
+          : digitalCopyUrl(documentNo);
+      const url = await generateQrDataUrl(payload);
+      if (!cancelled) setAutoQr(url);
+    })();
+    return () => { cancelled = true; };
+  }, [design.qrMode, documentNo, upiPayload]);
+
+  useEffect(() => {
+    if (design.barcodeMode !== "auto" || !documentNo) { setAutoBarcode(null); return; }
+    setAutoBarcode(generateBarcodeDataUrl(documentNo));
+  }, [design.barcodeMode, documentNo]);
+
+  const renderedQr =
+    design.qrMode === "off"
+      ? null
+      : design.qrMode === "manual"
+        ? design.qrCodeDataUrl ?? null
+        : autoQr;
+  const qrCaption =
+    design.qrMode === "upi-pay" && upiPayload
+      ? "Scan to pay via UPI"
+      : design.qrMode === "digital-copy"
+        ? "Scan for digital copy"
+        : design.qrMode === "manual"
+          ? "Scan to pay / verify"
+          : null;
+  const renderedBarcode =
+    design.barcodeMode === "off"
+      ? null
+      : design.barcodeMode === "manual"
+        ? design.barcodeDataUrl ?? null
+        : autoBarcode;
+
   const downloadPdf = async () => {
     const result = await lookupDocById(kind === "invoice" ? "sale" : "quote", id);
-    if (result) exportStoneWorldDocument(result, company, design);
+    if (result) {
+      // Hand the rendered codes to the branded PDF exporter so the printed
+      // PDF matches the on-screen preview byte-for-byte.
+      exportStoneWorldDocument(result, company, {
+        ...design,
+        qrCodeDataUrl: renderedQr ?? design.qrCodeDataUrl ?? null,
+        barcodeDataUrl: renderedBarcode ?? design.barcodeDataUrl ?? null,
+      });
+    }
   };
 
   const updateDesign = (next: PrintDesign) => { setDesign(next); savePrintDesign(next); };
@@ -183,29 +250,48 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <span>Show bank details (invoice)</span>
               </label>
               <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showUpi} onChange={(e) => updateDesign({ ...design, showUpi: e.target.checked })} />
+                <span>Show UPI ID in bank block</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
                 <input type="checkbox" checked={design.showGstSummary} onChange={(e) => updateDesign({ ...design, showGstSummary: e.target.checked })} />
                 <span>Show GST breakdown (CGST/SGST/IGST)</span>
               </label>
-              <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
-                <span className="truncate">{design.qrCodeDataUrl ? "QR uploaded" : "Payment / verification QR"}</span>
-                <span className="text-primary">{design.qrCodeDataUrl ? "Replace" : "Upload"}</span>
-                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadQr(e.target.files?.[0])} />
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">QR code</span>
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.qrMode} onChange={(e) => updateDesign({ ...design, qrMode: e.target.value as any })}>
+                  <option value="digital-copy">Auto · Digital copy link</option>
+                  <option value="upi-pay" disabled={!company?.upi_id}>Auto · UPI scan &amp; pay{company?.upi_id ? "" : " (set UPI ID in Settings)"}</option>
+                  <option value="manual">Manual upload</option>
+                  <option value="off">Hide</option>
+                </select>
+                {design.qrMode === "manual" && (
+                  <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                    <span className="truncate">{design.qrCodeDataUrl ? "QR uploaded" : "Upload QR image"}</span>
+                    <span className="text-primary">{design.qrCodeDataUrl ? "Replace" : "Upload"}</span>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadQr(e.target.files?.[0])} />
+                  </label>
+                )}
               </label>
-              <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
-                <span className="truncate">{design.barcodeDataUrl ? "Barcode uploaded" : "Document barcode"}</span>
-                <span className="text-primary">{design.barcodeDataUrl ? "Replace" : "Upload"}</span>
-                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadBarcode(e.target.files?.[0])} />
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Barcode</span>
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.barcodeMode} onChange={(e) => updateDesign({ ...design, barcodeMode: e.target.value as any })}>
+                  <option value="auto">Auto · Code-128 of document no.</option>
+                  <option value="manual">Manual upload</option>
+                  <option value="off">Hide</option>
+                </select>
+                {design.barcodeMode === "manual" && (
+                  <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                    <span className="truncate">{design.barcodeDataUrl ? "Barcode uploaded" : "Upload barcode image"}</span>
+                    <span className="text-primary">{design.barcodeDataUrl ? "Replace" : "Upload"}</span>
+                    <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadBarcode(e.target.files?.[0])} />
+                  </label>
+                )}
               </label>
               <label className="sm:col-span-2 flex items-center gap-2 text-[11px]">
                 <span className="w-28 text-muted-foreground">Signatory name</span>
                 <input className="h-8 flex-1 rounded-md border bg-background px-2 text-xs" placeholder="Authorised Signatory" value={design.signatoryName ?? ""} onChange={(e) => updateDesign({ ...design, signatoryName: e.target.value })} />
               </label>
-              {(design.qrCodeDataUrl || design.barcodeDataUrl) && (
-                <div className="sm:col-span-2 flex gap-2">
-                  {design.qrCodeDataUrl && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => updateDesign({ ...design, qrCodeDataUrl: null })}>Remove QR</Button>}
-                  {design.barcodeDataUrl && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => updateDesign({ ...design, barcodeDataUrl: null })}>Remove barcode</Button>}
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -316,11 +402,15 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                     {company?.bank_name && <><span className="text-[#6e7886]">Bank</span><span className="font-semibold">{company.bank_name}</span></>}
                     {company?.bank_account_no && <><span className="text-[#6e7886]">A/c No.</span><span className="font-mono font-semibold">{company.bank_account_no}</span></>}
                     {company?.bank_ifsc && <><span className="text-[#6e7886]">IFSC</span><span className="font-mono font-semibold">{company.bank_ifsc}</span></>}
+                    {design.showUpi && company?.upi_id && <><span className="text-[#6e7886]">UPI</span><span className="font-mono font-semibold">{company.upi_id}</span></>}
                   </div>
                 </div>
               )}
-              {design.barcodeDataUrl && (
-                <div className="mt-4"><img src={design.barcodeDataUrl} alt="barcode" className="h-10 object-contain" /></div>
+              {renderedBarcode && (
+                <div className="mt-4">
+                  <img src={renderedBarcode} alt={`barcode ${documentNo}`} className="h-10 object-contain" />
+                  <p className="mt-1 text-[9px] text-[#6e7886] tracking-wide">{documentNo}</p>
+                </div>
               )}
               {doc.notes && <p className="mt-4"><span className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Notes</span><br />{doc.notes}</p>}
               <p className="mt-4 text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">{kind === "invoice" ? "Terms & Conditions" : "Terms of Proposal"}</p>
@@ -329,10 +419,10 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 : "Prices valid until the date shown above. Quotation does not constitute a tax invoice. Stock and lot variation may apply. E&OE."}</p>
             </div>
             <div className="text-[11.5px] relative">
-              {design.qrCodeDataUrl && (
+              {renderedQr && (
                 <div className="mb-3 flex flex-col items-end">
-                  <img src={design.qrCodeDataUrl} alt="qr" className="h-24 w-24 object-contain" />
-                  <span className="text-[9px] text-[#6e7886] mt-1">Scan to pay / verify</span>
+                  <img src={renderedQr} alt="qr" className="h-24 w-24 object-contain" />
+                  {qrCaption && <span className="text-[9px] text-[#6e7886] mt-1">{qrCaption}</span>}
                 </div>
               )}
               <SummaryLine label="Subtotal" value={totals.subtotal} />
