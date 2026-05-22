@@ -649,28 +649,6 @@ function TodayTile({
   );
 }
 
-function LockPill({ locked, onResume }: { locked: boolean; onResume: () => void }) {
-  if (!locked) {
-    return (
-      <div className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground px-2 py-1 rounded-full bg-muted/60">
-        <span className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
-        Auto-cycling
-      </div>
-    );
-  }
-  return (
-    <button
-      onClick={onResume}
-      className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-full border border-border/60 hover:border-foreground/30 hover:bg-muted transition-all"
-    >
-      <Lock className="h-3 w-3" />
-      Locked
-      <span className="text-muted-foreground">·</span>
-      <span className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"><Play className="h-3 w-3" /> Resume</span>
-    </button>
-  );
-}
-
 function MiniStat({
   label, value, tone = "default", icon: Icon, to,
 }: {
