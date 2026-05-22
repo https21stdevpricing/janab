@@ -18,6 +18,7 @@ import { Plus, Pencil, Trash2, Printer, CheckCircle2 } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { DocDetail } from "@/routes/app.lookup";
+import { KpiGrid, KpiTile } from "@/components/ui-tokens";
 import { lookupDoc, type DocLookupResult } from "@/lib/doc-lookup";
 
 export type TxnConfig = {
