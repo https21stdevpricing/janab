@@ -259,7 +259,7 @@ function LookupView(p: LookupViewProps) {
           {/* Quick hints when idle */}
           {!hasResults && !p.busy && (
             <div className="mt-8 flex flex-wrap justify-center gap-2">
-              {["INV-", "PO-", "TP-", "QUO-", "RI-", "PY-"].map((tag) => (
+              {["INV-", "PO-", "TP-", "QT-", "PAY-", "BT-", "DEP-", "CHQ-"].map((tag) => (
                 <button
                   key={tag}
                   onClick={() => { p.setQ(tag); setTimeout(() => p.run(), 0); }}
