@@ -298,10 +298,9 @@ function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Reports" description="Your books at a glance." />
+      <PageHeader title="Reports" description="Clean financial summaries with detailed schedules below." />
 
-      {/* Minimal hero — four numbers, one integrity strip, no marketing copy */}
-      <div className="mb-4 rounded-2xl border border-border/70 bg-card overflow-hidden">
+      <div className="mb-4 surface overflow-hidden">
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-border/60">
           <ReportHeroMetric label="Revenue" value={inr(revenue)} />
           <ReportHeroMetric label="Net profit" value={inr(netProfit)} tone={netProfit >= 0 ? "good" : "bad"} />
@@ -328,28 +327,20 @@ function ReportsPage() {
           </TabsList>
         </div>
 
-        <TabsContent value="outlook" className="space-y-4">
-          {/* Health meters — plain language under each */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <MeterCard label="Gross Margin" value={`${fmt(grossMarginPct, 1)}%`} status={statusFor(grossMarginPct, 20, 10)}
-              meaning={grossMarginPct >= 20 ? "Pricing safely above stock cost." : grossMarginPct >= 10 ? "Margins thin — review pricing." : "Selling near or below cost."} />
-            <MeterCard label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} status={statusFor(currentRatio, 1.5, 1)}
-              meaning={currentRatio >= 1.5 ? "Plenty of cushion to pay dues." : currentRatio >= 1 ? "Can just about meet dues." : "Short-term dues exceed cash + receivables."} />
-            <MeterCard label="Revenue Trend (90d)" value={`${revGrowthPct >= 0 ? "+" : ""}${fmt(revGrowthPct, 1)}%`} status={statusFor(revGrowthPct, 5, -5)}
-              meaning={revGrowthPct >= 5 ? "Sales growing quarter-on-quarter." : revGrowthPct >= -5 ? "Sales roughly flat." : "Sales declining — investigate."} />
-            <MeterCard label="GST Payable" value={inr(Math.max(0, netGstPayable))} status={netGstPayable <= 0 ? "good" : "warn"}
-              meaning={netGstPayable <= 0 ? "Input credit covers liability." : "Reserve before GSTR-3B due date."} />
-          </div>
+        <TabsContent value="outlook" className="space-y-3">
+          <div className="grid gap-3 lg:grid-cols-[1fr_1.15fr]">
+            <div className="surface overflow-hidden">
+              <CompactSignal label="Gross margin" value={`${fmt(grossMarginPct, 1)}%`} status={statusFor(grossMarginPct, 20, 10)} />
+              <CompactSignal label="Current ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} status={statusFor(currentRatio, 1.5, 1)} />
+              <CompactSignal label="Revenue trend" value={`${revGrowthPct >= 0 ? "+" : ""}${fmt(revGrowthPct, 1)}%`} status={statusFor(revGrowthPct, 5, -5)} />
+              <CompactSignal label="GST payable" value={inr(Math.max(0, netGstPayable))} status={netGstPayable <= 0 ? "good" : "warn"} />
+            </div>
 
-          {/* What to do — prioritized action list */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">What to do next</CardTitle>
-              <div className="text-xs text-muted-foreground">Ranked by impact on your cash and profit.</div>
-            </CardHeader>
-            <CardContent className="divide-y">
+            <div className="surface p-4">
+              <div className="eyebrow mb-2">Next actions</div>
+              <div className="divide-y divide-border/60">
               {insights.map((it, i) => (
-                <div key={i} className="flex gap-3 items-start py-3">
+                <div key={i} className="flex gap-3 items-start py-2.5 first:pt-0 last:pb-0">
                   <ToneIcon tone={it.tone} />
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-sm">{it.title}</div>
@@ -357,16 +348,13 @@ function ReportsPage() {
                   </div>
                 </div>
               ))}
-            </CardContent>
-          </Card>
+              </div>
+            </div>
+          </div>
 
-          {/* Plain-English summary */}
-          <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-base">In one paragraph</CardTitle></CardHeader>
-            <CardContent className="text-sm leading-relaxed text-muted-foreground">
-              {outlookNarrative({ revGrowthPct, netProfit, grossMarginPct, runwayMonths, currentRatio, arApDelta, netGstPayable })}
-            </CardContent>
-          </Card>
+          <div className="surface p-4 text-sm leading-relaxed text-muted-foreground">
+            {outlookNarrative({ revGrowthPct, netProfit, grossMarginPct, runwayMonths, currentRatio, arApDelta, netGstPayable })}
+          </div>
         </TabsContent>
 
         <TabsContent value="pnl">
@@ -714,6 +702,16 @@ function ReportHeroMetric({ label, value, tone }: { label: string; value: string
     <div className="px-3 py-3 sm:px-4 sm:py-4 min-w-0">
       <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground truncate">{label}</div>
       <div className={`mt-1 text-base font-semibold tabular-nums leading-tight sm:text-lg ${toneCls}`} style={{ wordBreak: "break-word" }}>{value}</div>
+    </div>
+  );
+}
+
+function CompactSignal({ label, value, status }: { label: string; value: string; status: "good" | "warn" | "bad" }) {
+  const toneCls = status === "good" ? "text-primary" : status === "warn" ? "text-amber-600 dark:text-amber-400" : "text-destructive";
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-3 last:border-b-0">
+      <div className="text-sm font-medium">{label}</div>
+      <div className={`text-base font-semibold tabular-nums ${toneCls}`}>{value}</div>
     </div>
   );
 }

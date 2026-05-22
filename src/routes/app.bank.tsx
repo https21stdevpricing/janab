@@ -93,8 +93,9 @@ function BankPage() {
   const totals = useMemo(() => {
     const dep = filtered.filter(r => r.kind !== "cash_withdrawal").reduce((a,r) => a + Number(r.amount||0), 0);
     const wd  = filtered.filter(r => r.kind === "cash_withdrawal").reduce((a,r) => a + Number(r.amount||0), 0);
-    return { dep, wd };
-  }, [filtered]);
+    const pending = rows.filter(r => (r.status ?? (r.cleared ? "cleared" : "pending")) === "pending").reduce((a,r) => a + Number(r.amount||0), 0);
+    return { dep, wd, pending };
+  }, [filtered, rows]);
 
   const startNew = (k: Kind) => {
     setForm({ ...EMPTY, kind: k, date: todayISO(), cleared: k !== "cheque_deposit" });
@@ -144,92 +145,83 @@ function BankPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Deposits"
-        description="Cash, bank, and cheque movements with pending clearance kept separate from account balances."
-        actions={
-          <>
-            <Button size="sm" variant="outline" onClick={() => startNew("cash_deposit")}><ArrowDownToLine className="h-4 w-4" /> Cash deposit</Button>
-            <Button size="sm" variant="outline" onClick={() => startNew("cheque_deposit")}><Banknote className="h-4 w-4" /> Cheque deposit</Button>
-            <Button size="sm" onClick={() => startNew("cash_withdrawal")}><ArrowUpFromLine className="h-4 w-4" /> Withdraw cash</Button>
-          </>
-        }
-      />
+      <PageHeader title="Deposits" description="Track bank, cash and cheque clearance without mixing pending money into balances." />
 
-      <div className="mb-3 rounded-2xl border border-border/70 bg-card overflow-hidden">
-        <div className="grid grid-cols-2 divide-x divide-border/60">
-          <Link to="/app/ledger" className="px-4 py-3 hover:bg-muted/40 transition-colors">
-            <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Cash on hand</div>
-            <div className={`mt-1 text-base sm:text-lg font-semibold tabular-nums leading-tight ${cashBal < 0 ? "text-destructive" : ""}`}>{inr(cashBal)}</div>
-          </Link>
-          <Link to="/app/ledger" className="px-4 py-3 hover:bg-muted/40 transition-colors">
-            <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Bank balance</div>
-            <div className={`mt-1 text-base sm:text-lg font-semibold tabular-nums leading-tight ${bankBal < 0 ? "text-destructive" : "text-primary"}`}>{inr(bankBal)}</div>
-          </Link>
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_280px]">
+        <div className="surface overflow-hidden">
+          <div className="grid grid-cols-2 divide-x divide-border/60">
+            <Link to="/app/ledger" className="px-4 py-4 transition-colors hover:bg-muted/35">
+              <div className="eyebrow">Cash</div>
+              <div className={`mt-1 text-xl font-semibold tabular-nums ${cashBal < 0 ? "text-destructive" : ""}`}>{inr(cashBal)}</div>
+            </Link>
+            <Link to="/app/ledger" className="px-4 py-4 transition-colors hover:bg-muted/35">
+              <div className="eyebrow">Bank</div>
+              <div className={`mt-1 text-xl font-semibold tabular-nums ${bankBal < 0 ? "text-destructive" : "text-primary"}`}>{inr(bankBal)}</div>
+            </Link>
+          </div>
+          <div className="border-t px-4 py-2 text-xs text-muted-foreground">
+            Pending cheques: <span className="font-medium text-foreground">{inr(totals.pending)}</span>
+          </div>
+        </div>
+        <div className="surface p-3">
+          <div className="eyebrow">New entry</div>
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            <Button size="sm" variant="outline" className="justify-start" onClick={() => startNew("cash_deposit")}><ArrowDownToLine className="h-4 w-4" /> Cash deposit</Button>
+            <Button size="sm" variant="outline" className="justify-start" onClick={() => startNew("cheque_deposit")}><Banknote className="h-4 w-4" /> Cheque deposit</Button>
+            <Button size="sm" className="justify-start" onClick={() => startNew("cash_withdrawal")}><ArrowUpFromLine className="h-4 w-4" /> Withdraw cash</Button>
+          </div>
         </div>
       </div>
 
-      <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-3">
-        <TabsList className="scroll-tabs w-full justify-start sm:w-auto">
-          <TabsTrigger value="all" className="flex-1 sm:flex-none">All</TabsTrigger>
-          <TabsTrigger value="cash_deposit" className="flex-1 sm:flex-none">Deposits</TabsTrigger>
-          <TabsTrigger value="cheque_deposit" className="flex-1 sm:flex-none">Cheques</TabsTrigger>
-          <TabsTrigger value="cash_withdrawal" className="flex-1 sm:flex-none">Withdrawals</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      <div className="mb-3 flex flex-col gap-2 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-xs text-muted-foreground">
-          {filtered.length} of {rows.length} entries · Deposits {inr(totals.dep)} · Withdrawals {inr(totals.wd)}
+      <div className="mb-3 space-y-3">
+        <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
+          <TabsList className="scroll-tabs w-full justify-start rounded-full bg-muted p-1 sm:w-auto">
+            <TabsTrigger value="all">All</TabsTrigger>
+            <TabsTrigger value="cash_deposit">Deposits</TabsTrigger>
+            <TabsTrigger value="cheque_deposit">Cheques</TabsTrigger>
+            <TabsTrigger value="cash_withdrawal">Withdrawals</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+          <Input className="h-10" placeholder="Search entry, bank, cheque, UTR…" value={q} onChange={(e) => setQ(e.target.value)} />
+          <div className="text-xs text-muted-foreground sm:text-right">
+            {filtered.length} entries · In {inr(totals.dep)} · Out {inr(totals.wd)}
+          </div>
         </div>
-        <Input className="h-9 sm:max-w-xs" placeholder="Search no / bank / cheque / txn id…" value={q} onChange={(e) => setQ(e.target.value)} />
       </div>
 
       {filtered.length === 0 ? (
         <Empty>No bank entries yet. Record a cash deposit or cheque deposit to begin.</Empty>
       ) : (
-        <div className="space-y-2">
+        <div className="surface overflow-hidden">
           {filtered.map(r => {
             const st = (r.status ?? (r.cleared ? "cleared" : "pending")) as Status;
             const isOut = r.kind === "cash_withdrawal";
             return (
-              <div key={r.id} className="rounded-2xl border border-border/70 bg-card p-3 sm:p-4">
-                {/* Top row: meta + amount */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
-                      {KIND_LABEL[r.kind]} · {fmtDate(r.date)}
-                    </div>
-                    <div className="font-mono text-sm font-medium mt-0.5">{r.transfer_no}</div>
-                    {r.bank_name && <div className="text-xs text-muted-foreground truncate mt-0.5">{r.bank_name}</div>}
+              <div key={r.id} className="grid gap-3 border-b border-border/60 p-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-sm font-medium">{r.transfer_no}</span>
+                    <StatusPill status={st} />
                   </div>
-                  <div className="text-right shrink-0">
-                    <div className={`text-lg font-semibold tabular-nums leading-tight ${isOut ? "text-destructive" : "text-primary"}`}>
-                      {isOut ? "−" : "+"}{inr(r.amount)}
-                    </div>
-                    <div className="mt-1 flex justify-end"><StatusPill status={st} /></div>
+                  <div className="mt-1 text-xs text-muted-foreground truncate">
+                    {KIND_LABEL[r.kind]} · {fmtDate(r.date)}{r.bank_name ? ` · ${r.bank_name}` : ""}
+                    {r.cheque_no ? ` · Cheque ${r.cheque_no}` : ""}{r.txn_id ? ` · Txn ${r.txn_id}` : ""}
                   </div>
                 </div>
-
-                {(r.cheque_no || r.txn_id || r.notes) && (
-                  <div className="mt-2 text-[11px] text-muted-foreground truncate">
-                    {r.cheque_no && <>Cheque #{r.cheque_no}{r.cheque_date ? ` · ${fmtDate(r.cheque_date)}` : ""}</>}
-                    {r.txn_id && <>{r.cheque_no ? " · " : ""}Txn {r.txn_id}</>}
-                    {r.notes && <>{(r.cheque_no || r.txn_id) ? " · " : ""}{r.notes}</>}
-                  </div>
-                )}
-
-                {/* Bottom: status control + delete */}
-                <div className="mt-3 flex flex-col gap-2 border-t border-border/50 pt-2 sm:flex-row sm:items-center">
+                <div className={`text-left text-base font-semibold tabular-nums sm:text-right ${isOut ? "text-destructive" : "text-primary"}`}>
+                  {isOut ? "−" : "+"}{inr(r.amount)}
+                </div>
+                <div className="flex items-center gap-2 sm:w-44">
                   <Select value={st} onValueChange={(v) => changeStatus(r, v as Status)}>
-                    <SelectTrigger className="h-8 flex-1 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="h-9 flex-1 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="cleared">Cleared</SelectItem>
                       <SelectItem value="bounced">Bounced</SelectItem>
                     </SelectContent>
                   </Select>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => del(r.id)} aria-label="Delete">
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground hover:text-destructive" onClick={() => del(r.id)} aria-label="Delete">
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -285,15 +277,15 @@ function BankPage() {
             )}
 
             {form.kind !== "cheque_deposit" && (
-              <div className="col-span-2 space-y-1.5"><Label className="text-xs">Transaction / reference ID</Label>
+              <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">Transaction / reference ID</Label>
                 <Input placeholder="UPI / NEFT / RTGS reference (optional)" value={form.txn_id} onChange={(e) => setForm({ ...form, txn_id: e.target.value })} /></div>
             )}
 
-            <div className="col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label>
+            <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
 
             {form.kind === "cheque_deposit" && (
-              <label className="col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
+              <label className="sm:col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
                 <Checkbox checked={form.cleared} onCheckedChange={(v) => setForm({ ...form, cleared: !!v })} className="mt-0.5" />
                 <span>
                   <span className="block font-medium">Cheque is cleared</span>
