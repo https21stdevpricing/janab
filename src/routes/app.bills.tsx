@@ -755,7 +755,7 @@ function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; 
   const ring = active ? "ring-2 ring-primary/50" : "";
   return (
     <button type="button" onClick={onClick} disabled={!onClick}
-      className={`text-left rounded-xl border border-border/70 bg-card p-3 transition-all ${onClick ? "hover:bg-muted/40 active:scale-[0.99]" : ""} ${ring}`}>
+      className={`text-left rounded-2xl border border-border/70 bg-background p-3 transition-all ${onClick ? "hover:bg-muted/40 active:scale-[0.99]" : ""} ${ring}`}>
       <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
       <div className={`text-base sm:text-lg font-semibold tabular-nums truncate ${valueClr}`}>{value}</div>
       {sub && <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
@@ -766,7 +766,7 @@ function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; 
 function MiniBucket({ label, value, tone }: { label: string; value: number; tone?: "warn" | "bad" }) {
   const clr = tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : "text-foreground";
   return (
-    <div className="rounded-md border bg-muted/30 px-2 py-1.5">
+    <div className="rounded-2xl border bg-card px-2.5 py-2">
       <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className={`text-xs sm:text-sm font-semibold tabular-nums truncate ${clr}`}>{inr(value)}</div>
     </div>
