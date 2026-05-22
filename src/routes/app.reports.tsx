@@ -178,7 +178,12 @@ function ReportsPage() {
   const totalAssets = currentAssets + nonCurrentAssets;
   const currentLiab = ap + Math.max(0, gstOut);
   const totalLiab = currentLiab;
-  const equity = netProfit;
+  // Opening Capital — value of inventory the owner contributed at start-up.
+  // Products.opening_stock is read directly into Inventory (asset) without a
+  // journal entry, so we credit the matching amount to Owner's Capital here
+  // to keep A = L + E (standard treatment for non-cash owner contributions).
+  const openingCapital = inventory.openingValue;
+  const equity = netProfit + openingCapital;
   const balanceCheck = Math.abs(totalAssets - (totalLiab + equity)) < 1;
 
   const today = new Date();
