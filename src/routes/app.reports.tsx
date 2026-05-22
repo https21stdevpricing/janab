@@ -706,6 +706,16 @@ function ReportHeroMetric({ label, value, tone }: { label: string; value: string
   );
 }
 
+function CompactSignal({ label, value, status }: { label: string; value: string; status: "good" | "warn" | "bad" }) {
+  const toneCls = status === "good" ? "text-primary" : status === "warn" ? "text-amber-600 dark:text-amber-400" : "text-destructive";
+  return (
+    <div className="flex items-center justify-between gap-4 border-b border-border/60 px-4 py-3 last:border-b-0">
+      <div className="text-sm font-medium">{label}</div>
+      <div className={`text-base font-semibold tabular-nums ${toneCls}`}>{value}</div>
+    </div>
+  );
+}
+
 function MeterCard({ label, value, status, meaning }: { label: string; value: string; status: "good" | "warn" | "bad"; meaning: string }) {
   const ring = status === "good" ? "border-l-primary" : status === "warn" ? "border-l-amber-500" : "border-l-destructive";
   const valueTone = status === "good" ? "text-primary" : status === "warn" ? "text-amber-600 dark:text-amber-400" : "text-destructive";
