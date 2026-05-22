@@ -264,12 +264,62 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
+  // Swipe-down-to-close: track a single touch, close at >110px drag or >60px with downward velocity.
+  const [drag, setDrag] = useState(0);
+  const dragRef = { current: 0 };
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    (onTouchStart as any)._s = { y: t.clientY, t: Date.now() };
+    dragRef.current = 0;
+    setDrag(0);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    const s = (onTouchStart as any)._s as { y: number; t: number } | undefined;
+    if (!s) return;
+    const dy = e.touches[0].clientY - s.y;
+    if (dy > 0) {
+      dragRef.current = dy;
+      setDrag(dy);
+    }
+  };
+  const onTouchEnd = () => {
+    const s = (onTouchStart as any)._s as { y: number; t: number } | undefined;
+    (onTouchStart as any)._s = undefined;
+    const dy = dragRef.current;
+    const elapsed = s ? Date.now() - s.t : 0;
+    const velocity = elapsed > 0 ? dy / elapsed : 0;
+    if (dy > 110 || (dy > 60 && velocity > 0.5)) onOpenChange(false);
+    setDrag(0);
+  };
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="p-0 h-[88vh] rounded-t-2xl flex flex-col">
-        <div className="px-5 pt-5 pb-3 border-b">
-          <div className="text-base font-semibold tracking-tight">StoneWorld</div>
-          <div className="text-xs text-muted-foreground truncate">{email}</div>
+      <SheetContent
+        side="bottom"
+        className="p-0 h-[88vh] rounded-t-2xl flex flex-col [&>button]:hidden"
+        style={{ transform: drag > 0 ? `translateY(${Math.min(drag, 300)}px)` : undefined, transition: drag > 0 ? "none" : undefined }}
+      >
+        {/* Drag handle + aligned header */}
+        <div
+          className="px-5 pt-2 pb-3 border-b touch-pan-y"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted-foreground/30" />
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-base font-semibold tracking-tight">StoneWorld</div>
+              <div className="text-xs text-muted-foreground truncate">{email}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted active:scale-95 transition-all shrink-0"
+              aria-label="Close menu"
+            >
+              <X className="h-[18px] w-[18px]" />
+            </button>
+          </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
           {[{ label: "Daily", items: [...pinned].slice(1).map((p) => ({ ...p })) }, ...moreGroups].map((g) => (
