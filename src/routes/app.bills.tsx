@@ -381,22 +381,29 @@ function BillsPage() {
   return (
     <div>
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" /> Money hub <Kbd>B</Kbd></span>}
-        description="Clear balances first: what buyers owe, what you owe suppliers, and every settlement behind it."
+        title="Money"
+        description="Receivables, payables and every settlement."
         actions={
           <>
             <ExcelBar onExport={onExport} />
-            <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receive <Kbd>R</Kbd></Button>
-            <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Pay <Kbd>P</Kbd></Button>
+            <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receive</Button>
+            <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Pay</Button>
           </>
         }
       />
 
-      {/* Minimal 3-tile hero — only what matters at a glance */}
-      <div className="mb-4 grid grid-cols-3 gap-2">
-        <KpiTile label="Receivable" value={inr(kpis.recv)} tone="good" onClick={() => setTab("receivable")} active={tab === "receivable"} />
-        <KpiTile label="Payable" value={inr(kpis.pay)} tone="bad" onClick={() => setTab("payable")} active={tab === "payable"} />
-        <KpiTile label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} sub={kpis.overdue > 0 ? `${inr(kpis.overdue)} overdue` : undefined} />
+      {/* Minimal hero — one calm summary card with three balances */}
+      <div className="mb-4 rounded-2xl border border-border/70 bg-card overflow-hidden">
+        <div className="grid grid-cols-3 divide-x divide-border/60">
+          <HeroCell label="Receivable" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
+          <HeroCell label="Payable" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
+          <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
+        </div>
+        {kpis.overdue > 0 && (
+          <div className="px-4 py-2 border-t border-border/60 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-500/5">
+            {inr(kpis.overdue)} overdue · {">"} 30 days
+          </div>
+        )}
       </div>
 
       <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
