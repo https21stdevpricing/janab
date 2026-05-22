@@ -363,19 +363,26 @@ function BillsPage() {
   return (
     <div>
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><Wallet className="h-4 w-4" /> Money <Kbd>B</Kbd></span>}
-        description="Receivables, payables and every receipt or payment — in one place."
+        title={<span className="inline-flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" /> Money hub <Kbd>B</Kbd></span>}
+        description="Clear balances first: what buyers owe, what you owe suppliers, and every settlement behind it."
         actions={
           <>
             <ExcelBar onExport={onExport} />
-            <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receipt <Kbd>R</Kbd></Button>
-            <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Payment <Kbd>P</Kbd></Button>
+            <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receive <Kbd>R</Kbd></Button>
+            <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Pay <Kbd>P</Kbd></Button>
           </>
         }
       />
 
-      {/* Top KPIs — always visible across all tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+      <div className="mb-4 rounded-[1.5rem] border border-border/70 bg-card p-3 shadow-sm sm:p-4">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Balance control</div>
+            <div className="text-sm text-muted-foreground">Tap any bill to settle it with party, balance and allocation pre-filled.</div>
+          </div>
+          <div className="text-right text-xs text-muted-foreground">Net position <span className={`ml-1 font-semibold tabular-nums ${kpis.net >= 0 ? "text-primary" : "text-destructive"}`}>{inr(kpis.net)}</span></div>
+        </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <KpiTile label="Receivable" sub={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "On track"}
           value={inr(kpis.recv)} tone="good" onClick={() => setTab("receivable")} active={tab === "receivable"} />
         <KpiTile label="Payable" sub={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "On track"}
@@ -385,9 +392,10 @@ function BillsPage() {
         <KpiTile label="Overdue > 30d" sub={`${inr(kpis.overdue)} stuck`}
           value={inr(kpis.overdue)} tone={kpis.overdue > 0 ? "bad" : "muted"} />
       </div>
+      </div>
 
       <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
-        <TabsList className="w-full sm:w-auto">
+        <TabsList className="w-full rounded-full bg-muted p-1 sm:w-auto">
           <TabsTrigger value="receivable" className="flex-1 sm:flex-none gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
           <TabsTrigger value="payable" className="flex-1 sm:flex-none gap-1"><ArrowUpRight className="h-3.5 w-3.5" /> Payable</TabsTrigger>
           <TabsTrigger value="history" className="flex-1 sm:flex-none gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
