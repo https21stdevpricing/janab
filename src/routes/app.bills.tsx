@@ -631,6 +631,12 @@ function BillsPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewPay.date)}</div></div>
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewPay.mode ?? "—"}</div></div>
+                <div className="col-span-2">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Applied as</div>
+                  <Badge variant="outline" className="text-[10px]">
+                    {viewPay.kind === "advance" ? "Advance payment" : viewPay.kind === "on_account" ? "On account" : "Against invoice"}
+                  </Badge>
+                </div>
                 {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} status={viewPay.status} /></div>}
                 <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewPay.contact_name ?? "—"}</div></div>
                 <div className="col-span-2 rounded-md border bg-muted/30 p-3">
