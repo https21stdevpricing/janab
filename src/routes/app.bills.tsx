@@ -626,14 +626,18 @@ function BillsPage() {
 
       {/* Unified payment dialog */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
-        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto p-0 gap-0">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              {direction === "in" ? <ArrowDownLeft className="h-4 w-4 text-primary" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
-              {direction === "in" ? "Receive payment" : "Make payment"}
-            </DialogTitle>
+            <div className="border-b px-4 py-4 sm:px-6">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                {direction === "in" ? <ArrowDownLeft className="h-4 w-4 text-primary" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
+                {direction === "in" ? "Record receipt" : "Record payment"}
+              </DialogTitle>
+              <p className="mt-1 text-xs text-muted-foreground">Cheque entries stay pending until cleared, so accounts and outstanding balances remain safe.</p>
+            </div>
           </DialogHeader>
 
+          <div className="space-y-4 p-4 sm:p-6">
           {/* Direction switch inside dialog */}
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => { setDirection("in"); setAllocs([]); }}
@@ -648,7 +652,7 @@ function BillsPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 mt-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label className="text-xs">No.</Label>
               <Input className="font-mono" placeholder="Auto" disabled value="(auto)" /></div>
             <div className="space-y-1.5"><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
@@ -661,7 +665,7 @@ function BillsPage() {
               <p className="text-[10px] text-muted-foreground">Total of this single receipt/payment, not per invoice.</p>
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Mode</Label>
-              <Select value={mode} onValueChange={setMode}><SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={mode} onValueChange={(v) => { setMode(v); if (v !== "Cheque") setCleared(true); }}><SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Bank">Bank transfer (NEFT/RTGS/IMPS)</SelectItem>
                   <SelectItem value="UPI">UPI</SelectItem>
@@ -699,13 +703,22 @@ function BillsPage() {
                   <Label className="text-xs">Drawee bank</Label>
                   <Input placeholder="Bank on the cheque" value={bankName} onChange={(e) => setBankName(e.target.value)} />
                 </div>
-                <label className="col-span-2 flex items-center gap-2 text-xs text-muted-foreground">
-                  <input type="checkbox" checked={cleared} onChange={(e) => setCleared(e.target.checked)} />
-                  Already cleared (uncheck if cheque is in transit)
+                <label className="col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
+                  <Checkbox checked={cleared} onCheckedChange={(v) => setCleared(!!v)} className="mt-0.5" />
+                  <span>
+                    <span className="block font-medium">Cheque is cleared</span>
+                    <span className="block text-xs text-muted-foreground">Leave unchecked for in-transit or uncertain cheques. Pending cheques will not settle bills or change Cash/Bank ledgers.</span>
+                  </span>
                 </label>
               </>
             )}
           </div>
+
+          {mode === "Cheque" && !cleared && (
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+              This cheque will be saved as pending. Mark it cleared later before it affects accounts.
+            </div>
+          )}
 
           {contactId && (
             <div className="mt-3">
@@ -760,7 +773,11 @@ function BillsPage() {
               )}
             </div>
           )}
-          <DialogFooter><Button onClick={save}>Save</Button></DialogFooter>
+          </div>
+          <DialogFooter className="border-t px-4 py-3 sm:px-6">
+            <Button variant="outline" onClick={() => setPayOpen(false)}>Cancel</Button>
+            <Button onClick={save}><ShieldCheck className="h-4 w-4" /> Save safely</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
