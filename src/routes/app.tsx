@@ -301,6 +301,9 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     if (!el) return;
     el.style.transform = "";
     el.style.transition = "";
+    stateRef.current.closing = false;
+    stateRef.current.tracking = false;
+    stateRef.current.dragging = false;
 
     const isEditableTarget = (target: EventTarget | null) =>
       target instanceof HTMLElement && !!target.closest("input, textarea, select, [contenteditable='true']");
