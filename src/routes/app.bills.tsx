@@ -487,16 +487,16 @@ function BillsPage() {
         )
       ) : filtered.length === 0 ? <Empty>No outstanding {tab === "receivable" ? "receivables" : "payables"}.</Empty> : (
         <>
-        <div className="hidden md:block rounded-2xl border bg-card overflow-x-auto shadow-sm">
+        <div className="hidden md:block surface overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-muted/40 text-xs uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
-                <th className="text-left p-2">Doc</th>
-                <th className="text-left p-2">Party</th>
-                <th className="text-right p-2">Remaining</th>
-                <th className="text-left p-2 w-40">Paid / Total</th>
-                <th className="text-left p-2">Status</th>
-                <th className="text-right p-2">Action</th>
+                <th className="text-left p-3">Bill</th>
+                <th className="text-left p-3">Party</th>
+                <th className="text-right p-3">Balance</th>
+                <th className="text-left p-3 w-44">Settlement</th>
+                <th className="text-left p-3">Status</th>
+                <th className="text-right p-3">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -506,18 +506,18 @@ function BillsPage() {
                 const st = payStatus(Number(r.total), Number(r.paid), d);
                 return (
                   <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t transition-colors hover:bg-muted/35">
-                    <td className="p-2">
+                    <td className="p-3">
                       <button onClick={() => openPreview(r.doc_no)} className="font-mono text-primary hover:underline">{r.doc_no}</button>
                       <div className="text-[10px] text-muted-foreground mt-0.5">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
                     </td>
-                    <td className="p-2 truncate max-w-[220px]">{r.party_name ?? "—"}</td>
-                    <td className={`p-2 text-right tabular-nums text-base font-semibold ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</td>
-                    <td className="p-2">
+                    <td className="p-3 truncate max-w-[220px]">{r.party_name ?? "—"}</td>
+                    <td className={`p-3 text-right tabular-nums text-base font-semibold ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</td>
+                    <td className="p-3">
                       <PayProgress pct={pct} tab={tab} />
                       <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">{inr(r.paid)} of {inr(r.total)}</div>
                     </td>
-                    <td className="p-2"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div></td>
-                    <td className="p-2 text-right whitespace-nowrap">
+                    <td className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div></td>
+                    <td className="p-3 text-right whitespace-nowrap">
                       <Button size="sm" variant="ghost" onClick={() => openPreview(r.doc_no)} title="Preview bill"><Eye className="h-3.5 w-3.5" /></Button>
                       <Button size="sm" variant="outline" onClick={() => settleBill(r)}>
                         {tab === "receivable" ? "Receive" : "Pay"}
@@ -535,7 +535,7 @@ function BillsPage() {
             const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
             const st = payStatus(Number(r.total), Number(r.paid), d);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className="rounded-2xl border bg-card p-3 space-y-3">
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="surface p-3 space-y-3">
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
