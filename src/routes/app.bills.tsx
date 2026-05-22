@@ -348,13 +348,14 @@ function BillsPage() {
       toast.error(`Allocated (${inr(allocatedSum)}) is more than amount (${inr(amount)}).`);
       return;
     }
+    const finalCleared = mode === "Cheque" ? cleared : true;
     const { data: pay, error } = await supabase.from("payments").insert({
       user_id: user.id, direction, date, amount, mode, notes: notes || null,
       contact_id: contactId, contact_name: contactName,
       ref_doc: allocs.map(a => a.doc_no).join(", ") || null,
       cheque_no: chequeNo || null, cheque_date: chequeDate || null,
       txn_id: txnId || null, bank_name: bankName || null,
-      cleared, cleared_at: cleared ? date : null,
+      cleared: finalCleared, cleared_at: finalCleared ? date : null,
     } as never).select().single() as { data: any; error: any };
     if (error) { toast.error(error.message); return; }
     if (allocs.length) {
