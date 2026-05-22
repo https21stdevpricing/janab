@@ -552,6 +552,7 @@ export type Database = {
           notes: string | null
           payment_no: string
           ref_doc: string | null
+          status: string | null
           txn_id: string | null
           user_id: string
         }
@@ -572,6 +573,7 @@ export type Database = {
           notes?: string | null
           payment_no: string
           ref_doc?: string | null
+          status?: string | null
           txn_id?: string | null
           user_id: string
         }
@@ -592,6 +594,7 @@ export type Database = {
           notes?: string | null
           payment_no?: string
           ref_doc?: string | null
+          status?: string | null
           txn_id?: string | null
           user_id?: string
         }
@@ -1635,6 +1638,7 @@ export type Database = {
           doc_no: string | null
           payment_id: string | null
           payment_no: string | null
+          status: string | null
           user_id: string | null
         }
         Relationships: [
