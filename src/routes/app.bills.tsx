@@ -445,7 +445,7 @@ function BillsPage() {
 
       <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_260px]">
         <div className="surface overflow-hidden">
-          <div className="grid grid-cols-3 divide-x divide-border/60">
+          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <HeroCell label="Collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
             <HeroCell label="Pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
             <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
@@ -465,7 +465,7 @@ function BillsPage() {
 
       <div className="mb-3 space-y-3">
         <Tabs value={tab} onValueChange={v => setTab(v as any)}>
-          <TabsList className="scroll-tabs w-full justify-start rounded-full bg-muted p-1 sm:w-auto">
+          <TabsList className="grid w-full grid-cols-3 rounded-full bg-muted p-1 sm:inline-flex sm:w-auto">
             <TabsTrigger value="receivable" className="gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
             <TabsTrigger value="payable" className="gap-1"><ArrowUpRight className="h-3.5 w-3.5" /> Payable</TabsTrigger>
             <TabsTrigger value="history" className="gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
@@ -490,10 +490,10 @@ function BillsPage() {
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
-          <div className="grid gap-2 lg:grid-cols-2">
+          <div className="grid gap-2 lg:grid-cols-2 min-w-0">
             {filteredPays.map(p => (
-              <div key={p.id} className="surface p-3 cursor-pointer transition-colors hover:bg-muted/35" onClick={() => openPayView(p)}>
-                <div className="flex items-start gap-3">
+              <div key={p.id} className="surface p-3 cursor-pointer transition-colors hover:bg-muted/35 min-w-0" onClick={() => openPayView(p)}>
+                <div className="grid grid-cols-[auto_1fr] gap-3 sm:flex sm:items-start">
                 <Badge variant={p.direction === "in" ? "default" : "secondary"} className="shrink-0 mt-0.5">{p.direction === "in" ? "IN" : "OUT"}</Badge>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -513,7 +513,7 @@ function BillsPage() {
                     {p.cheque_no ? `Cheque ${p.cheque_no}` : p.txn_id ? `Txn ${p.txn_id}` : p.notes || "Tap to view details"}
                   </div>
                 </div>
-                <div className={`text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(p.amount)}</div>
+                <div className={`col-span-2 text-right text-base font-semibold tabular-nums sm:col-span-1 ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(p.amount)}</div>
                 </div>
               </div>
             ))}
