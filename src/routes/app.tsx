@@ -95,6 +95,19 @@ function AppLayout() {
     if (!loading && !user) navigate({ to: "/login", replace: true });
   }, [user, loading, navigate]);
 
+  // First-time setup gate — send brand-new users to the onboarding wizard.
+  useEffect(() => {
+    if (loading || !user) return;
+    if (path.startsWith("/app/onboarding")) return;
+    (async () => {
+      const { data } = await import("@/integrations/supabase/client").then(m => m.supabase.from("settings").select("onboarding_done").maybeSingle());
+      if (data && (data as any).onboarding_done === false) {
+        navigate({ to: "/app/onboarding", replace: true });
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, loading, path]);
+
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-sm text-muted-foreground">Checking session…</div>;
   }
