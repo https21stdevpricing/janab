@@ -11,7 +11,6 @@ import { Empty } from "@/components/empty";
 import { inr, fmtDate, todayISO } from "@/lib/format";
 import { toast } from "sonner";
 import { ArrowDownToLine, ArrowUpFromLine, Banknote, Eye, ShieldCheck, Trash2 } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDraft } from "@/hooks/use-draft";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ActionStack, KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
