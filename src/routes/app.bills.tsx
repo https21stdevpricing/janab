@@ -792,10 +792,10 @@ function HeroCell({ label, value, tone, active, onClick }: { label: string; valu
       type="button"
       onClick={onClick}
       disabled={!onClick}
-      className={`text-left px-3 py-3 sm:px-4 sm:py-4 transition-colors ${onClick ? "hover:bg-muted/40 active:bg-muted/60" : ""} ${active ? "bg-primary/5" : ""}`}
+      className={`text-left px-4 py-3 sm:py-4 transition-colors ${onClick ? "hover:bg-muted/40 active:bg-muted/60" : ""} ${active ? "bg-primary/5" : ""}`}
     >
       <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{label}</div>
-      <div className={`mt-1 font-semibold tabular-nums leading-tight text-[15px] sm:text-lg ${clr}`} style={{ wordBreak: "break-word" }}>{value}</div>
+      <div className={`mt-1 font-semibold tabular-nums leading-tight text-lg ${clr}`} style={{ wordBreak: "break-word" }}>{value}</div>
     </button>
   );
 }
