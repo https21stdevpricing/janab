@@ -410,9 +410,24 @@ function Dashboard() {
       metric === "expenses" ? s.expenses :
       s.revenue;
 
-    const last = data[data.length - 1] ?? 0;
-    const prev = data[data.length - 2] ?? 0;
-    const delta = prev === 0 ? 0 : ((last - prev) / Math.abs(prev)) * 100;
+    // Compare the back half of the period against the front half — this matches
+    // the "vs prev" label far better than comparing two adjacent buckets, which
+    // produced misleading -100% drops whenever the very last bucket had no
+    // activity yet (e.g. today).
+    const half = Math.floor(data.length / 2);
+    let prevSum = 0;
+    let currSum = 0;
+    if (metricDef.kind === "stock") {
+      // Running balance — compare end-of-window balance to mid-window balance.
+      prevSum = data[half - 1] ?? 0;
+      currSum = data[data.length - 1] ?? 0;
+    } else {
+      for (let i = 0; i < half; i++) prevSum += data[i] ?? 0;
+      for (let i = half; i < data.length; i++) currSum += data[i] ?? 0;
+    }
+    const delta = prevSum === 0
+      ? (currSum === 0 ? 0 : 100)
+      : ((currSum - prevSum) / Math.abs(prevSum)) * 100;
     return { value, data, labels: buckets.map((b) => b.label), delta, variant: metricDef.kind === "stock" ? ("area" as const) : ("bars" as const) };
   }, [s, daily, metric, range]);
 
