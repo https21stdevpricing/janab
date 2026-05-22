@@ -528,6 +528,7 @@ function BillsPage() {
                 const d = ageDays(r.date); const b = bucket(d);
                 const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
                 const st = payStatus(Number(r.total), Number(r.paid), d);
+                const lock = lockMap.get(`${r.doc_kind}:${r.doc_id}`);
                 return (
                   <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t transition-colors hover:bg-muted/35">
                     <td className="p-3">
@@ -540,10 +541,10 @@ function BillsPage() {
                       <PayProgress pct={pct} tab={tab} />
                       <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">{inr(r.paid)} of {inr(r.total)}</div>
                     </td>
-                    <td className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div></td>
+                    <td className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge>{lock && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Cheque {lock.payment_no}</Badge>}</div></td>
                     <td className="p-3 text-right whitespace-nowrap">
-                      <Button size="sm" variant="outline" onClick={() => settleBill(r)}>
-                        {tab === "receivable" ? "Receive" : "Pay"}
+                      <Button size="sm" variant={lock ? "secondary" : "outline"} onClick={() => settleBill(r)}>
+                        {lock ? "View cheque" : tab === "receivable" ? "Receive" : "Pay"}
                       </Button>
                     </td>
                   </tr>
@@ -573,11 +574,14 @@ function BillsPage() {
                   </div>
                 </button>
                 <PayProgress pct={pct} tab={tab} />
-                <div className="text-[11px] text-muted-foreground tabular-nums">{inr(r.paid)} of {inr(r.total)} · {b}d</div>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
+                  <span>{inr(r.paid)} of {inr(r.total)} · {b}d</span>
+                  {lockMap.get(`${r.doc_kind}:${r.doc_id}`) && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Pending cheque</Badge>}
+                </div>
                 <div>
-                  <Button size="sm" className="w-full" onClick={() => settleBill(r)}>
+                  <Button size="sm" className="w-full" variant={lockMap.get(`${r.doc_kind}:${r.doc_id}`) ? "secondary" : "default"} onClick={() => settleBill(r)}>
                     {tab === "receivable" ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
-                    {tab === "receivable" ? "Receive" : "Pay"}
+                    {lockMap.get(`${r.doc_kind}:${r.doc_id}`) ? "View pending cheque" : tab === "receivable" ? "Receive" : "Pay"}
                   </Button>
                 </div>
               </div>
