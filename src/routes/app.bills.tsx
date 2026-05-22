@@ -605,17 +605,17 @@ function BillsPage() {
             const st = payStatus(Number(r.total), Number(r.paid), d);
             const lock = lockMap.get(`${r.doc_kind}:${r.doc_id}`);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className="min-w-0 space-y-3 p-3.5">
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="min-w-0 space-y-2.5 p-3">
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
-                  <div className="grid min-w-0 grid-cols-1 gap-2">
+                  <div className="grid min-w-0 grid-cols-[1fr_auto] items-start gap-3">
                     <div className="min-w-0">
                       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
                       <div className="mt-0.5 truncate font-mono text-sm font-medium">{r.doc_no}</div>
                       <div className="text-sm truncate text-muted-foreground">{r.party_name ?? "—"}</div>
                     </div>
-                    <div className="min-w-0">
-                      <div className={`truncate text-lg font-semibold tabular-nums ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div>
+                    <div className="min-w-0 text-right">
+                      <div className={`truncate text-base font-semibold tabular-nums ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</div>
+                      <div className="mt-1 flex flex-wrap items-center justify-end gap-1.5"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div>
                     </div>
                   </div>
                 </button>
