@@ -214,6 +214,11 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
             <Button variant="outline" size="sm" onClick={() => updateDesign(DEFAULT_PRINT_DESIGN)}>Reset</Button>
           </div>
           <div className="grid gap-2 sm:grid-cols-3">
+            <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Preset</span>
+              <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.preset} onChange={(e) => updatePreset(e.target.value as PrintPreset)}>
+                {(Object.keys(presetLabels) as PrintPreset[]).map((key) => <option key={key} value={key}>{presetLabels[key]}</option>)}
+              </select>
+            </label>
             <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Header style</span>
               <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.headerStyle} onChange={(e) => updateDesign({ ...design, headerStyle: e.target.value as any })}>
                 <option value="classic">Classic</option><option value="editorial">Editorial</option><option value="compact">Compact</option>
@@ -222,6 +227,11 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
             <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Body density</span>
               <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.bodyLayout} onChange={(e) => updateDesign({ ...design, bodyLayout: e.target.value as any })}>
                 <option value="balanced">Balanced</option><option value="spacious">Spacious</option><option value="dense">Dense</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Products layout</span>
+              <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.productLayout} onChange={(e) => updateDesign({ ...design, productLayout: e.target.value as PrintProductLayout })}>
+                {(Object.keys(productLayoutLabels) as PrintProductLayout[]).map((key) => <option key={key} value={key}>{productLayoutLabels[key]}</option>)}
               </select>
             </label>
             <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Main logo (PNG)</span>
