@@ -71,16 +71,17 @@ function LedgerPage() {
       setRows([]);
       return;
     }
-    const data = await fetchAllPages<LedgerRow>((from, to) =>
-      supabase
-        .from("ledger_view")
-        .select("*")
-        .eq("user_id", auth.user.id)
-        .order("date", { ascending: false })
-        .range(from, to) as unknown as PromiseLike<{
-        data: LedgerRow[] | null;
-        error: { message: string } | null;
-      }>,
+    const data = await fetchAllPages<LedgerRow>(
+      (from, to) =>
+        supabase
+          .from("ledger_view")
+          .select("*")
+          .eq("user_id", auth.user.id)
+          .order("date", { ascending: false })
+          .range(from, to) as unknown as PromiseLike<{
+          data: LedgerRow[] | null;
+          error: { message: string } | null;
+        }>,
     );
     setRows(data);
   }, []);
@@ -107,10 +108,11 @@ function LedgerPage() {
     });
     const dir = sortDir === "asc" ? 1 : -1;
     out = [...out].sort((a, b) => {
-      let va: any, vb: any;
+      let va: string | number;
+      let vb: string | number;
       if (sortBy === "date") {
-        va = a.date;
-        vb = b.date;
+        va = a.date ?? "";
+        vb = b.date ?? "";
       } else if (sortBy === "account") {
         va = a.account ?? "";
         vb = b.account ?? "";
@@ -148,7 +150,10 @@ function LedgerPage() {
 
   // Export always start→end (chronological asc) regardless of on-screen sort
   const exportRows = useMemo(
-    () => [...filtered].sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? -1 : (a.date ?? "") > (b.date ?? "") ? 1 : 0)),
+    () =>
+      [...filtered].sort((a, b) =>
+        (a.date ?? "") < (b.date ?? "") ? -1 : (a.date ?? "") > (b.date ?? "") ? 1 : 0,
+      ),
     [filtered],
   );
   let running = 0;
@@ -378,7 +383,7 @@ function LedgerPage() {
                 running += Number(r.debit ?? 0) - Number(r.credit ?? 0);
                 return (
                   <tr key={i} className="border-t">
-                    <td className="p-2 whitespace-nowrap">{fmtDate(r.date)}</td>
+                    <td className="p-2 whitespace-nowrap">{r.date ? fmtDate(r.date) : ""}</td>
                     <td className="p-2 font-mono text-xs">{r.source_id}</td>
                     <td className="p-2">{r.account}</td>
                     <td className="p-2 truncate max-w-[140px]">{r.party}</td>
