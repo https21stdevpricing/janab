@@ -12,9 +12,10 @@ import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { CollapseFilters } from "@/components/collapse-filters";
 import { inr, fmtDate, todayISO } from "@/lib/format";
-import { ArrowDownLeft, ArrowUpRight, Eye, Trash2, History, X, Printer } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Clock3, Eye, FileText, History, Printer, ShieldCheck, Trash2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { ContactPicker } from "@/components/contact-picker";
 import { DocDetail } from "@/routes/app.lookup";
 import { lookupDoc, openDocsFor, type DocLookupResult } from "@/lib/doc-lookup";
@@ -51,6 +52,7 @@ type PayRow = {
   id: string; payment_no: string; date: string; direction: "in" | "out";
   contact_id: string | null; contact_name: string | null; amount: number;
   mode: string | null; ref_doc: string | null; notes: string | null;
+  cleared: boolean; cleared_at: string | null; cheque_no: string | null; bank_name: string | null; txn_id: string | null;
 };
 type Alloc = { doc_kind: "sale" | "purchase" | "tp" | "tp_purchase"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
 
@@ -82,6 +84,19 @@ function StatusBadge({ s }: { s: { label: string; tone: "warn" | "info" | "bad" 
     : s.tone === "info" ? "border-primary/30 text-primary bg-primary/5"
     : "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/5";
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${cls}`}>{s.label}</span>;
+}
+
+function ClearancePill({ cleared, mode }: { cleared: boolean; mode?: string | null }) {
+  const isCheque = mode === "Cheque";
+  const cls = cleared
+    ? "border-primary/30 bg-primary/5 text-primary"
+    : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400";
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${cls}`}>
+      {cleared ? <CheckCircle2 className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
+      {cleared ? "Cleared" : isCheque ? "Cheque pending" : "Pending"}
+    </span>
+  );
 }
 
 function BillsPage() {
