@@ -569,9 +569,9 @@ function InlineContacts({ kind, rows, setRows }: {
           const idx = rows.indexOf(r);
           return (
             <div key={r.id ?? `n-${idx}`} className="grid grid-cols-2 sm:grid-cols-[minmax(180px,1fr)_130px_150px_36px] gap-2 p-3 sm:py-2 items-end">
-              <Field label="Name"><Input className="h-10 text-sm" value={r.name} placeholder="Name" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], name: e.target.value, _dirty: true }; setRows(c); }} /></Field>
-              <Field label="Phone"><Input className="h-10 text-sm" value={r.phone ?? ""} placeholder="Phone" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], phone: e.target.value, _dirty: true }; setRows(c); }} /></Field>
-              <Field label="Opening ₹"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={r.opening_balance} onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], opening_balance: +e.target.value, _dirty: true }; setRows(c); }} /></Field>
+              <RowField label="Name"><Input className="h-10 text-sm" value={r.name} placeholder="Name" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], name: e.target.value, _dirty: true }; setRows(c); }} /></RowField>
+              <RowField label="Phone"><Input className="h-10 text-sm" value={r.phone ?? ""} placeholder="Phone" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], phone: e.target.value, _dirty: true }; setRows(c); }} /></RowField>
+              <RowField label="Opening ₹"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={r.opening_balance} onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], opening_balance: +e.target.value, _dirty: true }; setRows(c); }} /></RowField>
               <Button size="icon" variant="ghost" className="h-10 w-10 self-end" onClick={async () => {
                 if (r.id) { if (!confirm(`Delete "${r.name}"?`)) return; await supabase.from("contacts").delete().eq("id", r.id); }
                 setRows(rows.filter((_, j) => j !== idx));
