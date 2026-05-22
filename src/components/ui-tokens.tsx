@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ElementType, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -141,7 +141,7 @@ export function KpiTile({
     : tone === "bad" ? "text-destructive"
     : "text-foreground";
   const interactive = !!onClick;
-  const Comp: any = interactive ? "button" : "div";
+  const Comp: ElementType = interactive ? "button" : "div";
   return (
     <Comp
       onClick={onClick}
