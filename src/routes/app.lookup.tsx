@@ -52,7 +52,7 @@ function LookupPage() {
     // Otherwise broad search
     const like = `%${term}%`;
     const out: SearchHit[] = [];
-    const [{ data: cs }, { data: ps }, { data: ss }, { data: pos }, { data: tps }, { data: qs }, { data: pys }] = await Promise.all([
+    const [{ data: cs }, { data: ps }, { data: ss }, { data: pos }, { data: tps }, { data: qs }, { data: pys }, { data: bts }] = await Promise.all([
       supabase.from("contacts").select("*").or(`name.ilike.${like},phone.ilike.${like},gstin.ilike.${like},code.ilike.${like}`).limit(20),
       supabase.from("products").select("*").or(`name.ilike.${like},code.ilike.${like},hsn.ilike.${like}`).limit(20),
       supabase.from("sales").select("id,invoice_no,date,buyer_name").or(`invoice_no.ilike.${like},buyer_name.ilike.${like}`).limit(10),
@@ -60,6 +60,7 @@ function LookupPage() {
       supabase.from("third_party").select("id,tp_no,date,buyer_name,supplier_name").or(`tp_no.ilike.${like},buyer_name.ilike.${like},supplier_name.ilike.${like}`).limit(10),
       supabase.from("quotations").select("id,quote_no,date,buyer_name").or(`quote_no.ilike.${like},buyer_name.ilike.${like}`).limit(10),
       supabase.from("payments").select("id,payment_no,date,contact_name,direction").or(`payment_no.ilike.${like},contact_name.ilike.${like}`).limit(10),
+      supabase.from("bank_transfers" as never).select("id,transfer_no,date,kind,bank_name,cheque_no,txn_id,amount,status").or(`transfer_no.ilike.${like},bank_name.ilike.${like},cheque_no.ilike.${like},txn_id.ilike.${like}`).limit(10) as any,
     ]);
     for (const r of cs ?? []) out.push({ kind: "contact", row: r });
     for (const r of ps ?? []) out.push({ kind: "product", row: r });
@@ -68,6 +69,10 @@ function LookupPage() {
     for (const r of tps ?? []) out.push({ kind: "doc", docKind: "TP", no: r.tp_no, date: r.date, party: `${r.supplier_name ?? "—"} → ${r.buyer_name ?? "—"}`, row: r });
     for (const r of qs ?? []) out.push({ kind: "doc", docKind: "Quote", no: r.quote_no, date: r.date, party: r.buyer_name ?? "—", row: r });
     for (const r of pys ?? []) out.push({ kind: "doc", docKind: r.direction === "in" ? "Receipt" : "Payment", no: r.payment_no, date: r.date, party: r.contact_name ?? "—", row: r });
+    for (const r of (bts ?? []) as any[]) {
+      const lbl = r.kind === "cash_deposit" ? "Deposit" : r.kind === "cash_withdrawal" ? "Withdrawal" : "Cheque";
+      out.push({ kind: "doc", docKind: lbl, no: r.transfer_no, date: r.date, party: r.bank_name ?? r.cheque_no ?? r.txn_id ?? "—", row: r });
+    }
     setHits(out);
     if (out.length === 0) toast.error("Nothing found");
     setBusy(false);
@@ -113,13 +118,14 @@ function LookupPage() {
     suggestTimer.current = window.setTimeout(async () => {
       const like = `%${term}%`;
       const out: SearchHit[] = [];
-      const [{ data: cs }, { data: ps }, { data: ss }, { data: pos }, { data: tps }, { data: pys }] = await Promise.all([
+      const [{ data: cs }, { data: ps }, { data: ss }, { data: pos }, { data: tps }, { data: pys }, { data: bts }] = await Promise.all([
         supabase.from("contacts").select("id,name,code,type,state,phone,gstin").or(`name.ilike.${like},phone.ilike.${like},gstin.ilike.${like},code.ilike.${like}`).limit(5),
         supabase.from("products").select("id,name,code,unit,hsn,sale_rate").or(`name.ilike.${like},code.ilike.${like},hsn.ilike.${like}`).limit(5),
         supabase.from("sales").select("id,invoice_no,date,buyer_name").or(`invoice_no.ilike.${like},buyer_name.ilike.${like}`).limit(4),
         supabase.from("purchases").select("id,po_no,date,supplier_name").or(`po_no.ilike.${like},supplier_name.ilike.${like}`).limit(4),
         supabase.from("third_party").select("id,tp_no,date,buyer_name,supplier_name").or(`tp_no.ilike.${like},buyer_name.ilike.${like},supplier_name.ilike.${like}`).limit(3),
         supabase.from("payments").select("id,payment_no,date,contact_name,direction").or(`payment_no.ilike.${like},contact_name.ilike.${like}`).limit(3),
+        supabase.from("bank_transfers" as never).select("id,transfer_no,date,kind,bank_name,amount").or(`transfer_no.ilike.${like},bank_name.ilike.${like},cheque_no.ilike.${like},txn_id.ilike.${like}`).limit(3) as any,
       ]);
       for (const r of cs ?? []) out.push({ kind: "contact", row: r });
       for (const r of ps ?? []) out.push({ kind: "product", row: r });
@@ -127,6 +133,10 @@ function LookupPage() {
       for (const r of pos ?? []) out.push({ kind: "doc", docKind: "Purchase", no: r.po_no, date: r.date, party: r.supplier_name ?? "—", row: r });
       for (const r of tps ?? []) out.push({ kind: "doc", docKind: "TP", no: r.tp_no, date: r.date, party: `${r.supplier_name ?? "—"} → ${r.buyer_name ?? "—"}`, row: r });
       for (const r of pys ?? []) out.push({ kind: "doc", docKind: r.direction === "in" ? "Receipt" : "Payment", no: r.payment_no, date: r.date, party: r.contact_name ?? "—", row: r });
+      for (const r of (bts ?? []) as any[]) {
+        const lbl = r.kind === "cash_deposit" ? "Deposit" : r.kind === "cash_withdrawal" ? "Withdrawal" : "Cheque";
+        out.push({ kind: "doc", docKind: lbl, no: r.transfer_no, date: r.date, party: r.bank_name ?? "—", row: r });
+      }
       setSuggest(out.slice(0, 12));
     }, 220);
     return () => { if (suggestTimer.current) window.clearTimeout(suggestTimer.current); };
@@ -377,7 +387,7 @@ function ResultGroup({ title, count, children }: { title: string; count: number;
 
 export function DocDetail({ doc }: { doc: DocLookupResult }) {
   const h = doc.header;
-  const no = h.invoice_no ?? h.po_no ?? h.tp_no ?? h.quote_no ?? h.payment_no;
+  const no = h.invoice_no ?? h.po_no ?? h.tp_no ?? h.quote_no ?? h.payment_no ?? h.transfer_no;
   const printable = doc.kind === "sale" ? "invoice" : doc.kind === "quote" ? "quote" : null;
   const navigate = useNavigate();
   const payable = doc.kind === "sale" || doc.kind === "purchase" || doc.kind === "tp";

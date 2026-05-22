@@ -72,7 +72,13 @@ export async function lookupDoc(rawId: string): Promise<DocLookupResult | null> 
   // Outstanding (sale / purchase / tp only)
   let outstanding: DocLookupResult["outstanding"] | undefined;
   let supplierOutstanding: DocLookupResult["supplierOutstanding"] | undefined;
-  if (cfg.kind === "sale" || cfg.kind === "purchase" || cfg.kind === "tp") {
+  // Bank transfer — treat as a settled "payment-like" doc
+  if (cfg.table === "bank_transfers") {
+    const amt = Number(header.amount ?? 0);
+    totals.subtotal = amt;
+    totals.total = amt;
+    outstanding = { total: amt, paid: header.status === "cleared" ? amt : 0, balance: header.status === "cleared" ? 0 : amt, status: header.status ?? (header.cleared ? "cleared" : "pending") };
+  } else if (cfg.kind === "sale" || cfg.kind === "purchase" || cfg.kind === "tp") {
     const { data: o } = await supabase
       .from("outstanding_view" as never).select("total,paid,balance,status")
       .eq("doc_kind" as never, cfg.kind).eq("doc_id" as never, header.id).maybeSingle() as { data: any };
