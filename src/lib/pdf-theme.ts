@@ -433,12 +433,12 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   doc.text(doc.splitTextToSize(notes, leftW).slice(0, 5), M, leftY + 12);
 
   // Optional QR + barcode column on the right of totals
-  if (design?.qrCodeDataUrl) {
+  if (qrPlacement === "totals" && design?.qrCodeDataUrl) {
     try { doc.addImage(design.qrCodeDataUrl, imageFormat(design.qrCodeDataUrl) as any, W - M - 70, blockY + 4, 70, 70); } catch {}
     doc.setFont("helvetica", "normal").setFontSize(7).setTextColor(...swPdf.muted);
     doc.text("Scan to pay / verify", W - M - 35, blockY + 82, { align: "center" });
   }
-  if (design?.barcodeDataUrl) {
+  if (barcodePlacement === "terms" && design?.barcodeDataUrl) {
     try { doc.addImage(design.barcodeDataUrl, imageFormat(design.barcodeDataUrl) as any, M, leftY + 70, 160, 28); } catch {}
   }
 
