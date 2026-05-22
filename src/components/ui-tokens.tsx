@@ -155,7 +155,7 @@ export function KpiTile({
       className={cn(
         "surface relative isolate overflow-hidden text-left w-full min-w-0 p-3 sm:p-4 transition-colors",
         interactive && "hover:bg-muted/35",
-        active && "ring-1 ring-primary/40",
+        active && "border-primary/35 bg-primary/5",
       )}
     >
       <div className="eyebrow truncate">{label}</div>
