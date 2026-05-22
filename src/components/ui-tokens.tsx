@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -167,8 +167,12 @@ export function KpiTile({
 }
 
 export function KpiGrid({ children, cols = 2, className }: { children: ReactNode; cols?: 2 | 3 | 4; className?: string }) {
-  const grid = cols === 4 ? "grid-cols-2 md:grid-cols-4" : cols === 3 ? "grid-cols-3" : "grid-cols-2";
-  return <div className={cn("grid gap-2.5", grid, className)}>{children}</div>;
+  const grid = cols === 4
+    ? "grid-cols-2 md:grid-cols-4"
+    : cols === 3
+    ? "grid-cols-[repeat(3,minmax(136px,1fr))] overflow-x-auto no-scrollbar snap-x"
+    : "grid-cols-2";
+  return <div className={cn("grid gap-2.5 max-w-full min-w-0", grid, className)}>{children}</div>;
 }
 
 export type ActionItem = {
@@ -228,11 +232,17 @@ export function SegmentedTabs({
   items: SegmentItem[];
   className?: string;
 }) {
+  const activeRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [value]);
+
   return (
     <div
       role="tablist"
       className={cn(
-        "flex w-full sm:w-auto rounded-full bg-muted p-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x",
+        "scroll-tabs w-full sm:w-auto max-w-full min-w-0 justify-start rounded-full bg-muted p-1 overflow-x-auto no-scrollbar snap-x overscroll-x-contain",
         className,
       )}
     >
@@ -241,6 +251,7 @@ export function SegmentedTabs({
         return (
           <button
             key={it.value}
+            ref={active ? activeRef : undefined}
             role="tab"
             aria-selected={active}
             onClick={() => onValueChange(it.value)}
