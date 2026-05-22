@@ -224,7 +224,7 @@ export function SegmentedTabs({
     <div
       role="tablist"
       className={cn(
-        "inline-flex w-full sm:w-auto rounded-full bg-muted p-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "flex w-full sm:w-auto rounded-full bg-muted p-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className,
       )}
     >
@@ -237,14 +237,17 @@ export function SegmentedTabs({
             aria-selected={active}
             onClick={() => onValueChange(it.value)}
             className={cn(
-              "inline-flex items-center gap-1.5 whitespace-nowrap px-3.5 h-8 rounded-full text-[12.5px] font-medium transition-colors",
+              // Equal-width segments + fixed type metrics so the active pill
+              // never resizes the row. Same font-size & weight in both states;
+              // active state only changes the surface + colour.
+              "flex-1 min-w-0 inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3 h-8 rounded-full text-[12.5px] font-medium leading-none tracking-tight transition-colors",
               active
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {it.icon && <span className="h-3.5 w-3.5 inline-flex items-center justify-center">{it.icon}</span>}
-            {it.label}
+            {it.icon && <span className="h-3.5 w-3.5 inline-flex items-center justify-center shrink-0">{it.icon}</span>}
+            <span className="truncate">{it.label}</span>
           </button>
         );
       })}
