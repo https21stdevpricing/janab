@@ -489,7 +489,7 @@ function BillsPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm">{p.payment_no}</span>
                     <span className="text-xs text-muted-foreground">{fmtDate(p.date)}</span>
-                    {(p.mode === "Cheque" || p.cleared === false) && <ClearancePill cleared={p.cleared !== false} mode={p.mode} />}
+                    {(p.mode === "Cheque" || p.cleared === false) && <ClearancePill cleared={p.cleared !== false} mode={p.mode} status={p.status} />}
                     {p.ref_doc && (
                       <span className="text-xs text-muted-foreground flex flex-wrap gap-1">
                         {p.ref_doc.split(",").map(s => s.trim()).filter(Boolean).map((ref, idx) => (
@@ -606,7 +606,7 @@ function BillsPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewPay.date)}</div></div>
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewPay.mode ?? "—"}</div></div>
-                {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} /></div>}
+                {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} status={viewPay.status} /></div>}
                 <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewPay.contact_name ?? "—"}</div></div>
                 <div className="col-span-2 rounded-md border bg-muted/30 p-3">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Amount</div>
@@ -636,6 +636,11 @@ function BillsPage() {
             {viewPay?.cleared === false && (
               <Button variant="outline" className="w-full" onClick={() => viewPay && markPayCleared(viewPay)}>
                 <CheckCircle2 className="h-4 w-4" /> Mark cleared and post accounts
+              </Button>
+            )}
+            {viewPay?.mode === "Cheque" && viewPay.status !== "bounced" && viewPay.cleared === false && (
+              <Button variant="outline" className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive" onClick={() => viewPay && markPayBounced(viewPay)}>
+                <X className="h-4 w-4" /> Mark bounced and release bill
               </Button>
             )}
             <Button variant="outline" className="w-full" onClick={() => viewPay && exportStoneWorldPayment(viewPay, viewAllocs, company)}>
