@@ -431,26 +431,33 @@ function OnboardingPage() {
         {step === 3 && (
           <>
             <Header n={3} title="Opening stock" hint="Add each product with current quantity and purchase rate. Edit inline — no need to leave this page." icon={Boxes} />
-            <div className="rounded-lg border bg-muted/10">
-              <div className="grid grid-cols-[1fr_70px_90px_110px_32px] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
+            <div className="rounded-2xl border bg-background overflow-hidden">
+              <div className="hidden sm:grid grid-cols-[minmax(180px,1fr)_82px_110px_130px_36px] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
                 <div>Product</div><div>Unit</div><div className="text-right">Qty</div><div className="text-right">Rate ₹</div><div></div>
               </div>
-              <div className="max-h-[40vh] overflow-y-auto divide-y">
+              <div className="max-h-[46vh] overflow-y-auto divide-y">
                 {prods.length === 0 && <div className="px-3 py-6 text-center text-xs text-muted-foreground">No products yet. Add your first below.</div>}
                 {prods.map((p, i) => (
-                  <div key={p.id ?? `n-${i}`} className="grid grid-cols-[1fr_70px_90px_110px_32px] gap-2 px-3 py-1.5 items-center">
-                    <Input className="h-8 text-sm" value={p.name} placeholder="e.g. Marble 24×24" onChange={e => { const c = [...prods]; c[i] = { ...c[i], name: e.target.value, _dirty: true }; setProds(c); }} />
-                    <Input className="h-8 text-sm" value={p.unit} onChange={e => { const c = [...prods]; c[i] = { ...c[i], unit: e.target.value, _dirty: true }; setProds(c); }} />
-                    <Input className="h-8 text-sm text-right tabular-nums" type="number" value={p.opening_stock} onChange={e => { const c = [...prods]; c[i] = { ...c[i], opening_stock: +e.target.value, _dirty: true }; setProds(c); }} />
-                    <Input className="h-8 text-sm text-right tabular-nums" type="number" value={p.purchase_rate} onChange={e => { const c = [...prods]; c[i] = { ...c[i], purchase_rate: +e.target.value, _dirty: true }; setProds(c); }} />
-                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => { if (p.id) { if (!confirm(`Delete "${p.name}"?`)) return; await supabase.from("products").delete().eq("id", p.id); } setProds(prods.filter((_, j) => j !== i)); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  <div key={p.id ?? `n-${i}`} className="grid grid-cols-2 sm:grid-cols-[minmax(180px,1fr)_82px_110px_130px_36px] gap-2 p-3 sm:py-2 items-end">
+                    <Field label="Product"><Input className="h-10 text-sm" value={p.name} placeholder="e.g. Marble 24×24" onChange={e => { const c = [...prods]; c[i] = { ...c[i], name: e.target.value, _dirty: true }; setProds(c); }} /></Field>
+                    <Field label="Unit"><Input className="h-10 text-sm" value={p.unit} onChange={e => { const c = [...prods]; c[i] = { ...c[i], unit: e.target.value, _dirty: true }; setProds(c); }} /></Field>
+                    <Field label="Qty"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={p.opening_stock} onChange={e => { const c = [...prods]; c[i] = { ...c[i], opening_stock: +e.target.value, _dirty: true }; setProds(c); }} /></Field>
+                    <Field label="Rate ₹"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={p.purchase_rate} onChange={e => { const c = [...prods]; c[i] = { ...c[i], purchase_rate: +e.target.value, _dirty: true }; setProds(c); }} /></Field>
+                    <Button size="icon" variant="ghost" className="h-10 w-10 self-end" onClick={async () => { if (p.id) { if (!confirm(`Delete "${p.name}"?`)) return; await supabase.from("products").delete().eq("id", p.id); } setProds(prods.filter((_, j) => j !== i)); }}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
               </div>
-              <div className="border-t flex items-center justify-between px-3 py-2 bg-card">
+              <div className="border-t flex flex-col gap-3 px-3 py-3 bg-card sm:flex-row sm:items-center sm:justify-between">
                 <Button size="sm" variant="outline" onClick={() => setProds([...prods, { name: "", unit: "pc", opening_stock: 0, purchase_rate: 0, _dirty: true }])}><Plus className="h-3.5 w-3.5" /> Add product</Button>
                 <div className="text-xs">Stock value: <span className="font-semibold tabular-nums">{inr(liveOpeningStockValue)}</span></div>
               </div>
+            </div>
+            <div className="rounded-2xl border bg-muted/20 p-3 space-y-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div><div className="text-sm font-semibold">Bulk paste products</div><div className="text-xs text-muted-foreground">One line each: Name | Unit | Qty | Purchase rate</div></div>
+                <Button size="sm" variant="outline" onClick={addBulkStock}>Add pasted rows</Button>
+              </div>
+              <Textarea value={bulkStockText} onChange={(e) => setBulkStockText(e.target.value)} rows={4} className="font-mono text-xs" placeholder={"Italian Marble | sqft | 1200 | 95\nKota Stone | sqft | 800 | 40"} />
             </div>
             <Note>Saved here directly. Full management later in <Link className="underline" to="/app/products">Products</Link>.</Note>
             <Foot>
