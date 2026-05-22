@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { SegmentedTabs } from "@/components/ui-tokens";
 import { inr, fmt } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert, Layers, Calculator, Check, Wrench } from "lucide-react";
@@ -22,6 +23,7 @@ function ReportsPage() {
   const [cogsMethod, setCogsMethod] = useState<"weighted_average" | "fifo">("weighted_average");
   const [payments, setPayments] = useState<any[]>([]);
   const [allocations, setAllocations] = useState<any[]>([]);
+  const [reportTab, setReportTab] = useState("outlook");
 
   useEffect(() => {
     const loadAll = () => {
