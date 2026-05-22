@@ -452,13 +452,25 @@ export function DocDetail({ doc }: { doc: DocLookupResult }) {
     <div className="rounded-md border bg-card">
       <div className="p-4 border-b flex items-start gap-3">
         <div className="flex-1">
-          <div className="text-xs uppercase tracking-wide text-muted-foreground">{doc.kind}</div>
+          <div className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+            {doc.kind === "deposit" && <Landmark className="h-3 w-3" />}
+            {doc.kind === "deposit" ? (h.kind === "cash_withdrawal" ? "Cash withdrawal" : h.kind === "cheque_deposit" ? "Cheque deposit" : "Cash deposit") : doc.kind}
+          </div>
           <div className="text-lg font-semibold font-mono">{no}</div>
-          <div className="text-sm text-muted-foreground mt-1">{fmtDate(h.date)} · {h.buyer_name ?? h.supplier_name ?? h.contact_name ?? "—"}</div>
+          <div className="text-sm text-muted-foreground mt-1">
+            {fmtDate(h.date)}
+            {doc.kind === "deposit"
+              ? <>{h.bank_name ? ` · ${h.bank_name}` : ""}{h.cheque_no ? ` · Cheque #${h.cheque_no}` : ""}{h.txn_id ? ` · Txn ${h.txn_id}` : ""}</>
+              : <> · {h.buyer_name ?? h.supplier_name ?? h.contact_name ?? "—"}</>
+            }
+          </div>
           {doc.party && (
             <div className="text-xs text-muted-foreground mt-0.5">
               {doc.party.code} · {doc.party.state} {doc.party.gstin ? `· ${doc.party.gstin}` : ""} {doc.party.phone ? `· ${doc.party.phone}` : ""}
             </div>
+          )}
+          {doc.kind === "deposit" && h.notes && (
+            <div className="text-xs text-muted-foreground mt-1 italic">{h.notes}</div>
           )}
         </div>
         <div className="text-right">
