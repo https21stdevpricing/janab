@@ -338,18 +338,6 @@ function ReportsPage() {
         </div>
 
         <TabsContent value="outlook" className="space-y-4">
-          {/* Headline card — single source of truth */}
-          <Card>
-            <CardContent className="p-5">
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                <Headline label="Revenue" value={inr(revenue)} sub="Total billed to date" />
-                <Headline label="Net Profit" value={inr(netProfit)} sub={`Margin ${fmt(netMarginPct, 1)}%`} tone={netProfit >= 0 ? "good" : "bad"} />
-                <Headline label="Cash + Bank" value={inr(liquid)} sub={isFinite(runwayMonths) ? `${fmt(runwayMonths, 1)} months runway` : "No recent OPEX"} tone={runwayMonths >= 3 ? "good" : "bad"} />
-                <Headline label="You're owed − you owe" value={inr(arApDelta)} sub={arApDelta >= 0 ? "Net cash inflow expected" : "Net cash outflow expected"} tone={arApDelta >= 0 ? "good" : "warn"} />
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Health meters — plain language under each */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <MeterCard label="Gross Margin" value={`${fmt(grossMarginPct, 1)}%`} status={statusFor(grossMarginPct, 20, 10)}
