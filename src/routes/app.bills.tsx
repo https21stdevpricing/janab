@@ -565,9 +565,6 @@ function BillsPage() {
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Bill preview</DialogTitle>
           </div>
           <div className="p-4">{preview && <DocDetail doc={preview} />}</div>
-          <div className="px-4 py-3 border-t flex justify-end">
-            <Button variant="outline" onClick={() => setPreview(null)}>Close</Button>
-          </div>
         </DialogContent>
       </Dialog>
 
@@ -618,7 +615,6 @@ function BillsPage() {
             <Button variant="outline" className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive" onClick={() => { if (viewPay) { delPay(viewPay.id); setViewPay(null); } }}>
               <Trash2 className="h-4 w-4" /> Delete
             </Button>
-            <Button className="w-full" onClick={() => setViewPay(null)}>Close</Button>
           </div>
         </DialogContent>
       </Dialog>
