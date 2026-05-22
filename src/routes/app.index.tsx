@@ -410,7 +410,7 @@ function Dashboard() {
   const actions = [
     { to: "/app/sales", label: "New sale", icon: ShoppingCart, primary: true },
     { to: "/app/purchases", label: "New purchase", icon: Truck },
-    { to: "/app/payments", label: "Record payment", icon: Wallet },
+    { to: "/app/bills", label: "Record payment", icon: Wallet },
     { to: "/app/bank", label: "Bank & cash", icon: Landmark },
   ];
 
@@ -457,7 +457,7 @@ function Dashboard() {
             hint="Cash + bank in"
             icon={ArrowDownLeft}
             tone="good"
-            to="/app/payments"
+            to="/app/bills"
           />
           <TodayTile
             label="Purchases"
@@ -471,7 +471,7 @@ function Dashboard() {
             value={today ? inr(today.paidOut) : "—"}
             hint="Cash + bank out"
             icon={ArrowUpLeft}
-            to="/app/payments"
+            to="/app/bills"
           />
           <TodayTile
             label="Expenses"
