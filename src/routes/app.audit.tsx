@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import {
   Activity,
   CalendarClock,
@@ -28,8 +28,11 @@ import { exportToExcel } from "@/lib/excel";
 import { KpiGrid, KpiTile, SegmentedTabs, Surface } from "@/components/ui-tokens";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useLiveSync } from "@/hooks/use-live-sync";
 
 export const Route = createFileRoute("/app/audit")({ component: AuditPage });
+
+const AUDIT_LIVE_TABLES = ["audit_log"];
 
 type Row = {
   id: string;
@@ -83,12 +86,13 @@ function AuditPage() {
   const [restoring, setRestoring] = useState<Record<string, boolean>>({});
   const [authReady, setAuthReady] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     setAuthReady(true);
-    if (!session?.user) {
+    if (authError || !user) {
       setRows([]);
       return;
     }
@@ -105,29 +109,12 @@ function AuditPage() {
       return;
     }
     setRows((data ?? []) as Row[]);
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    const reload = () => {
-      if (!cancelled) load();
-    };
-
-    reload();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => reload());
-    const ch = supabase
-      .channel("audit-live")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "audit_log" }, reload)
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-      supabase.removeChannel(ch);
-    };
   }, []);
+  const { isLive, isRefreshing, lastSyncedAt, lastError, refresh } = useLiveSync({
+    channelName: "audit-live",
+    tables: AUDIT_LIVE_TABLES,
+    load,
+  });
 
   const counts = useMemo(() => {
     const c: Record<ActionFilter | string, number> = {
