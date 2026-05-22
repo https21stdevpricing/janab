@@ -357,14 +357,18 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     const onTouchMove = (e: TouchEvent) => { const touch = e.touches[0]; if (touch) move(touch.clientY, e); };
     const onTouchEnd = () => end();
 
-    document.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
-    document.addEventListener("pointermove", onPointerMove, { passive: false, capture: true });
-    document.addEventListener("pointerup", onPointerEnd, { passive: true, capture: true });
-    document.addEventListener("pointercancel", onPointerEnd, { passive: true, capture: true });
-    document.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
-    document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
-    document.addEventListener("touchend", onTouchEnd, { passive: true, capture: true });
-    document.addEventListener("touchcancel", onTouchEnd, { passive: true, capture: true });
+    const usePointer = "PointerEvent" in window;
+    if (usePointer) {
+      document.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
+      document.addEventListener("pointermove", onPointerMove, { passive: false, capture: true });
+      document.addEventListener("pointerup", onPointerEnd, { passive: true, capture: true });
+      document.addEventListener("pointercancel", onPointerEnd, { passive: true, capture: true });
+    } else {
+      document.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
+      document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+      document.addEventListener("touchend", onTouchEnd, { passive: true, capture: true });
+      document.addEventListener("touchcancel", onTouchEnd, { passive: true, capture: true });
+    }
     return () => {
       document.removeEventListener("pointerdown", onPointerDown, true);
       document.removeEventListener("pointermove", onPointerMove, true);
