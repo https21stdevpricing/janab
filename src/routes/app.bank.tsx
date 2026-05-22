@@ -149,15 +149,17 @@ function BankPage() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <Link to="/app/ledger" className="rounded-xl border bg-card p-3 hover:bg-muted/30 transition-colors">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Landmark className="h-3 w-3" /> Cash on hand</div>
-          <div className="text-lg font-semibold tabular-nums">{inr(cashBal)}</div>
-        </Link>
-        <Link to="/app/ledger" className="rounded-xl border bg-card p-3 hover:bg-muted/30 transition-colors">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><Landmark className="h-3 w-3" /> Bank balance</div>
-          <div className="text-lg font-semibold tabular-nums text-primary">{inr(bankBal)}</div>
-        </Link>
+      <div className="mb-3 rounded-2xl border border-border/70 bg-card overflow-hidden">
+        <div className="grid grid-cols-2 divide-x divide-border/60">
+          <Link to="/app/ledger" className="px-4 py-3 hover:bg-muted/40 transition-colors">
+            <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Cash on hand</div>
+            <div className={`mt-1 text-base sm:text-lg font-semibold tabular-nums leading-tight ${cashBal < 0 ? "text-destructive" : ""}`}>{inr(cashBal)}</div>
+          </Link>
+          <Link to="/app/ledger" className="px-4 py-3 hover:bg-muted/40 transition-colors">
+            <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">Bank balance</div>
+            <div className={`mt-1 text-base sm:text-lg font-semibold tabular-nums leading-tight ${bankBal < 0 ? "text-destructive" : "text-primary"}`}>{inr(bankBal)}</div>
+          </Link>
+        </div>
       </div>
 
       <Tabs value={filter} onValueChange={(v) => setFilter(v as any)} className="mb-3">
@@ -183,36 +185,48 @@ function BankPage() {
         <div className="space-y-2">
           {filtered.map(r => {
             const st = (r.status ?? (r.cleared ? "cleared" : "pending")) as Status;
+            const isOut = r.kind === "cash_withdrawal";
             return (
-              <div key={r.id} className={`rounded-xl border bg-card p-3 flex items-center gap-3 ${st === "bounced" ? "border-destructive/40" : st === "pending" ? "border-amber-500/40" : ""}`}>
-                <Badge variant={r.kind === "cash_withdrawal" ? "secondary" : "default"}>
-                  {r.kind === "cash_deposit" ? "DEP" : r.kind === "cheque_deposit" ? "CHQ" : "WD"}
-                </Badge>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm">{r.transfer_no}</span>
-                    <span className="text-xs text-muted-foreground">{fmtDate(r.date)}</span>
-                    <StatusPill status={st} />
+              <div key={r.id} className="rounded-2xl border border-border/70 bg-card p-3 sm:p-4">
+                {/* Top row: meta + amount */}
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+                      {KIND_LABEL[r.kind]} · {fmtDate(r.date)}
+                    </div>
+                    <div className="font-mono text-sm font-medium mt-0.5">{r.transfer_no}</div>
+                    {r.bank_name && <div className="text-xs text-muted-foreground truncate mt-0.5">{r.bank_name}</div>}
                   </div>
-                  <div className="text-sm truncate">
-                    {KIND_LABEL[r.kind]}{r.bank_name ? ` · ${r.bank_name}` : ""}
-                  </div>
-                  <div className="text-[11px] text-muted-foreground truncate">
-                    {r.cheque_no && <>Cheque #{r.cheque_no}{r.cheque_date ? ` (${fmtDate(r.cheque_date)})` : ""}</>}
-                    {r.txn_id && <> · Txn {r.txn_id}</>}
-                    {r.notes && <> · {r.notes}</>}
+                  <div className="text-right shrink-0">
+                    <div className={`text-lg font-semibold tabular-nums leading-tight ${isOut ? "text-destructive" : "text-primary"}`}>
+                      {isOut ? "−" : "+"}{inr(r.amount)}
+                    </div>
+                    <div className="mt-1 flex justify-end"><StatusPill status={st} /></div>
                   </div>
                 </div>
-                <div className="text-base font-semibold tabular-nums">{inr(r.amount)}</div>
-                <Select value={st} onValueChange={(v) => changeStatus(r, v as Status)}>
-                  <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="pending">⏳ Pending</SelectItem>
-                    <SelectItem value="cleared">✓ Cleared</SelectItem>
-                    <SelectItem value="bounced">✗ Bounced</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button variant="ghost" size="icon" onClick={() => del(r.id)}><Trash2 className="h-4 w-4" /></Button>
+
+                {(r.cheque_no || r.txn_id || r.notes) && (
+                  <div className="mt-2 text-[11px] text-muted-foreground truncate">
+                    {r.cheque_no && <>Cheque #{r.cheque_no}{r.cheque_date ? ` · ${fmtDate(r.cheque_date)}` : ""}</>}
+                    {r.txn_id && <>{r.cheque_no ? " · " : ""}Txn {r.txn_id}</>}
+                    {r.notes && <>{(r.cheque_no || r.txn_id) ? " · " : ""}{r.notes}</>}
+                  </div>
+                )}
+
+                {/* Bottom: status control + delete */}
+                <div className="mt-3 flex items-center gap-2 pt-2 border-t border-border/50">
+                  <Select value={st} onValueChange={(v) => changeStatus(r, v as Status)}>
+                    <SelectTrigger className="h-8 flex-1 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="cleared">Cleared</SelectItem>
+                      <SelectItem value="bounced">Bounced</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => del(r.id)} aria-label="Delete">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             );
           })}
