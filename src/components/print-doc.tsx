@@ -305,6 +305,15 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <span>Show transport / dispatch panel</span>
               </label>
               <label className="flex flex-col gap-1">
+                <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Round off grand total</span>
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.roundOff} onChange={(e) => updateDesign({ ...design, roundOff: e.target.value as any })}>
+                  <option value="off">Off · show paise</option>
+                  <option value="nearest">Nearest rupee (recommended)</option>
+                  <option value="up">Always round up</option>
+                  <option value="down">Always round down</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground">QR code</span>
                 <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.qrMode} onChange={(e) => updateDesign({ ...design, qrMode: e.target.value as any })}>
                   <option value="digital-copy">Auto · Digital copy link</option>
