@@ -53,6 +53,7 @@ type PayRow = {
   mode: string | null; ref_doc: string | null; notes: string | null;
   cleared: boolean; cleared_at: string | null; cheque_no: string | null; bank_name: string | null; txn_id: string | null;
   status?: "pending" | "cleared" | "bounced" | null;
+  kind?: "against_invoice" | "advance" | "on_account" | null;
 };
 type Alloc = { doc_kind: "sale" | "purchase" | "tp" | "tp_purchase"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
 type PendingChequeLock = { doc_kind: string; doc_id: string; payment_id: string; payment_no: string; cheque_no: string | null; amount: number; date: string };
