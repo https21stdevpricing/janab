@@ -779,18 +779,20 @@ function BillsPage() {
                 <div className="border rounded-md divide-y max-h-64 overflow-y-auto">
                   {openDocs.map((d: any) => {
                     const picked = allocs.find(a => a.doc_id === d.doc_id);
+                    const lock = lockMap.get(`${d.doc_kind}:${d.doc_id}`);
                     return (
-                      <div key={`${d.doc_kind}-${d.doc_id}`} className={`p-2.5 cursor-pointer ${picked ? "bg-primary/5" : ""}`} onClick={() => toggleDoc(d)}>
+                      <div key={`${d.doc_kind}-${d.doc_id}`} className={`p-2.5 ${lock ? "bg-amber-500/5 cursor-default" : "cursor-pointer"} ${picked ? "bg-primary/5" : ""}`} onClick={() => lock ? toast.error(`Pending cheque ${lock.payment_no} is already linked. Open it from history to clear or bounce.`) : toggleDoc(d)}>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline" className="text-[10px]">{docKindLabel(d.doc_kind)}</Badge>
                               <span className="font-mono text-xs">{d.doc_no}</span>
+                              {lock && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Locked by {lock.payment_no}</Badge>}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">{fmtDate(d.date)} · balance <span className="font-semibold text-foreground">{inr(d.balance)}</span> of {inr(d.total)}</div>
                           </div>
                           <div className="flex items-center gap-2 sm:justify-end">
-                            {picked ? (
+                            {lock ? <Button type="button" size="sm" variant="secondary" className="h-8" onClick={(e) => { e.stopPropagation(); const p = pays.find(x => x.id === lock.payment_id); if (p) openPayView(p); }}>Open cheque</Button> : picked ? (
                               <Input type="number" className="w-28 h-8 text-right" value={picked.amount}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => { const v = +e.target.value; setAllocs(allocs.map(a => a.doc_id === d.doc_id ? { ...a, amount: v } : a)); }} />
