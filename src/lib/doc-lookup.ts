@@ -5,12 +5,19 @@ export type DocKind = "sale" | "purchase" | "tp" | "quote" | "payment";
 export type PrintableDocKind = Exclude<DocKind, "payment">;
 
 const MAP: Record<string, { kind: DocKind; table: string; items?: string; fk?: string; noCol: string }> = {
-  INV: { kind: "sale",     table: "sales",       items: "sale_items",       fk: "sale_id",      noCol: "invoice_no" },
-  PO:  { kind: "purchase", table: "purchases",   items: "purchase_items",   fk: "purchase_id",  noCol: "po_no" },
-  TP:  { kind: "tp",       table: "third_party", items: "tp_items",         fk: "tp_id",        noCol: "tp_no" },
-  QUO: { kind: "quote",    table: "quotations",  items: "quotation_items",  fk: "quotation_id", noCol: "quote_no" },
-  RI:  { kind: "payment",  table: "payments",                                                    noCol: "payment_no" },
-  PY:  { kind: "payment",  table: "payments",                                                    noCol: "payment_no" },
+  INV: { kind: "sale",     table: "sales",          items: "sale_items",       fk: "sale_id",      noCol: "invoice_no" },
+  PO:  { kind: "purchase", table: "purchases",      items: "purchase_items",   fk: "purchase_id",  noCol: "po_no" },
+  TP:  { kind: "tp",       table: "third_party",    items: "tp_items",         fk: "tp_id",        noCol: "tp_no" },
+  QUO: { kind: "quote",    table: "quotations",     items: "quotation_items",  fk: "quotation_id", noCol: "quote_no" },
+  QT:  { kind: "quote",    table: "quotations",     items: "quotation_items",  fk: "quotation_id", noCol: "quote_no" },
+  RI:  { kind: "payment",  table: "payments",                                                       noCol: "payment_no" },
+  PY:  { kind: "payment",  table: "payments",                                                       noCol: "payment_no" },
+  PAY: { kind: "payment",  table: "payments",                                                       noCol: "payment_no" },
+  // Bank & cash transfers — deposit / withdrawal / cheque
+  BT:  { kind: "payment",  table: "bank_transfers",                                                 noCol: "transfer_no" },
+  DEP: { kind: "payment",  table: "bank_transfers",                                                 noCol: "transfer_no" },
+  WD:  { kind: "payment",  table: "bank_transfers",                                                 noCol: "transfer_no" },
+  CHQ: { kind: "payment",  table: "bank_transfers",                                                 noCol: "transfer_no" },
 };
 
 export function prefixOf(id: string): string | null {
@@ -65,7 +72,13 @@ export async function lookupDoc(rawId: string): Promise<DocLookupResult | null> 
   // Outstanding (sale / purchase / tp only)
   let outstanding: DocLookupResult["outstanding"] | undefined;
   let supplierOutstanding: DocLookupResult["supplierOutstanding"] | undefined;
-  if (cfg.kind === "sale" || cfg.kind === "purchase" || cfg.kind === "tp") {
+  // Bank transfer — treat as a settled "payment-like" doc
+  if (cfg.table === "bank_transfers") {
+    const amt = Number(header.amount ?? 0);
+    totals.subtotal = amt;
+    totals.total = amt;
+    outstanding = { total: amt, paid: header.status === "cleared" ? amt : 0, balance: header.status === "cleared" ? 0 : amt, status: header.status ?? (header.cleared ? "cleared" : "pending") };
+  } else if (cfg.kind === "sale" || cfg.kind === "purchase" || cfg.kind === "tp") {
     const { data: o } = await supabase
       .from("outstanding_view" as never).select("total,paid,balance,status")
       .eq("doc_kind" as never, cfg.kind).eq("doc_id" as never, header.id).maybeSingle() as { data: any };
