@@ -60,27 +60,99 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
     updateDesign({ ...design, footerLogos: [...design.footerLogos, ...add].slice(0, 20) });
   };
 
+  const footerCols = Math.ceil(design.footerLogos.length / design.footerRows) || 1;
+  const watermarkOpacity = Math.max(0, Math.min(100, design.watermarkOpacity)) / 100;
+  const footerLogoBlock = design.footerLogos.length > 0 && (
+    <div
+      className="mt-8 border-t border-slate-200 pt-4 grid gap-3 items-center break-inside-avoid"
+      style={{ gridTemplateColumns: `repeat(${Math.max(1, footerCols)}, minmax(0, 1fr))` }}
+    >
+      {design.footerLogos.map((src, i) => (
+        <img
+          key={i}
+          src={src}
+          alt={`Footer brand logo ${i + 1}`}
+          className="max-w-full object-contain justify-self-center opacity-80"
+          style={{ height: `${design.footerLogoSize}px` }}
+        />
+      ))}
+    </div>
+  );
+
   return (
     <div>
       <div className="grid gap-3 mb-3 print:hidden lg:grid-cols-[1fr_auto] lg:items-start">
-        <div className="surface p-3 space-y-3">
+        <div className="surface p-3 space-y-2.5 text-xs">
           <div className="flex items-center justify-between gap-3">
-            <div><div className="eyebrow">Document design</div><div className="text-xs text-muted-foreground">Header, watermark and footer logos apply to invoices and quotations.</div></div>
+            <div className="min-w-0"><div className="eyebrow">Document design</div><div className="text-[11px] text-muted-foreground">Edits apply live to the preview and the branded PDF.</div></div>
             <Button variant="outline" size="sm" onClick={() => updateDesign(DEFAULT_PRINT_DESIGN)}>Reset</Button>
           </div>
-          <div className="grid gap-2 sm:grid-cols-4">
-            <select className="h-9 rounded-md border bg-background px-2 text-sm" value={design.headerStyle} onChange={(e) => updateDesign({ ...design, headerStyle: e.target.value as any })}>
-              <option value="classic">Classic header</option><option value="editorial">Editorial header</option><option value="compact">Compact header</option>
-            </select>
-            <select className="h-9 rounded-md border bg-background px-2 text-sm" value={design.bodyLayout} onChange={(e) => updateDesign({ ...design, bodyLayout: e.target.value as any })}>
-              <option value="balanced">Balanced body</option><option value="spacious">Spacious body</option><option value="dense">Dense body</option>
-            </select>
-            <input className="h-9 rounded-md border bg-background px-2 text-sm" placeholder="Watermark text" value={design.watermarkText ?? ""} onChange={(e) => updateDesign({ ...design, watermarkText: e.target.value })} />
-            <label className="h-9 rounded-md border bg-background px-2 text-sm flex items-center justify-center cursor-pointer">Logo PNG<input type="file" accept="image/png" className="hidden" onChange={(e) => uploadLogo(e.target.files?.[0])} /></label>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Header style</span>
+              <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.headerStyle} onChange={(e) => updateDesign({ ...design, headerStyle: e.target.value as any })}>
+                <option value="classic">Classic</option><option value="editorial">Editorial</option><option value="compact">Compact</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Body density</span>
+              <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.bodyLayout} onChange={(e) => updateDesign({ ...design, bodyLayout: e.target.value as any })}>
+                <option value="balanced">Balanced</option><option value="spacious">Spacious</option><option value="dense">Dense</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Main logo (PNG)</span>
+              <span className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                <span className="truncate">{design.logoDataUrl ? "Custom uploaded" : "Default StoneWorld"}</span>
+                <span className="text-primary">Replace</span>
+                <input type="file" accept="image/png" className="hidden" onChange={(e) => uploadLogo(e.target.files?.[0])} />
+              </span>
+            </label>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <label className="h-8 rounded-md border bg-background px-3 text-xs flex items-center cursor-pointer">Add footer brand logos ({design.footerLogos.length}/20)<input type="file" accept="image/png" multiple className="hidden" onChange={(e) => uploadFooterLogos(e.target.files)} /></label>
-            {design.footerLogos.length > 0 && <Button variant="ghost" size="sm" onClick={() => updateDesign({ ...design, footerLogos: [] })}>Clear logos</Button>}
+
+          <div className="rounded-md border border-border/60 p-2 space-y-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Watermark</div>
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <input className="h-8 rounded-md border bg-background px-2 text-xs" placeholder="Watermark text (e.g. DRAFT, PAID)" value={design.watermarkText ?? ""} onChange={(e) => updateDesign({ ...design, watermarkText: e.target.value })} />
+              <label className="flex items-center gap-2 text-[11px]"><span>Opacity</span>
+                <input type="range" min={0} max={100} value={design.watermarkOpacity} onChange={(e) => updateDesign({ ...design, watermarkOpacity: Number(e.target.value) })} className="w-24" />
+                <span className="tabular-nums w-8 text-right">{design.watermarkOpacity}%</span>
+              </label>
+              <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.watermarkLayer} onChange={(e) => updateDesign({ ...design, watermarkLayer: e.target.value as any })}>
+                <option value="back">Behind content</option><option value="front">Over content</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="rounded-md border border-border/60 p-2 space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Footer brand logos ({design.footerLogos.length}/20)</div>
+              {design.footerLogos.length > 0 && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => updateDesign({ ...design, footerLogos: [] })}>Clear</Button>}
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[auto_auto_auto_1fr]">
+              <label className="h-8 rounded-md border bg-background px-3 text-[11px] flex items-center cursor-pointer">Add PNG logos<input type="file" accept="image/png" multiple className="hidden" onChange={(e) => uploadFooterLogos(e.target.files)} /></label>
+              <label className="flex items-center gap-2 text-[11px]"><span>Rows</span>
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.footerRows} onChange={(e) => updateDesign({ ...design, footerRows: Number(e.target.value) as 1|2|3 })}>
+                  <option value={1}>1 row</option><option value={2}>2 rows</option><option value={3}>3 rows</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]"><span>Logo size</span>
+                <input type="range" min={18} max={64} value={design.footerLogoSize} onChange={(e) => updateDesign({ ...design, footerLogoSize: Number(e.target.value) })} className="w-24" />
+                <span className="tabular-nums w-10 text-right">{design.footerLogoSize}px</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px] sm:justify-end"><span>Place at</span>
+                <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.footerPosition} onChange={(e) => updateDesign({ ...design, footerPosition: e.target.value as any })}>
+                  <option value="above-signature">Above signature</option><option value="page-bottom">At page bottom</option>
+                </select>
+              </label>
+            </div>
+            {design.footerLogos.length > 0 && (
+              <div className="flex flex-wrap gap-2 pt-1">
+                {design.footerLogos.map((src, i) => (
+                  <span key={i} className="relative rounded border bg-background p-1">
+                    <img src={src} alt="" className="h-6 object-contain" />
+                    <button type="button" className="absolute -top-1.5 -right-1.5 h-4 w-4 grid place-items-center rounded-full bg-destructive text-destructive-foreground text-[9px]" onClick={() => updateDesign({ ...design, footerLogos: design.footerLogos.filter((_, j) => j !== i) })} aria-label="Remove">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-2">
@@ -128,7 +200,14 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
         </section>
 
         <section className={`${design.bodyLayout === "dense" ? "px-8 py-4" : design.bodyLayout === "spacious" ? "px-10 py-7" : "px-9 py-5"} relative`}>
-          {design.watermarkText && <div className="pointer-events-none absolute inset-0 grid place-items-center text-6xl font-black uppercase tracking-normal text-slate-200/50 rotate-[-24deg] select-none">{design.watermarkText}</div>}
+          {design.watermarkText && (
+            <div
+              className="pointer-events-none absolute inset-0 grid place-items-center text-6xl font-black uppercase tracking-normal select-none"
+              style={{ color: "#94a3b8", opacity: watermarkOpacity, transform: "rotate(-24deg)", zIndex: design.watermarkLayer === "front" ? 30 : 0 }}
+            >
+              {design.watermarkText}
+            </div>
+          )}
           <table className="w-full border-collapse text-[12px] leading-4">
             <thead>
               <tr className="bg-[#f4fcfd] text-[#007e87] uppercase text-[10px] tracking-normal border-y border-slate-200">
@@ -174,15 +253,12 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
             </div>
           </div>
 
-          {design.footerLogos.length > 0 && (
-            <div className="mt-10 border-t border-slate-200 pt-4 grid gap-3 break-inside-avoid" style={{ gridTemplateColumns: `repeat(${Math.min(5, Math.max(2, design.footerLogos.length))}, minmax(0, 1fr))` }}>
-              {design.footerLogos.map((src, i) => <img key={i} src={src} alt={`Footer brand logo ${i + 1}`} className="h-9 max-w-full object-contain justify-self-center opacity-80" />)}
-            </div>
-          )}
+          {design.footerPosition === "above-signature" && footerLogoBlock}
           <div className="mt-14 grid grid-cols-2 text-[11px] text-[#566070] break-inside-avoid">
             <div>Thank you for your business.</div>
             <div className="text-right">For {company?.company_name ?? "StoneWorld Traders"}<br /><br /><br /><span className="border-t border-slate-300 pt-2 inline-block min-w-[180px]">Authorised Signatory</span></div>
           </div>
+          {design.footerPosition === "page-bottom" && footerLogoBlock}
         </section>
       </article>
 
