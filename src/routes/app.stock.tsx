@@ -223,7 +223,7 @@ function StockPage() {
       )}
 
       <Dialog open={!!selected} onOpenChange={o => !o && setSelected(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&>button]:hidden">
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <DialogTitle className="text-sm font-medium">
               {selected?.name} <span className="font-mono text-xs text-muted-foreground">{selected?.code}</span>
@@ -335,7 +335,7 @@ function StockPage() {
       </Dialog>
 
       <Dialog open={!!preview} onOpenChange={o => !o && setPreview(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0 [&>button]:hidden">
           <div className="px-4 py-3 border-b flex items-center justify-between">
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Document preview</DialogTitle>
             <button className="rounded-md p-1 hover:bg-muted" onClick={() => setPreview(null)} aria-label="Close"><X className="h-4 w-4" /></button>
