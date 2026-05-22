@@ -298,25 +298,35 @@ function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Financial Reports" description="Auto-built from your ledger. Every figure is traceable to a journal entry." />
+      <PageHeader title="Reports" description="Ledger-backed business health for mobile review and desktop accounting work." />
 
-      {/* Trust strip — integrity at a glance, no jargon */}
-      <div className="mb-4 rounded-xl border border-border/70 bg-card p-3 sm:p-4 space-y-2 text-xs">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <IntegrityBadge ok={tbBalanced} okLabel="Books are balanced" badLabel="Books not balanced" />
-          <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet ties out" badLabel="Balance sheet drift" />
+      <div className="mb-4 rounded-[1.75rem] border border-border/70 bg-card p-4 shadow-sm sm:p-5">
+        <div className="grid gap-4 lg:grid-cols-[1.1fr_1.9fr] lg:items-end">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Financial control center</div>
+            <div className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Know what changed, why it changed, and whether books still tie out.</div>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs">
+              <IntegrityBadge ok={tbBalanced} okLabel="Trial balance OK" badLabel="Trial balance drift" />
+              <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet OK" badLabel="Balance sheet drift" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <ReportHeroMetric label="Revenue" value={inr(revenue)} />
+            <ReportHeroMetric label="Net profit" value={inr(netProfit)} tone={netProfit >= 0 ? "good" : "bad"} />
+            <ReportHeroMetric label="Cash + Bank" value={inr(liquid)} tone={liquid >= 0 ? "good" : "bad"} />
+            <ReportHeroMetric label="AR − AP" value={inr(arApDelta)} tone={arApDelta >= 0 ? "good" : "warn"} />
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
-          <span>Method: <span className="font-medium text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span></span>
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
+          <span>Inventory method: <span className="font-medium text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span></span>
           <span className="hidden sm:inline">·</span>
-          <span>Change in Inventory tab</span>
-          <span className="sm:ml-auto">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
+          <span>Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
         </div>
       </div>
 
       <Tabs defaultValue="outlook">
         <div className="-mx-1 px-1 mb-3">
-          <TabsList className="scroll-tabs w-full justify-start gap-0 bg-muted p-1 rounded-lg">
+          <TabsList className="scroll-tabs w-full justify-start gap-0 bg-muted p-1 rounded-full">
             <TabsTrigger value="outlook">Overview</TabsTrigger>
             <TabsTrigger value="pnl">Profit &amp; Loss</TabsTrigger>
             <TabsTrigger value="bs">Balance Sheet</TabsTrigger>
