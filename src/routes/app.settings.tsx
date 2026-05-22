@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
@@ -190,7 +191,7 @@ function SettingsPage() {
   );
 }
 
-function F({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
+function F({ label, children, wide }: { label: string; children: ReactNode; wide?: boolean }) {
   return <div className={`space-y-1.5 ${wide ? "md:col-span-2" : ""}`}><Label className="text-xs">{label}</Label>{children}</div>;
 }
 
@@ -205,7 +206,7 @@ function SettingsSection({
   description?: string;
   icon?: React.ReactNode;
   action?: React.ReactNode;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <section className="surface overflow-hidden">
@@ -224,7 +225,7 @@ function SettingsSection({
   );
 }
 
-function SettingRow({ title, description, danger, children }: { title: string; description: string; danger?: boolean; children: React.ReactNode }) {
+function SettingRow({ title, description, danger, children }: { title: string; description: string; danger?: boolean; children: ReactNode }) {
   return (
     <div className="grid gap-3 border-b border-border/60 pb-4 last:border-b-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center">
       <div className="min-w-0">
