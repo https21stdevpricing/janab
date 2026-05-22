@@ -438,9 +438,9 @@ function BillsPage() {
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
-          <div className="space-y-2">
+          <div className="grid gap-2 lg:grid-cols-2">
             {filteredPays.map(p => (
-              <div key={p.id} className="rounded-md border bg-card p-3 flex items-center gap-3 cursor-pointer hover:bg-muted/40" onClick={() => openPayView(p)}>
+              <div key={p.id} className="rounded-2xl border bg-card p-3 flex items-center gap-3 cursor-pointer transition-colors hover:bg-muted/40" onClick={() => openPayView(p)}>
                 <Badge variant={p.direction === "in" ? "default" : "secondary"} className="shrink-0">{p.direction === "in" ? "IN" : "OUT"}</Badge>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -464,9 +464,9 @@ function BillsPage() {
         )
       ) : filtered.length === 0 ? <Empty>No outstanding {tab === "receivable" ? "receivables" : "payables"}.</Empty> : (
         <>
-        <div className="hidden md:block rounded-md border bg-card overflow-x-auto">
+        <div className="hidden md:block rounded-2xl border bg-card overflow-x-auto shadow-sm">
           <table className="w-full text-sm min-w-[640px]">
-            <thead className="bg-muted/40 text-xs uppercase">
+            <thead className="bg-muted/40 text-xs uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
                 <th className="text-left p-2">Doc</th>
                 <th className="text-left p-2">Party</th>
@@ -482,7 +482,7 @@ function BillsPage() {
                 const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
                 const st = payStatus(Number(r.total), Number(r.paid), d);
                 return (
-                  <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t">
+                  <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t transition-colors hover:bg-muted/35">
                     <td className="p-2">
                       <button onClick={() => openPreview(r.doc_no)} className="font-mono text-primary hover:underline">{r.doc_no}</button>
                       <div className="text-[10px] text-muted-foreground mt-0.5">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
@@ -514,7 +514,7 @@ function BillsPage() {
             const sideBdr = tab === "receivable" ? "border-l-primary" : "border-l-destructive";
             const st = payStatus(Number(r.total), Number(r.paid), d);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className={`rounded-md border border-l-4 ${sideBdr} bg-card p-3 space-y-3`}>
+              <div key={`${r.doc_kind}-${r.doc_id}`} className={`rounded-2xl border border-l-4 ${sideBdr} bg-card p-3 space-y-3 shadow-sm`}>
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
