@@ -406,7 +406,7 @@ function BillsPage() {
 
       <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_300px]">
         <div className="surface overflow-hidden">
-          <div className="grid grid-cols-3 divide-x divide-border/60">
+          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <HeroCell label="Collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
             <HeroCell label="Pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
             <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
