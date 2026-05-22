@@ -729,6 +729,16 @@ function Headline({ label, value, sub, tone }: { label: string; value: string; s
   );
 }
 
+function ReportHeroMetric({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" | "bad" }) {
+  const toneCls = tone === "good" ? "text-primary" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : tone === "bad" ? "text-destructive" : "text-foreground";
+  return (
+    <div className="rounded-2xl border border-border/70 bg-background p-3 min-w-0">
+      <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground truncate">{label}</div>
+      <div className={`mt-1 truncate text-base font-semibold tabular-nums sm:text-lg ${toneCls}`}>{value}</div>
+    </div>
+  );
+}
+
 function MeterCard({ label, value, status, meaning }: { label: string; value: string; status: "good" | "warn" | "bad"; meaning: string }) {
   const ring = status === "good" ? "border-l-primary" : status === "warn" ? "border-l-amber-500" : "border-l-destructive";
   const valueTone = status === "good" ? "text-primary" : status === "warn" ? "text-amber-600 dark:text-amber-400" : "text-destructive";
