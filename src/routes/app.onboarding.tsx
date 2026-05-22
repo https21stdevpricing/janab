@@ -292,11 +292,12 @@ function OnboardingPage() {
             <div className="rounded-lg border divide-y text-sm">
               <Line label="Cash on hand" value={inr(cashOpen)} side="Dr" />
               <Line label="Bank balance" value={inr(bankOpen)} side="Dr" />
-              <Line label="Inventory (from products)" value={inr(counts.openingStockValue)} side="Dr" />
+              <Line label="Inventory (from products — auto)" value={inr(counts.openingStockValue)} side="" />
               <Line label="Accounts Receivable (from buyers)" value={inr(counts.recv)} side="Dr" />
               <Line label="Accounts Payable (from suppliers)" value={inr(counts.pay)} side="Cr" />
-              <Line label="Opening Balance Equity" value="Auto-balanced" side="" />
+              <Line label="Owner's Capital" value="Auto-balanced" side="Cr" />
             </div>
+            <Note>Inventory carries from your Products page directly to the Balance Sheet (matched by Opening Capital). Cash, bank and party balances post as one journal voucher.</Note>
             <Foot>
               <Button variant="ghost" onClick={() => setStep(4)}><ArrowLeft className="h-4 w-4" /> Back</Button>
               <Button onClick={finish} disabled={busy}><CheckCircle2 className="h-4 w-4" /> Post & finish</Button>
