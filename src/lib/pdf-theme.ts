@@ -299,6 +299,11 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   const W = doc.internal.pageSize.getWidth();
   const isQuote = result.kind === "quote";
   const docLabel = result.kind === "sale" ? "Tax Invoice" : isQuote ? "Quotation" : result.kind === "purchase" ? "Purchase Bill" : "Third Party Bill";
+  const footerLogos = design?.footerLogos ?? [];
+  const footerRows = (design?.footerRows ?? 1) as 1 | 2 | 3;
+  const footerEvery = (design?.footerOnEveryPage ?? true) && footerLogos.length > 0;
+  const footerLogoSize = design?.footerLogoSize ?? 36;
+  const reservedFooter = footerEvery ? 66 + Math.round(footerLogoSize * 0.6) * footerRows + 18 : 66;
   const { margin: M, y } = drawStoneWorldHeader(doc, company, {
     title: docLabel,
     subtitle: result.kind === "sale" ? "Original for Recipient" : isQuote ? "Proposal · Not a tax invoice" : result.kind.toUpperCase(),
@@ -329,7 +334,7 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
 
   stoneWorldTable(doc, {
     startY: y + 140,
-    margin: { left: M, right: M, top: 58, bottom: 66 },
+    margin: { left: M, right: M, top: 58, bottom: reservedFooter },
     head: [["#", "Description", "HSN/SAC", "Qty", "Unit", "Rate", "Taxable", "GST", "Amount"]],
     body: result.items.map((it, i) => {
       const rate = Number(it.sale_rate ?? it.rate ?? 0);
@@ -362,7 +367,7 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   });
 
   const finalY = (doc as any).lastAutoTable?.finalY ?? y + 260;
-  let blockY = ensurePdfSpace(doc, finalY + 24, 170, M, 66);
+  let blockY = ensurePdfSpace(doc, finalY + 24, 170, M, reservedFooter);
   const totalsW = 220;
   const leftW = W - M * 2 - totalsW - 22;
 
@@ -375,7 +380,7 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
 
   // Bank details (invoice only, when present)
   let leftY = blockY + 24 + wordsLines.length * 11 + 8;
-  if (!isQuote && (company?.bank_name || company?.bank_account_no || company?.bank_ifsc)) {
+  if (!isQuote && (design?.showBankDetails ?? true) && (company?.bank_name || company?.bank_account_no || company?.bank_ifsc)) {
     doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...swPdf.muted);
     doc.text("BANK DETAILS", M, leftY, { charSpace: 0.6 } as any);
     doc.setFont("helvetica", "normal").setFontSize(8.4).setTextColor(...swPdf.ink);
@@ -399,6 +404,16 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   const notes = result.header.notes ? `${result.header.notes}\n${baseTerms}` : baseTerms;
   doc.text(doc.splitTextToSize(notes, leftW).slice(0, 5), M, leftY + 12);
 
+  // Optional QR + barcode column on the right of totals
+  if (design?.qrCodeDataUrl) {
+    try { doc.addImage(design.qrCodeDataUrl, imageFormat(design.qrCodeDataUrl) as any, W - M - 70, blockY + 4, 70, 70); } catch {}
+    doc.setFont("helvetica", "normal").setFontSize(7).setTextColor(...swPdf.muted);
+    doc.text("Scan to pay / verify", W - M - 35, blockY + 82, { align: "center" });
+  }
+  if (design?.barcodeDataUrl) {
+    try { doc.addImage(design.barcodeDataUrl, imageFormat(design.barcodeDataUrl) as any, M, leftY + 70, 160, 28); } catch {}
+  }
+
   // Totals block (right)
   const gstRows: Array<[string, string]> = sameState
     ? [["CGST", pdfMoney(result.totals.gst / 2)], ["SGST", pdfMoney(result.totals.gst / 2)]]
@@ -414,20 +429,21 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
     showBalance ? pdfMoney(result.outstanding!.balance) : pdfMoney(result.totals.total));
 
   // Signature
-  blockY = ensurePdfSpace(doc, Math.max(leftY + 60, blockY + 170), 56, M, 66);
+  blockY = ensurePdfSpace(doc, Math.max(leftY + 60, blockY + 170), 56, M, reservedFooter);
   doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
   doc.line(W - M - 180, blockY + 32, W - M, blockY + 32);
   doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
   doc.text(`For ${company?.company_name || "StoneWorld Traders"}`, W - M, blockY + 10, { align: "right" });
   doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...swPdf.ink);
-  doc.text("Authorised Signatory", W - M, blockY + 44, { align: "right" });
+  doc.text(design?.signatoryName?.trim() || "Authorised Signatory", W - M, blockY + 44, { align: "right" });
 
   drawCustomWatermark(doc, design?.watermarkText, design?.watermarkOpacity ?? 35, design?.watermarkLayer ?? "back", design?.watermarkLogoDataUrl, design?.watermarkLogoScale ?? 55);
-  drawFooterBrandLogos(doc, design?.footerLogos, M, {
-    rows: (design?.footerRows ?? 1) as 1 | 2 | 3,
-    logoHeightPx: design?.footerLogoSize ?? 36,
+  drawFooterBrandLogos(doc, footerLogos, M, {
+    rows: footerRows,
+    logoHeightPx: footerLogoSize,
     position: design?.footerPosition ?? "above-signature",
     signatureY: blockY,
+    everyPage: footerEvery,
   });
   drawStoneWorldFooter(doc, company, M);
   doc.save(`${String(no || result.kind).replace(/\s+/g, "_")}.pdf`);
