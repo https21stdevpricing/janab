@@ -314,6 +314,9 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   }, 30, design);
   const no = result.header.invoice_no ?? result.header.quote_no ?? result.header.po_no ?? result.header.tp_no;
   const sameState = !!(company?.state && result.party?.state && String(company.state).toLowerCase() === String(result.party.state).toLowerCase());
+  const productLayout = design?.productLayout ?? "standard";
+  const qrPlacement = design?.qrCodeDataUrl ? (design.qrPlacement ?? "totals") : "hidden";
+  const barcodePlacement = design?.barcodeDataUrl ? (design.barcodePlacement ?? "terms") : "hidden";
   const panelW = (W - M * 2 - 18) / 2;
   const partyTitle = result.kind === "purchase" ? "Supplier" : isQuote ? "Quoted To" : "Bill To";
   drawKeyValuePanel(doc, M, y, panelW, partyTitle, [
@@ -333,29 +336,52 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
     ...(!isQuote && result.outstanding?.status ? [["Status", result.outstanding.status] as [string, string]] : []),
   ], 124);
 
+  const productHead = productLayout === "compact"
+    ? [["#", "Description", "Qty", "Rate", "Amount"]]
+    : productLayout === "tax-detail"
+      ? [["#", "Description", "HSN/SAC", "Qty", "Taxable", "GST", "Tax", "Total"]]
+      : [["#", "Description", "HSN/SAC", "Qty", "Unit", "Rate", "GST", "Amount"]];
+  const productBody = result.items.map((it, i) => {
+    const rate = Number(it.sale_rate ?? it.rate ?? 0);
+    const qty = Number(it.qty ?? 0);
+    const taxable = qty * rate;
+    const tax = taxable * Number(it.gst_pct ?? 0) / 100;
+    const total = taxable + tax;
+    const name = it.product_name ?? "-";
+    const hsn = it.hsn ?? it.hsn_code ?? "—";
+    if (productLayout === "compact") return [String(i + 1), `${name}\n${[hsn !== "—" ? `HSN ${hsn}` : "", it.unit ?? ""].filter(Boolean).join(" · ")}`, `${fmt(qty)} ${it.unit ?? ""}`.trim(), pdfMoney(rate), pdfMoney(taxable)];
+    if (productLayout === "tax-detail") return [String(i + 1), `${name}\n${fmt(qty)} ${it.unit ?? ""} × ${pdfMoney(rate)}`.trim(), String(hsn), fmt(qty), pdfMoney(taxable), pdfPct(it.gst_pct), pdfMoney(tax), pdfMoney(total)];
+    return [String(i + 1), name, String(hsn), fmt(qty), it.unit ?? "—", pdfMoney(rate), pdfPct(it.gst_pct), productLayout === "description-first" ? pdfMoney(total) : pdfMoney(taxable)];
+  });
   stoneWorldTable(doc, {
     startY: y + 140,
     margin: { left: M, right: M, top: 58, bottom: reservedFooter },
-    head: [["#", "Description", "HSN/SAC", "Qty", "Unit", "Rate", "Taxable", "GST", "Amount"]],
-    body: result.items.map((it, i) => {
-      const rate = Number(it.sale_rate ?? it.rate ?? 0);
-      const qty = Number(it.qty ?? 0);
-      const taxable = qty * rate;
-      const total = taxable * (1 + Number(it.gst_pct ?? 0) / 100);
-      const name = it.product_name ?? "-";
-      const hsn = it.hsn ?? it.hsn_code ?? "—";
-      return [String(i + 1), name, String(hsn), fmt(qty), it.unit ?? "—", pdfMoney(rate), pdfMoney(taxable), pdfPct(it.gst_pct), pdfMoney(total)];
-    }),
-    columnStyles: {
+    head: productHead,
+    body: productBody,
+    columnStyles: productLayout === "compact" ? {
+      0: { halign: "center", cellWidth: 24, textColor: swPdf.muted },
+      1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 220 },
+      2: { halign: "right", cellWidth: 70 },
+      3: { halign: "right", cellWidth: 74 },
+      4: { halign: "right", cellWidth: 88, fontStyle: "bold" },
+    } : productLayout === "tax-detail" ? {
+      0: { halign: "center", cellWidth: 20, textColor: swPdf.muted },
+      1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 120 },
+      2: { halign: "center", cellWidth: 50, textColor: swPdf.muted, font: "courier", fontSize: 8 },
+      3: { halign: "right", cellWidth: 34 },
+      4: { halign: "right", cellWidth: 62 },
+      5: { halign: "right", cellWidth: 34, textColor: swPdf.muted },
+      6: { halign: "right", cellWidth: 54 },
+      7: { halign: "right", cellWidth: 68, fontStyle: "bold" },
+    } : {
       0: { halign: "center", cellWidth: 20, textColor: swPdf.muted },
       1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 130 },
       2: { halign: "center", cellWidth: 52, textColor: swPdf.muted, font: "courier", fontSize: 8 },
       3: { halign: "right", cellWidth: 36 },
       4: { halign: "center", cellWidth: 34, textColor: swPdf.muted },
       5: { halign: "right", cellWidth: 58 },
-      6: { halign: "right", cellWidth: 62 },
-      7: { halign: "right", cellWidth: 34, textColor: swPdf.muted },
-      8: { halign: "right", cellWidth: 72, fontStyle: "bold" },
+      6: { halign: "right", cellWidth: 34, textColor: swPdf.muted },
+      7: { halign: "right", cellWidth: 72, fontStyle: "bold" },
     },
     didDrawPage: (data: any) => {
       if (data.pageNumber > 1) {
