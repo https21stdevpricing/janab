@@ -261,7 +261,7 @@ function ProductsPage() {
       {filtered.length === 0 ? (
         <Empty>No products yet — tap “New” to add one.</Empty>
       ) : (
-        <div className="rounded-3xl border border-border/60 bg-card overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
           <ul className="divide-y divide-border/50">
             {filtered.map((r) => {
               const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
@@ -270,8 +270,8 @@ function ProductsPage() {
                 <li key={r.id}>
                   <button
                     type="button"
-                    onClick={() => startEdit(r)}
-                    className="w-full text-left px-5 sm:px-6 py-5 hover:bg-muted/30 active:bg-muted/40 transition-colors flex items-center gap-4 group"
+                    onClick={() => setPreview(r)}
+                    className="group grid w-full grid-cols-[1fr_auto] items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30 active:bg-muted/40 sm:px-5"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -282,12 +282,12 @@ function ProductsPage() {
                           </span>
                         )}
                       </div>
-                      <div className="mt-1 text-[12.5px] text-muted-foreground truncate">
-                        {r.category || "Uncategorised"} · {r.unit || "unit"}
+                      <div className="mt-1 text-[12px] text-muted-foreground truncate">
+                        {r.code || "No code"} · {r.category || "Uncategorised"} · {r.unit || "unit"}
                         {!isOrderBasis(r) && <> · {fmt(oh)} on hand</>}
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="min-w-0 text-right">
                       <div className="tabular-nums text-[15px] font-medium leading-tight">{inr(r.sale_rate ?? 0)}</div>
                       <div className="text-[11px] text-muted-foreground mt-0.5">per {r.unit || "unit"}</div>
                     </div>
