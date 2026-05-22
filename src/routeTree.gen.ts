@@ -26,6 +26,7 @@ import { Route as AppProductsRouteImport } from './routes/app.products'
 import { Route as AppPrintRouteImport } from './routes/app.print'
 import { Route as AppPriceListsRouteImport } from './routes/app.price-lists'
 import { Route as AppPaymentsRouteImport } from './routes/app.payments'
+import { Route as AppOnboardingRouteImport } from './routes/app.onboarding'
 import { Route as AppLookupRouteImport } from './routes/app.lookup'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
 import { Route as AppGuideRouteImport } from './routes/app.guide'
@@ -127,6 +128,11 @@ const AppPaymentsRoute = AppPaymentsRouteImport.update({
   path: '/payments',
   getParentRoute: () => AppRoute,
 } as any)
+const AppOnboardingRoute = AppOnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppLookupRoute = AppLookupRouteImport.update({
   id: '/lookup',
   path: '/lookup',
@@ -221,6 +227,7 @@ export interface FileRoutesByFullPath {
   '/app/guide': typeof AppGuideRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
+  '/app/onboarding': typeof AppOnboardingRoute
   '/app/payments': typeof AppPaymentsRoute
   '/app/price-lists': typeof AppPriceListsRoute
   '/app/print': typeof AppPrintRouteWithChildren
@@ -254,6 +261,7 @@ export interface FileRoutesByTo {
   '/app/guide': typeof AppGuideRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
+  '/app/onboarding': typeof AppOnboardingRoute
   '/app/payments': typeof AppPaymentsRoute
   '/app/price-lists': typeof AppPriceListsRoute
   '/app/print': typeof AppPrintRouteWithChildren
@@ -289,6 +297,7 @@ export interface FileRoutesById {
   '/app/guide': typeof AppGuideRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
+  '/app/onboarding': typeof AppOnboardingRoute
   '/app/payments': typeof AppPaymentsRoute
   '/app/price-lists': typeof AppPriceListsRoute
   '/app/print': typeof AppPrintRouteWithChildren
@@ -325,6 +334,7 @@ export interface FileRouteTypes {
     | '/app/guide'
     | '/app/ledger'
     | '/app/lookup'
+    | '/app/onboarding'
     | '/app/payments'
     | '/app/price-lists'
     | '/app/print'
@@ -358,6 +368,7 @@ export interface FileRouteTypes {
     | '/app/guide'
     | '/app/ledger'
     | '/app/lookup'
+    | '/app/onboarding'
     | '/app/payments'
     | '/app/price-lists'
     | '/app/print'
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | '/app/guide'
     | '/app/ledger'
     | '/app/lookup'
+    | '/app/onboarding'
     | '/app/payments'
     | '/app/price-lists'
     | '/app/print'
@@ -537,6 +549,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPaymentsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/onboarding': {
+      id: '/app/onboarding'
+      path: '/onboarding'
+      fullPath: '/app/onboarding'
+      preLoaderRoute: typeof AppOnboardingRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/lookup': {
       id: '/app/lookup'
       path: '/lookup'
@@ -673,6 +692,7 @@ interface AppRouteChildren {
   AppGuideRoute: typeof AppGuideRoute
   AppLedgerRoute: typeof AppLedgerRoute
   AppLookupRoute: typeof AppLookupRoute
+  AppOnboardingRoute: typeof AppOnboardingRoute
   AppPaymentsRoute: typeof AppPaymentsRoute
   AppPriceListsRoute: typeof AppPriceListsRoute
   AppPrintRoute: typeof AppPrintRouteWithChildren
@@ -702,6 +722,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppGuideRoute: AppGuideRoute,
   AppLedgerRoute: AppLedgerRoute,
   AppLookupRoute: AppLookupRoute,
+  AppOnboardingRoute: AppOnboardingRoute,
   AppPaymentsRoute: AppPaymentsRoute,
   AppPriceListsRoute: AppPriceListsRoute,
   AppPrintRoute: AppPrintRouteWithChildren,
