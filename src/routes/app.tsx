@@ -380,6 +380,13 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     };
   }, [open, onOpenChange]);
 
+  const suppressClickAfterDrag = (event: React.MouseEvent) => {
+    if (Date.now() <= blockClickUntilRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
@@ -390,6 +397,7 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
           willChange: "transform",
           touchAction: "pan-y",
         }}
+        onClickCapture={suppressClickAfterDrag}
       >
         {/* Drag handle + aligned header */}
         <div
