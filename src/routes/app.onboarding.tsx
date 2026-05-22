@@ -439,10 +439,10 @@ function OnboardingPage() {
                 {prods.length === 0 && <div className="px-3 py-6 text-center text-xs text-muted-foreground">No products yet. Add your first below.</div>}
                 {prods.map((p, i) => (
                   <div key={p.id ?? `n-${i}`} className="grid grid-cols-2 sm:grid-cols-[minmax(180px,1fr)_82px_110px_130px_36px] gap-2 p-3 sm:py-2 items-end">
-                    <Field label="Product"><Input className="h-10 text-sm" value={p.name} placeholder="e.g. Marble 24×24" onChange={e => { const c = [...prods]; c[i] = { ...c[i], name: e.target.value, _dirty: true }; setProds(c); }} /></Field>
-                    <Field label="Unit"><Input className="h-10 text-sm" value={p.unit} onChange={e => { const c = [...prods]; c[i] = { ...c[i], unit: e.target.value, _dirty: true }; setProds(c); }} /></Field>
-                    <Field label="Qty"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={p.opening_stock} onChange={e => { const c = [...prods]; c[i] = { ...c[i], opening_stock: +e.target.value, _dirty: true }; setProds(c); }} /></Field>
-                    <Field label="Rate ₹"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={p.purchase_rate} onChange={e => { const c = [...prods]; c[i] = { ...c[i], purchase_rate: +e.target.value, _dirty: true }; setProds(c); }} /></Field>
+                    <RowField label="Product"><Input className="h-10 text-sm" value={p.name} placeholder="e.g. Marble 24×24" onChange={e => { const c = [...prods]; c[i] = { ...c[i], name: e.target.value, _dirty: true }; setProds(c); }} /></RowField>
+                    <RowField label="Unit"><Input className="h-10 text-sm" value={p.unit} onChange={e => { const c = [...prods]; c[i] = { ...c[i], unit: e.target.value, _dirty: true }; setProds(c); }} /></RowField>
+                    <RowField label="Qty"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={p.opening_stock} onChange={e => { const c = [...prods]; c[i] = { ...c[i], opening_stock: +e.target.value, _dirty: true }; setProds(c); }} /></RowField>
+                    <RowField label="Rate ₹"><Input className="h-10 text-sm text-right tabular-nums" type="number" value={p.purchase_rate} onChange={e => { const c = [...prods]; c[i] = { ...c[i], purchase_rate: +e.target.value, _dirty: true }; setProds(c); }} /></RowField>
                     <Button size="icon" variant="ghost" className="h-10 w-10 self-end" onClick={async () => { if (p.id) { if (!confirm(`Delete "${p.name}"?`)) return; await supabase.from("products").delete().eq("id", p.id); } setProds(prods.filter((_, j) => j !== i)); }}><Trash2 className="h-4 w-4" /></Button>
                   </div>
                 ))}
