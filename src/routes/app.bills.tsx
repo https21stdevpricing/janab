@@ -509,12 +509,12 @@ function BillsPage() {
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
-          <div className="rounded-2xl border bg-card overflow-hidden divide-y min-w-0">
+          <div className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm divide-y">
             {filteredPays.map(p => (
-              <button key={p.id} type="button" className="grid w-full grid-cols-[1fr_auto] gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:px-4" onClick={() => openPayView(p)}>
+              <button key={p.id} type="button" className="grid w-full min-w-0 grid-cols-1 gap-2 px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_auto] sm:gap-3 sm:px-4" onClick={() => openPayView(p)}>
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="font-mono text-sm font-medium">{p.payment_no}</span>
+                    <span className="min-w-0 max-w-full truncate font-mono text-sm font-medium">{p.payment_no}</span>
                     <span className="text-xs text-muted-foreground">{fmtDate(p.date)}</span>
                     {(p.mode === "Cheque" || p.cleared === false) && <ClearancePill cleared={p.cleared !== false} mode={p.mode} status={p.status} />}
                   </div>
@@ -525,8 +525,8 @@ function BillsPage() {
                     {p.ref_doc || p.cheque_no || p.txn_id || p.notes ? [p.ref_doc, p.cheque_no ? `Cheque ${p.cheque_no}` : null, p.txn_id ? `Txn ${p.txn_id}` : null, p.notes].filter(Boolean).join(" · ") : "Open details"}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className={`text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{p.direction === "in" ? "+" : "−"}{inr(p.amount)}</div>
+                <div className="min-w-0 text-left sm:text-right">
+                  <div className={`truncate text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{p.direction === "in" ? "+" : "−"}{inr(p.amount)}</div>
                   <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">{p.direction === "in" ? "Receipt" : "Payment"}</div>
                 </div>
               </button>
@@ -535,7 +535,7 @@ function BillsPage() {
         )
       ) : filtered.length === 0 ? <Empty>No outstanding {tab === "receivable" ? "receivables" : "payables"}.</Empty> : (
         <>
-        <div className="hidden md:block rounded-2xl border bg-card overflow-x-auto">
+        <div className="hidden rounded-2xl border bg-card shadow-sm overflow-x-auto md:block">
           <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-muted/40 text-xs uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
@@ -577,35 +577,36 @@ function BillsPage() {
             </tbody>
           </table>
         </div>
-        <div className="md:hidden rounded-2xl border bg-card overflow-hidden divide-y">
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm divide-y md:hidden">
           {filtered.map(r => {
             const d = ageDays(r.date); const b = bucket(d);
             const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
             const st = payStatus(Number(r.total), Number(r.paid), d);
+            const lock = lockMap.get(`${r.doc_kind}:${r.doc_id}`);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className="p-4 space-y-3">
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="min-w-0 space-y-3 p-3.5">
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="grid min-w-0 grid-cols-1 gap-2">
                     <div className="min-w-0">
                       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
-                      <div className="font-mono text-sm font-medium mt-0.5">{r.doc_no}</div>
+                      <div className="mt-0.5 truncate font-mono text-sm font-medium">{r.doc_no}</div>
                       <div className="text-sm truncate text-muted-foreground">{r.party_name ?? "—"}</div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-lg font-semibold tabular-nums">{inr(r.balance)}</div>
-                      <div className="mt-1 flex justify-end"><StatusBadge s={st} /></div>
+                    <div className="min-w-0">
+                      <div className={`truncate text-lg font-semibold tabular-nums ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div>
                     </div>
                   </div>
                 </button>
                 <PayProgress pct={pct} tab={tab} />
                 <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
                   <span>{inr(r.paid)} of {inr(r.total)} · {b}d</span>
-                  {lockMap.get(`${r.doc_kind}:${r.doc_id}`) && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Pending cheque</Badge>}
+                  {lock && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Pending cheque</Badge>}
                 </div>
                 <div>
-                  <Button size="sm" className="w-full" variant={lockMap.get(`${r.doc_kind}:${r.doc_id}`) ? "secondary" : "default"} onClick={() => settleBill(r)}>
+                  <Button size="sm" className="w-full rounded-full" variant={lock ? "secondary" : "default"} onClick={() => settleBill(r)}>
                     {tab === "receivable" ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
-                    {lockMap.get(`${r.doc_kind}:${r.doc_id}`) ? "View pending cheque" : tab === "receivable" ? "Receive" : "Pay"}
+                    {lock ? "View pending cheque" : tab === "receivable" ? "Receive" : "Pay"}
                   </Button>
                 </div>
               </div>
