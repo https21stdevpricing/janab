@@ -12,8 +12,7 @@ import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { CollapseFilters } from "@/components/collapse-filters";
 import { inr, fmtDate, todayISO } from "@/lib/format";
-import { Kbd } from "@/components/kbd";
-import { ArrowDownLeft, ArrowUpRight, FileSpreadsheet, Eye, Trash2, History, Wallet, X, Printer } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Eye, Trash2, History, X, Printer } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ContactPicker } from "@/components/contact-picker";
@@ -381,22 +380,29 @@ function BillsPage() {
   return (
     <div>
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" /> Money hub <Kbd>B</Kbd></span>}
-        description="Clear balances first: what buyers owe, what you owe suppliers, and every settlement behind it."
+        title="Money"
+        description="Receivables, payables and every settlement."
         actions={
           <>
             <ExcelBar onExport={onExport} />
-            <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receive <Kbd>R</Kbd></Button>
-            <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Pay <Kbd>P</Kbd></Button>
+            <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receive</Button>
+            <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Pay</Button>
           </>
         }
       />
 
-      {/* Minimal 3-tile hero — only what matters at a glance */}
-      <div className="mb-4 grid grid-cols-3 gap-2">
-        <KpiTile label="Receivable" value={inr(kpis.recv)} tone="good" onClick={() => setTab("receivable")} active={tab === "receivable"} />
-        <KpiTile label="Payable" value={inr(kpis.pay)} tone="bad" onClick={() => setTab("payable")} active={tab === "payable"} />
-        <KpiTile label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} sub={kpis.overdue > 0 ? `${inr(kpis.overdue)} overdue` : undefined} />
+      {/* Minimal hero — one calm summary card with three balances */}
+      <div className="mb-4 rounded-2xl border border-border/70 bg-card overflow-hidden">
+        <div className="grid grid-cols-3 divide-x divide-border/60">
+          <HeroCell label="Receivable" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
+          <HeroCell label="Payable" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
+          <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
+        </div>
+        {kpis.overdue > 0 && (
+          <div className="px-4 py-2 border-t border-border/60 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-500/5">
+            {inr(kpis.overdue)} overdue · {">"} 30 days
+          </div>
+        )}
       </div>
 
       <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
@@ -755,15 +761,21 @@ function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; 
   );
 }
 
-function MiniBucket({ label, value, tone }: { label: string; value: number; tone?: "warn" | "bad" }) {
-  const clr = tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : "text-foreground";
+function HeroCell({ label, value, tone, active, onClick }: { label: string; value: string; tone?: "good" | "bad"; active?: boolean; onClick?: () => void }) {
+  const clr = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "text-foreground";
   return (
-    <div className="rounded-2xl border bg-card px-2.5 py-2">
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`text-xs sm:text-sm font-semibold tabular-nums truncate ${clr}`}>{inr(value)}</div>
-    </div>
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!onClick}
+      className={`text-left px-3 py-3 sm:px-4 sm:py-4 transition-colors ${onClick ? "hover:bg-muted/40 active:bg-muted/60" : ""} ${active ? "bg-primary/5" : ""}`}
+    >
+      <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{label}</div>
+      <div className={`mt-1 font-semibold tabular-nums leading-tight text-[15px] sm:text-lg ${clr}`} style={{ wordBreak: "break-word" }}>{value}</div>
+    </button>
   );
 }
+
 
 function PayProgress({ pct, tab }: { pct: number; tab: "receivable" | "payable" | "history" }) {
   const bar = tab === "receivable" ? "bg-primary" : "bg-destructive";
