@@ -526,6 +526,9 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               )}
               <SummaryLine label="Subtotal" value={totals.subtotal} />
               {design.showGstSummary && (sameState ? <><SummaryLine label="CGST" value={totals.gst / 2} /><SummaryLine label="SGST" value={totals.gst / 2} /></> : <SummaryLine label="IGST" value={totals.gst} />)}
+              {Math.abs(totals.roundOff) > 0.0001 && (
+                <SummaryLine label={totals.roundOff > 0 ? "Round Off (+)" : "Round Off (−)"} value={Math.abs(totals.roundOff)} />
+              )}
               <div className="border-t-2 border-[#111621] mt-1 pt-2 flex justify-between items-baseline">
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em]">Grand Total</span>
                 <span className="tabular-nums font-bold text-[15px]">{inr(totals.total)}</span>
