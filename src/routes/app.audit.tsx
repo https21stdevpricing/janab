@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
-import { ExternalLink, RotateCcw, Search, Plus, Pencil, Trash2, Clock, ListMusic } from "lucide-react";
+import { ExternalLink, RotateCcw, Search, Plus, Pencil, Trash2, Clock, ListMusic, FileText, Hash, User as UserIcon } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/audit")({ component: AuditPage });
@@ -208,68 +208,138 @@ function AuditPage() {
 
           {/* Detail panel */}
           {selected && (
-            <aside className="lg:sticky lg:top-4 lg:self-start rounded-xl bg-card border p-4 space-y-3 h-fit">
-              <div className="flex items-center gap-3">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${actionTone(selected.action)}`}>
-                  <ActionIcon a={selected.action} />
-                </div>
-                <div className="min-w-0">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    {selected.action === "insert" ? "Created" : selected.action === "delete" ? "Deleted" : "Updated"}
-                  </div>
-                  <div className="font-semibold truncate">{entityLabel[selected.entity] ?? selected.entity}</div>
-                  {selected.ref_no && <div className="text-xs font-mono text-muted-foreground">{selected.ref_no}</div>}
-                </div>
-              </div>
-
-              <div className="text-xs text-muted-foreground">
-                {new Date(selected.at).toLocaleString()}
-              </div>
-
-              {selected.summary && (
-                <div className="text-sm border-l-2 border-primary/40 pl-3 py-1 bg-muted/30 rounded-r">
-                  {selected.summary}
-                </div>
-              )}
-
-              {selected.diff && Object.keys(selected.diff).length > 0 && (
-                <div className="space-y-1.5">
-                  <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1.5">
-                    <ListMusic className="h-3 w-3" /> Changes ({Object.keys(selected.diff).length})
-                  </div>
-                  <div className="rounded-lg border bg-background/50 divide-y max-h-80 overflow-auto">
-                    {Object.entries(selected.diff).map(([k, v]: any) => (
-                      <div key={k} className="px-3 py-2 text-xs">
-                        <div className="font-mono text-[10px] text-muted-foreground mb-1">{k}</div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-mono px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 dark:text-rose-400 line-through break-all">{String(v?.old ?? "—")}</span>
-                          <span className="text-muted-foreground">→</span>
-                          <span className="font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 break-all">{String(v?.new ?? "—")}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-1">
-                {selected.ref_no && selected.action !== "delete" && (
-                  <Button asChild size="sm" variant="outline" className="flex-1">
-                    <Link to="/app/lookup" search={{ q: selected.ref_no } as any}>
-                      <ExternalLink className="h-3.5 w-3.5" /> Open record
-                    </Link>
-                  </Button>
-                )}
-                {selected.action === "delete" && (
-                  <Button size="sm" className="flex-1" onClick={() => restore(selected.id)} disabled={!!restoring[selected.id]}>
-                    <RotateCcw className="h-3.5 w-3.5" /> {restoring[selected.id] ? "Restoring…" : "Restore"}
-                  </Button>
-                )}
-              </div>
-            </aside>
+            <AuditDetailPanel
+              selected={selected}
+              entityLabel={entityLabel}
+              actionTone={actionTone}
+              ActionIcon={ActionIcon}
+              restoring={restoring}
+              onRestore={restore}
+            />
           )}
         </div>
       )}
     </div>
   );
+}
+
+function AuditDetailPanel({
+  selected,
+  entityLabel,
+  actionTone,
+  ActionIcon,
+  restoring,
+  onRestore,
+}: {
+  selected: Row;
+  entityLabel: Record<string, string>;
+  actionTone: (a: string) => string;
+  ActionIcon: (props: { a: string }) => ReactElement;
+  restoring: Record<string, boolean>;
+  onRestore: (id: string) => void;
+}) {
+  const diff = selected.diff ?? {};
+  const diffEntries = Object.entries(diff) as Array<[string, any]>;
+  const at = new Date(selected.at);
+  const rel = relTime(at);
+  const actLabel = selected.action === "insert" ? "Created" : selected.action === "delete" ? "Deleted" : "Updated";
+  const isMoney = (k: string) => /amount|total|paid|balance|rate|qty|cost|opening|salary|price/i.test(k);
+
+  return (
+    <aside className="lg:sticky lg:top-4 lg:self-start rounded-2xl bg-card border overflow-hidden h-fit">
+      {/* Header */}
+      <div className="px-5 pt-5 pb-4 border-b">
+        <div className="flex items-start gap-3">
+          <div className={`h-11 w-11 rounded-2xl flex items-center justify-center ${actionTone(selected.action)}`}>
+            <ActionIcon a={selected.action} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold">{actLabel}</div>
+            <h3 className="text-[15px] font-semibold tracking-tight leading-tight truncate">
+              {entityLabel[selected.entity] ?? selected.entity}
+            </h3>
+            <div className="text-[11px] text-muted-foreground mt-0.5">{rel} · {at.toLocaleString()}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Meta grid */}
+      <dl className="px-5 py-3 grid grid-cols-2 gap-x-4 gap-y-2.5 text-[12px] border-b">
+        {selected.ref_no && (
+          <MetaRow icon={<Hash className="h-3 w-3" />} label="Reference" value={<span className="font-mono">{selected.ref_no}</span>} />
+        )}
+        <MetaRow icon={<FileText className="h-3 w-3" />} label="Entity" value={<span className="capitalize">{selected.entity.replace("_"," ")}</span>} />
+        <MetaRow icon={<Clock className="h-3 w-3" />} label="When" value={at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })} />
+        <MetaRow icon={<UserIcon className="h-3 w-3" />} label="Action" value={actLabel} />
+      </dl>
+
+      {selected.summary && (
+        <div className="px-5 py-3 border-b">
+          <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold mb-1.5">Summary</div>
+          <p className="text-[13px] leading-snug text-foreground/90">{selected.summary}</p>
+        </div>
+      )}
+
+      {diffEntries.length > 0 && (
+        <div className="px-5 py-3 border-b">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold flex items-center gap-1.5">
+              <ListMusic className="h-3 w-3" /> Field changes
+            </div>
+            <span className="text-[10px] text-muted-foreground tabular-nums">{diffEntries.length}</span>
+          </div>
+          <div className="rounded-lg border bg-background/40 divide-y max-h-[360px] overflow-auto">
+            {diffEntries.map(([k, v]) => {
+              const oldV = v?.old ?? "—";
+              const newV = v?.new ?? "—";
+              return (
+                <div key={k} className="px-3 py-2">
+                  <div className="font-mono text-[10px] uppercase tracking-wide text-muted-foreground mb-1">{k.replace(/_/g, " ")}</div>
+                  <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 text-[11.5px]">
+                    <span className={`font-mono px-1.5 py-1 rounded bg-rose-500/8 text-rose-600 dark:text-rose-400 truncate ${selected.action !== "insert" ? "line-through" : ""}`}>{String(oldV)}</span>
+                    <span className="text-muted-foreground text-[10px]">→</span>
+                    <span className={`font-mono px-1.5 py-1 rounded bg-emerald-500/8 text-emerald-600 dark:text-emerald-400 truncate ${isMoney(k) ? "tabular-nums" : ""}`}>{String(newV)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="px-5 py-3 flex gap-2">
+        {selected.ref_no && selected.action !== "delete" && (
+          <Button asChild size="sm" variant="outline" className="flex-1 rounded-full">
+            <Link to="/app/lookup" search={{ q: selected.ref_no } as any}>
+              <ExternalLink className="h-3.5 w-3.5" /> Open record
+            </Link>
+          </Button>
+        )}
+        {selected.action === "delete" && (
+          <Button size="sm" className="flex-1 rounded-full" onClick={() => onRestore(selected.id)} disabled={!!restoring[selected.id]}>
+            <RotateCcw className="h-3.5 w-3.5" /> {restoring[selected.id] ? "Restoring…" : "Restore record"}
+          </Button>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+function MetaRow({ icon, label, value }: { icon: ReactElement; label: string; value: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground font-semibold flex items-center gap-1">{icon}{label}</dt>
+      <dd className="mt-0.5 text-[12.5px] font-medium truncate">{value}</dd>
+    </div>
+  );
+}
+
+function relTime(d: Date) {
+  const secs = Math.floor((Date.now() - d.getTime()) / 1000);
+  if (secs < 60) return `${secs}s ago`;
+  const m = Math.floor(secs / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  const day = Math.floor(h / 24); if (day < 30) return `${day}d ago`;
+  const mo = Math.floor(day / 30); if (mo < 12) return `${mo}mo ago`;
+  return `${Math.floor(mo / 12)}y ago`;
 }

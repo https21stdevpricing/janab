@@ -21,6 +21,7 @@ import { lookupDoc, openDocsFor, type DocLookupResult } from "@/lib/doc-lookup";
 import { toast } from "sonner";
 import { useShortcut } from "@/lib/shortcuts";
 import { exportStoneWorldPayment } from "@/lib/pdf-theme";
+import { ActionStack, SegmentedTabs } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/bills")({
   component: BillsPage,
@@ -454,23 +455,25 @@ function BillsPage() {
             Overdue: <span className="font-medium text-foreground">{inr(kpis.overdue)}</span>
           </div>
         </div>
-        <div className="surface p-3">
-          <div className="eyebrow">Quick actions</div>
-          <div className="mt-3 grid grid-cols-1 gap-2">
-            <Button variant="outline" className="justify-start" onClick={() => startNew("in")}><ArrowDownLeft className="h-4 w-4" /> Receive</Button>
-            <Button className="justify-start" onClick={() => startNew("out")}><ArrowUpRight className="h-4 w-4" /> Pay</Button>
-          </div>
-        </div>
+        <ActionStack
+          title="Quick actions"
+          items={[
+            { label: "Receive", icon: <ArrowDownLeft className="h-4 w-4" />, onClick: () => startNew("in") },
+            { label: "Pay", icon: <ArrowUpRight className="h-4 w-4" />, onClick: () => startNew("out"), primary: true },
+          ]}
+        />
       </div>
 
       <div className="mb-3 space-y-3">
-        <Tabs value={tab} onValueChange={v => setTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-3 rounded-full bg-muted p-1 sm:inline-flex sm:w-auto">
-            <TabsTrigger value="receivable" className="gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
-            <TabsTrigger value="payable" className="gap-1"><ArrowUpRight className="h-3.5 w-3.5" /> Payable</TabsTrigger>
-            <TabsTrigger value="history" className="gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <SegmentedTabs
+          value={tab}
+          onValueChange={(v) => setTab(v as any)}
+          items={[
+            { value: "receivable", label: "Receivable", icon: <ArrowDownLeft className="h-3.5 w-3.5" /> },
+            { value: "payable", label: "Payable", icon: <ArrowUpRight className="h-3.5 w-3.5" /> },
+            { value: "history", label: "History", icon: <History className="h-3.5 w-3.5" /> },
+          ]}
+        />
         <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
           <Input className="h-10" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
           {tab !== "history" && (

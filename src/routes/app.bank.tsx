@@ -14,6 +14,7 @@ import { ArrowDownToLine, ArrowUpFromLine, Banknote, Eye, ShieldCheck, Trash2 } 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDraft } from "@/hooks/use-draft";
 import { Checkbox } from "@/components/ui/checkbox";
+import { ActionStack, SegmentedTabs } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/bank")({ component: BankPage });
 
@@ -169,25 +170,27 @@ function BankPage() {
             Pending cheques: <span className="font-medium text-foreground">{inr(totals.pending)}</span>
           </div>
         </div>
-        <div className="surface p-3">
-          <div className="eyebrow">New entry</div>
-          <div className="mt-3 grid grid-cols-1 gap-2">
-            <Button size="sm" variant="outline" className="justify-start" onClick={() => startNew("cash_deposit")}><ArrowDownToLine className="h-4 w-4" /> Cash deposit</Button>
-            <Button size="sm" variant="outline" className="justify-start" onClick={() => startNew("cheque_deposit")}><Banknote className="h-4 w-4" /> Cheque deposit</Button>
-            <Button size="sm" className="justify-start" onClick={() => startNew("cash_withdrawal")}><ArrowUpFromLine className="h-4 w-4" /> Withdraw cash</Button>
-          </div>
-        </div>
+        <ActionStack
+          title="New entry"
+          items={[
+            { label: "Cash deposit", icon: <ArrowDownToLine className="h-4 w-4" />, onClick: () => startNew("cash_deposit") },
+            { label: "Cheque deposit", icon: <Banknote className="h-4 w-4" />, onClick: () => startNew("cheque_deposit") },
+            { label: "Withdraw cash", icon: <ArrowUpFromLine className="h-4 w-4" />, onClick: () => startNew("cash_withdrawal"), primary: true },
+          ]}
+        />
       </div>
 
       <div className="mb-3 space-y-3">
-        <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
-          <TabsList className="scroll-tabs w-full justify-start rounded-full bg-muted p-1 sm:w-auto">
-            <TabsTrigger value="all">All</TabsTrigger>
-            <TabsTrigger value="cash_deposit">Deposits</TabsTrigger>
-            <TabsTrigger value="cheque_deposit">Cheques</TabsTrigger>
-            <TabsTrigger value="cash_withdrawal">Withdrawals</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <SegmentedTabs
+          value={filter}
+          onValueChange={(v) => setFilter(v as any)}
+          items={[
+            { value: "all", label: "All" },
+            { value: "cash_deposit", label: "Deposits" },
+            { value: "cheque_deposit", label: "Cheques" },
+            { value: "cash_withdrawal", label: "Withdrawals" },
+          ]}
+        />
         <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
           <Input className="h-10" placeholder="Search entry, bank, cheque, UTR…" value={q} onChange={(e) => setQ(e.target.value)} />
           <div className="text-xs text-muted-foreground sm:text-right">
