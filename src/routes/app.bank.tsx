@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
@@ -55,6 +55,7 @@ const EMPTY: Form = {
 };
 
 function BankPage() {
+  const navigate = useNavigate();
   const [rows, setRows] = useState<Row[]>([]);
   const [filter, setFilter] = useState<"all" | Kind>("all");
   const [q, setQ] = useState("");
@@ -161,14 +162,14 @@ function BankPage() {
             value={inr(cashBal)}
             tone={cashBal < 0 ? "bad" : undefined}
             hint={`Pending cheques ${inr(totals.pending)}`}
-            onClick={() => { window.location.href = "/app/ledger"; }}
+            onClick={() => navigate({ to: "/app/ledger" })}
           />
           <KpiTile
             label="Bank"
             value={inr(bankBal)}
             tone={bankBal < 0 ? "bad" : "good"}
             hint="View ledger"
-            onClick={() => { window.location.href = "/app/ledger"; }}
+            onClick={() => navigate({ to: "/app/ledger" })}
           />
         </KpiGrid>
         <ActionStack
