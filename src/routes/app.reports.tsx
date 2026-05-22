@@ -335,14 +335,25 @@ function ReportsPage() {
 
       <Tabs defaultValue="outlook">
         <div className="-mx-1 px-1 mb-3">
-          <TabsList className="scroll-tabs w-full sm:w-auto justify-start gap-0 bg-muted p-1 rounded-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <TabsTrigger value="outlook" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Overview</TabsTrigger>
-            <TabsTrigger value="pnl" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Profit &amp; Loss</TabsTrigger>
-            <TabsTrigger value="bs" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Balance Sheet</TabsTrigger>
-            <TabsTrigger value="wc" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Working Capital</TabsTrigger>
-            <TabsTrigger value="inv" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Inventory</TabsTrigger>
-            <TabsTrigger value="tb" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Trial Balance</TabsTrigger>
-            <TabsTrigger value="reconcile" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Reconcile</TabsTrigger>
+          {/* Visual parity with SegmentedTabs (Money, Deposits, Products, Audit) */}
+          <TabsList className="scroll-tabs w-full sm:w-auto justify-start gap-0 bg-muted/70 ring-1 ring-border/60 p-1 rounded-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {[
+              ["outlook", "Overview"],
+              ["pnl", "Profit & Loss"],
+              ["bs", "Balance Sheet"],
+              ["wc", "Working Capital"],
+              ["inv", "Inventory"],
+              ["tb", "Trial Balance"],
+              ["reconcile", "Reconcile"],
+            ].map(([v, label]) => (
+              <TabsTrigger
+                key={v}
+                value={v}
+                className="shrink-0 snap-start whitespace-nowrap rounded-full px-3.5 h-8 text-[13px] font-medium leading-none tracking-tight data-[state=active]:bg-background data-[state=active]:shadow-sm"
+              >
+                {label}
+              </TabsTrigger>
+            ))}
           </TabsList>
         </div>
 
