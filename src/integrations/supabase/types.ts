@@ -50,6 +50,60 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_transfers: {
+        Row: {
+          amount: number
+          bank_name: string | null
+          cheque_date: string | null
+          cheque_no: string | null
+          cleared: boolean
+          cleared_at: string | null
+          created_at: string
+          date: string
+          id: string
+          kind: string
+          notes: string | null
+          transfer_no: string | null
+          txn_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          bank_name?: string | null
+          cheque_date?: string | null
+          cheque_no?: string | null
+          cleared?: boolean
+          cleared_at?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          kind: string
+          notes?: string | null
+          transfer_no?: string | null
+          txn_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          bank_name?: string | null
+          cheque_date?: string | null
+          cheque_no?: string | null
+          cleared?: boolean
+          cleared_at?: string | null
+          created_at?: string
+          date?: string
+          id?: string
+          kind?: string
+          notes?: string | null
+          transfer_no?: string | null
+          txn_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           address: string | null
@@ -470,6 +524,11 @@ export type Database = {
       payments: {
         Row: {
           amount: number
+          bank_name: string | null
+          cheque_date: string | null
+          cheque_no: string | null
+          cleared: boolean
+          cleared_at: string | null
           contact_id: string | null
           contact_name: string | null
           created_at: string
@@ -480,10 +539,16 @@ export type Database = {
           notes: string | null
           payment_no: string
           ref_doc: string | null
+          txn_id: string | null
           user_id: string
         }
         Insert: {
           amount?: number
+          bank_name?: string | null
+          cheque_date?: string | null
+          cheque_no?: string | null
+          cleared?: boolean
+          cleared_at?: string | null
           contact_id?: string | null
           contact_name?: string | null
           created_at?: string
@@ -494,10 +559,16 @@ export type Database = {
           notes?: string | null
           payment_no: string
           ref_doc?: string | null
+          txn_id?: string | null
           user_id: string
         }
         Update: {
           amount?: number
+          bank_name?: string | null
+          cheque_date?: string | null
+          cheque_no?: string | null
+          cleared?: boolean
+          cleared_at?: string | null
           contact_id?: string | null
           contact_name?: string | null
           created_at?: string
@@ -508,6 +579,7 @@ export type Database = {
           notes?: string | null
           payment_no?: string
           ref_doc?: string | null
+          txn_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -1488,6 +1560,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      post_journal_bank_transfer: { Args: { _id: string }; Returns: undefined }
       post_journal_expense: { Args: { _id: string }; Returns: undefined }
       post_journal_fixed_asset: { Args: { _id: string }; Returns: undefined }
       post_journal_payment: { Args: { _id: string }; Returns: undefined }
