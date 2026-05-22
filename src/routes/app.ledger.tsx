@@ -42,12 +42,14 @@ const SORT_BY_VALUES = ["date", "amount", "account"] as const;
 const SORT_DIR_VALUES = ["desc", "asc"] as const;
 
 type LedgerRow = {
+  id?: string | null;
   user_id: string | null;
   date: string | null;
   account: string | null;
   party: string | null;
   ref_no: string | null;
   narration: string | null;
+  entry_id?: string | null;
   source_id?: string | null;
   debit: number | null;
   credit: number | null;
@@ -74,10 +76,11 @@ function LedgerPage() {
     const data = await fetchAllPages<LedgerRow>(
       (from, to) =>
         supabase
-          .from("ledger_view")
-          .select("*")
+          .from("journal_lines")
+          .select("id,user_id,date,account,party,ref_no,narration,entry_id,debit,credit")
           .eq("user_id", auth.user.id)
           .order("date", { ascending: false })
+          .order("id", { ascending: false })
           .range(from, to) as unknown as PromiseLike<{
           data: LedgerRow[] | null;
           error: { message: string } | null;
@@ -382,9 +385,9 @@ function LedgerPage() {
               {filtered.map((r, i) => {
                 running += Number(r.debit ?? 0) - Number(r.credit ?? 0);
                 return (
-                  <tr key={i} className="border-t">
+                  <tr key={r.id ?? `${r.date}-${r.account}-${r.ref_no}-${i}`} className="border-t">
                     <td className="p-2 whitespace-nowrap">{r.date ? fmtDate(r.date) : ""}</td>
-                    <td className="p-2 font-mono text-xs">{r.source_id}</td>
+                    <td className="p-2 font-mono text-xs">{r.entry_id ?? r.source_id}</td>
                     <td className="p-2">{r.account}</td>
                     <td className="p-2 truncate max-w-[140px]">{r.party}</td>
                     <td className="p-2 font-mono text-xs">
