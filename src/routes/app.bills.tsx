@@ -10,9 +10,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
-import { CollapseFilters } from "@/components/collapse-filters";
 import { inr, fmtDate, todayISO } from "@/lib/format";
-import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Clock3, Eye, FileText, History, Printer, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Clock3, Eye, History, Printer, ShieldCheck, Trash2, X } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -781,19 +780,6 @@ function BillsPage() {
         </DialogContent>
       </Dialog>
     </div>
-  );
-}
-
-function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; value: string; sub?: string; tone?: "good" | "bad" | "muted"; onClick?: () => void; active?: boolean }) {
-  const valueClr = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "text-foreground";
-  const ring = active ? "ring-2 ring-primary/50" : "";
-  return (
-    <button type="button" onClick={onClick} disabled={!onClick}
-      className={`text-left rounded-2xl border border-border/70 bg-background p-3 transition-all ${onClick ? "hover:bg-muted/40 active:scale-[0.99]" : ""} ${ring}`}>
-      <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground">{label}</div>
-      <div className={`text-base sm:text-lg font-semibold tabular-nums truncate ${valueClr}`}>{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
-    </button>
   );
 }
 
