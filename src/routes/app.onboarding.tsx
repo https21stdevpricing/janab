@@ -8,7 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeader } from "@/components/page-header";
 import { inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, FileUp } from "lucide-react";
+import { importWorkbook, pickSheet } from "@/lib/excel";
+import { useRef } from "react";
 
 export const Route = createFileRoute("/app/onboarding")({
   component: OnboardingPage,
@@ -139,6 +141,87 @@ function OnboardingPage() {
   const validateIFSC = (i: string) => !i || /^[A-Z]{4}0[A-Z0-9]{6}$/.test(i.toUpperCase());
   const needsPartners = biz.business_type === "partnership" || biz.business_type === "llp";
 
+  const importRef = useRef<HTMLInputElement | null>(null);
+  const handleBackupImport = async (file: File) => {
+    setBusy(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      const wb = await importWorkbook(file);
+      let added = { products: 0, contacts: 0, settings: 0 };
+
+      // Settings (Company sheet — Field/Value rows from our backup format)
+      const companyRows = pickSheet(wb, "Company", "Settings");
+      if (companyRows.length) {
+        const flat: Record<string, any> = {};
+        for (const r of companyRows) {
+          const k = String(r.Field ?? r.field ?? "").trim();
+          const v = r.Value ?? r.value;
+          if (k && v !== undefined) flat[k] = v;
+        }
+        const cleanFields = ["company_name","gstin","state","address","phone","email","owner_name","pan","business_type","bank_name","bank_account_no","bank_ifsc"];
+        const upd: Record<string, any> = {};
+        for (const f of cleanFields) if (flat[f] != null && flat[f] !== "") upd[f] = flat[f];
+        if (Object.keys(upd).length) {
+          await supabase.from("settings").update(upd as never).eq("user_id" as never, user.id);
+          if (upd.company_name) setBiz(b => ({ ...b, ...upd }));
+          if (upd.bank_name || upd.bank_account_no || upd.bank_ifsc) setBank(s => ({ ...s, bank_name: upd.bank_name ?? s.bank_name, bank_account_no: upd.bank_account_no ?? s.bank_account_no, bank_ifsc: upd.bank_ifsc ?? s.bank_ifsc }));
+          added.settings = Object.keys(upd).length;
+        }
+      }
+
+      // Products
+      const prodRows = pickSheet(wb, "Products");
+      if (prodRows.length) {
+        const payload = prodRows.map((r: any) => ({
+          user_id: user.id,
+          name: r.Name ?? r.name ?? "",
+          code: r.Code ?? r.code ?? "",
+          unit: r.Unit ?? r.unit ?? "pc",
+          hsn: r.HSN ?? r.hsn ?? null,
+          kind: String(r.Kind ?? r.kind ?? "stocked").toLowerCase().startsWith("order") ? "order_basis" : "stocked",
+          purchase_rate: Number(r["Purchase Rate"] ?? r.purchase_rate ?? 0) || 0,
+          sale_rate: Number(r["Sale Rate"] ?? r.sale_rate ?? 0) || 0,
+          opening_stock: Number(r["Opening Stock"] ?? r.opening_stock ?? 0) || 0,
+          reorder_level: Number(r["Reorder Level"] ?? r.reorder_level ?? 0) || 0,
+        })).filter(r => r.name);
+        if (payload.length) {
+          const { error } = await supabase.from("products").insert(payload as never);
+          if (error) throw error;
+          added.products = payload.length;
+        }
+      }
+
+      // Contacts
+      const contactRows = pickSheet(wb, "Contacts");
+      if (contactRows.length) {
+        const payload = contactRows.map((r: any) => ({
+          user_id: user.id,
+          name: r.Name ?? r.name ?? "",
+          code: r.Code ?? r.code ?? null,
+          type: (String(r.Type ?? r.type ?? "buyer").toLowerCase() === "supplier" ? "supplier" : "buyer"),
+          gstin: r.GSTIN ?? r.gstin ?? null,
+          state: r.State ?? r.state ?? null,
+          phone: r.Phone ?? r.phone ?? null,
+          email: r.Email ?? r.email ?? null,
+          address: r.Address ?? r.address ?? null,
+          opening_balance: Number(r["Opening Balance"] ?? r.opening_balance ?? 0) || 0,
+          credit_limit: Number(r["Credit Limit"] ?? r.credit_limit ?? 0) || 0,
+        })).filter(r => r.name);
+        if (payload.length) {
+          const { error } = await supabase.from("contacts").insert(payload as never);
+          if (error) throw error;
+          added.contacts = payload.length;
+        }
+      }
+
+      await refreshInline();
+      toast.success(`Restored: ${added.products} products · ${added.contacts} contacts${added.settings ? ` · company profile updated` : ""}`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Restore failed");
+    } finally { setBusy(false); }
+  };
+
   const saveBiz = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
@@ -226,7 +309,7 @@ function OnboardingPage() {
   return (
     <div className="max-w-2xl mx-auto py-2">
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> First-time setup</span>}
+        title={<span className="inline-flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> First-time setup</span>}
         description="Five quick steps so your books start clean. Nothing posts until the final confirm."
       />
 
@@ -241,6 +324,15 @@ function OnboardingPage() {
         {step === 1 && (
           <>
             <Header n={1} title="Your business" hint="Legal identity for invoices, GST returns and reports." icon={Building2} />
+            {/* Quick restore from a previous backup file */}
+            <div className="rounded-lg border border-dashed bg-muted/20 p-3 flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium">Already have a backup file?</div>
+                <div className="text-[11px] text-muted-foreground">Restore company profile, products and contacts from a previous StoneWorld Excel backup (.xlsx) — opening balances stay editable in the next steps.</div>
+              </div>
+              <input ref={importRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleBackupImport(f); if (importRef.current) importRef.current.value = ""; }} />
+              <Button size="sm" variant="outline" disabled={busy} onClick={() => importRef.current?.click()}><FileUp className="h-3.5 w-3.5" /> Restore</Button>
+            </div>
             <div className="grid sm:grid-cols-2 gap-3">
               <Field label="Company name *"><Input value={biz.company_name} onChange={e => setBiz({ ...biz, company_name: e.target.value })} placeholder="StoneWorld Marble" /></Field>
               <Field label="Business type *">
