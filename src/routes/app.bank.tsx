@@ -93,7 +93,8 @@ function BankPage() {
   const totals = useMemo(() => {
     const dep = filtered.filter(r => r.kind !== "cash_withdrawal").reduce((a,r) => a + Number(r.amount||0), 0);
     const wd  = filtered.filter(r => r.kind === "cash_withdrawal").reduce((a,r) => a + Number(r.amount||0), 0);
-    return { dep, wd };
+    const pending = rows.filter(r => (r.status ?? (r.cleared ? "cleared" : "pending")) === "pending").reduce((a,r) => a + Number(r.amount||0), 0);
+    return { dep, wd, pending };
   }, [filtered]);
 
   const startNew = (k: Kind) => {
