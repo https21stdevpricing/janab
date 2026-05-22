@@ -570,7 +570,7 @@ function ActionMark({ action, large = false }: { action: string; large?: boolean
         action === "delete" && "bg-destructive/10 text-destructive",
       )}
     >
-      <Icon className={large ? "h-4.5 w-4.5" : "h-3.5 w-3.5"} />
+      <Icon className={large ? "h-[18px] w-[18px]" : "h-3.5 w-3.5"} />
     </span>
   );
 }
