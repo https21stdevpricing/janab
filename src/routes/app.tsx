@@ -100,7 +100,8 @@ function AppLayout() {
     if (loading || !user) return;
     if (path.startsWith("/app/onboarding")) return;
     (async () => {
-      const { data } = await import("@/integrations/supabase/client").then(m => m.supabase.from("settings").select("onboarding_done").maybeSingle());
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase.from("settings").select("onboarding_done").maybeSingle();
       if (data && (data as any).onboarding_done === false) {
         navigate({ to: "/app/onboarding", replace: true });
       }
