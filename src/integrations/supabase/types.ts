@@ -1139,6 +1139,10 @@ export type Database = {
         Row: {
           account_closed_at: string | null
           address: string | null
+          bank_account_no: string | null
+          bank_ifsc: string | null
+          bank_name: string | null
+          business_type: string | null
           cogs_method: string
           company_name: string
           currency: string | null
@@ -1148,6 +1152,9 @@ export type Database = {
           gstin: string | null
           low_stock_threshold: number | null
           onboarding_done: boolean
+          owner_name: string | null
+          pan: string | null
+          partners: Json | null
           phone: string | null
           prefix_delivery: string
           prefix_payment: string
@@ -1162,6 +1169,10 @@ export type Database = {
         Insert: {
           account_closed_at?: string | null
           address?: string | null
+          bank_account_no?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
+          business_type?: string | null
           cogs_method?: string
           company_name?: string
           currency?: string | null
@@ -1171,6 +1182,9 @@ export type Database = {
           gstin?: string | null
           low_stock_threshold?: number | null
           onboarding_done?: boolean
+          owner_name?: string | null
+          pan?: string | null
+          partners?: Json | null
           phone?: string | null
           prefix_delivery?: string
           prefix_payment?: string
@@ -1185,6 +1199,10 @@ export type Database = {
         Update: {
           account_closed_at?: string | null
           address?: string | null
+          bank_account_no?: string | null
+          bank_ifsc?: string | null
+          bank_name?: string | null
+          business_type?: string | null
           cogs_method?: string
           company_name?: string
           currency?: string | null
@@ -1194,6 +1212,9 @@ export type Database = {
           gstin?: string | null
           low_stock_threshold?: number | null
           onboarding_done?: boolean
+          owner_name?: string | null
+          pan?: string | null
+          partners?: Json | null
           phone?: string | null
           prefix_delivery?: string
           prefix_payment?: string

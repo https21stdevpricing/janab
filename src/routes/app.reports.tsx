@@ -178,7 +178,12 @@ function ReportsPage() {
   const totalAssets = currentAssets + nonCurrentAssets;
   const currentLiab = ap + Math.max(0, gstOut);
   const totalLiab = currentLiab;
-  const equity = netProfit;
+  // Opening Capital — value of inventory the owner contributed at start-up.
+  // Products.opening_stock is read directly into Inventory (asset) without a
+  // journal entry, so we credit the matching amount to Owner's Capital here
+  // to keep A = L + E (standard treatment for non-cash owner contributions).
+  const openingCapital = inventory.openingValue;
+  const equity = netProfit + openingCapital;
   const balanceCheck = Math.abs(totalAssets - (totalLiab + equity)) < 1;
 
   const today = new Date();
@@ -429,6 +434,9 @@ function ReportsPage() {
               <Row label="Total Current Liabilities" value={currentLiab} bold />
               <Sep />
               <Section title="Equity" />
+              {openingCapital > 0 && (
+                <Row label="Opening Capital (Owner's contribution)" value={openingCapital} hint="Value of inventory you brought into the business at start-up. Auto-credited so the books balance." />
+              )}
               <Row label="Retained Earnings (Net Profit)" value={netProfit} hint="Cumulative profit reinvested." />
               <Sep /><Row label="Total Liabilities + Equity" value={totalLiab + equity} bold />
               <div className={`mt-2 text-xs flex items-center gap-1.5 ${balanceCheck ? "text-primary" : "text-destructive"}`}>
