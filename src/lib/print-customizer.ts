@@ -16,6 +16,12 @@ export type PrintDesign = {
   footerRows: 1 | 2 | 3;             // arrangement of brand logos
   footerLogoSize: number;            // uniform height in px (HTML) / pt (PDF scaled)
   footerPosition: PrintFooterPosition;
+  footerOnEveryPage: boolean;        // strict footer logos on every page
+  qrCodeDataUrl?: string | null;     // UPI/payment/website QR
+  barcodeDataUrl?: string | null;    // invoice barcode
+  showBankDetails: boolean;          // pre-filled bank block (invoice)
+  showGstSummary: boolean;           // CGST/SGST/IGST breakdown line
+  signatoryName?: string;            // override authorised signatory line
 };
 
 export const DEFAULT_PRINT_DESIGN: PrintDesign = {
@@ -31,6 +37,12 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   footerRows: 1,
   footerLogoSize: 36,
   footerPosition: "above-signature",
+  footerOnEveryPage: true,
+  qrCodeDataUrl: null,
+  barcodeDataUrl: null,
+  showBankDetails: true,
+  showGstSummary: true,
+  signatoryName: "",
 };
 
 const KEY = "stoneworld_print_design";

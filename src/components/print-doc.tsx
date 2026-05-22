@@ -56,6 +56,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const updateDesign = (next: PrintDesign) => { setDesign(next); savePrintDesign(next); };
   const uploadLogo = async (file?: File) => { if (file) updateDesign({ ...design, logoDataUrl: await fileToDataUrl(file) }); };
   const uploadWatermarkLogo = async (file?: File) => { if (file) updateDesign({ ...design, watermarkLogoDataUrl: await fileToDataUrl(file) }); };
+  const uploadQr = async (file?: File) => { if (file) updateDesign({ ...design, qrCodeDataUrl: await fileToDataUrl(file) }); };
+  const uploadBarcode = async (file?: File) => { if (file) updateDesign({ ...design, barcodeDataUrl: await fileToDataUrl(file) }); };
   const uploadFooterLogos = async (files?: FileList | null) => {
     if (!files) return;
     const add = await Promise.all(Array.from(files).slice(0, 20 - design.footerLogos.length).map(fileToDataUrl));
@@ -157,6 +159,10 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 </select>
               </label>
             </div>
+            <label className="flex items-center gap-2 text-[11px]">
+              <input type="checkbox" checked={design.footerOnEveryPage} onChange={(e) => updateDesign({ ...design, footerOnEveryPage: e.target.checked })} />
+              <span>Print footer logos on every page (strict)</span>
+            </label>
             {design.footerLogos.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {design.footerLogos.map((src, i) => (
@@ -167,6 +173,40 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="rounded-md border border-border/60 p-2 space-y-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Document extras (pre-filled blocks)</div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showBankDetails} onChange={(e) => updateDesign({ ...design, showBankDetails: e.target.checked })} />
+                <span>Show bank details (invoice)</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showGstSummary} onChange={(e) => updateDesign({ ...design, showGstSummary: e.target.checked })} />
+                <span>Show GST breakdown (CGST/SGST/IGST)</span>
+              </label>
+              <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                <span className="truncate">{design.qrCodeDataUrl ? "QR uploaded" : "Payment / verification QR"}</span>
+                <span className="text-primary">{design.qrCodeDataUrl ? "Replace" : "Upload"}</span>
+                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadQr(e.target.files?.[0])} />
+              </label>
+              <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                <span className="truncate">{design.barcodeDataUrl ? "Barcode uploaded" : "Document barcode"}</span>
+                <span className="text-primary">{design.barcodeDataUrl ? "Replace" : "Upload"}</span>
+                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadBarcode(e.target.files?.[0])} />
+              </label>
+              <label className="sm:col-span-2 flex items-center gap-2 text-[11px]">
+                <span className="w-28 text-muted-foreground">Signatory name</span>
+                <input className="h-8 flex-1 rounded-md border bg-background px-2 text-xs" placeholder="Authorised Signatory" value={design.signatoryName ?? ""} onChange={(e) => updateDesign({ ...design, signatoryName: e.target.value })} />
+              </label>
+              {(design.qrCodeDataUrl || design.barcodeDataUrl) && (
+                <div className="sm:col-span-2 flex gap-2">
+                  {design.qrCodeDataUrl && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => updateDesign({ ...design, qrCodeDataUrl: null })}>Remove QR</Button>}
+                  {design.barcodeDataUrl && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => updateDesign({ ...design, barcodeDataUrl: null })}>Remove barcode</Button>}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex justify-end gap-2">
@@ -269,7 +309,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
             <div className="text-[11px] leading-5 text-[#374050]">
               <p className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Amount in words</p>
               <p className="mt-1 font-semibold text-[#111621]">{amountInWords(totals.total)}</p>
-              {kind === "invoice" && (company?.bank_name || company?.bank_account_no || company?.bank_ifsc) && (
+              {kind === "invoice" && design.showBankDetails && (company?.bank_name || company?.bank_account_no || company?.bank_ifsc) && (
                 <div className="mt-4">
                   <p className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Bank Details</p>
                   <div className="mt-1 grid grid-cols-[auto_1fr] gap-x-3 gap-y-0.5 text-[11px]">
@@ -279,15 +319,24 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                   </div>
                 </div>
               )}
+              {design.barcodeDataUrl && (
+                <div className="mt-4"><img src={design.barcodeDataUrl} alt="barcode" className="h-10 object-contain" /></div>
+              )}
               {doc.notes && <p className="mt-4"><span className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Notes</span><br />{doc.notes}</p>}
               <p className="mt-4 text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">{kind === "invoice" ? "Terms & Conditions" : "Terms of Proposal"}</p>
               <p className="mt-1 text-[10.5px] leading-4 text-[#6e7886]">{kind === "invoice"
                 ? "Goods once sold will not be taken back. Interest @18% p.a. on overdue balances. Subject to local jurisdiction. E&OE."
                 : "Prices valid until the date shown above. Quotation does not constitute a tax invoice. Stock and lot variation may apply. E&OE."}</p>
             </div>
-            <div className="text-[11.5px]">
+            <div className="text-[11.5px] relative">
+              {design.qrCodeDataUrl && (
+                <div className="mb-3 flex flex-col items-end">
+                  <img src={design.qrCodeDataUrl} alt="qr" className="h-24 w-24 object-contain" />
+                  <span className="text-[9px] text-[#6e7886] mt-1">Scan to pay / verify</span>
+                </div>
+              )}
               <SummaryLine label="Subtotal" value={totals.subtotal} />
-              {sameState ? <><SummaryLine label="CGST" value={totals.gst / 2} /><SummaryLine label="SGST" value={totals.gst / 2} /></> : <SummaryLine label="IGST" value={totals.gst} />}
+              {design.showGstSummary && (sameState ? <><SummaryLine label="CGST" value={totals.gst / 2} /><SummaryLine label="SGST" value={totals.gst / 2} /></> : <SummaryLine label="IGST" value={totals.gst} />)}
               <div className="border-t-2 border-[#111621] mt-1 pt-2 flex justify-between items-baseline">
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em]">Grand Total</span>
                 <span className="tabular-nums font-bold text-[15px]">{inr(totals.total)}</span>
@@ -295,16 +344,16 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
             </div>
           </div>
 
-          {design.footerPosition === "above-signature" && footerLogoBlock}
+          {design.footerPosition === "above-signature" && !design.footerOnEveryPage && footerLogoBlock}
           <div className="mt-14 grid grid-cols-2 text-[11px] text-[#6e7886] break-inside-avoid">
             <div>Thank you for your business.</div>
-            <div className="text-right">For {company?.company_name ?? "StoneWorld Traders"}<br /><br /><br /><span className="border-t border-slate-400 pt-2 inline-block min-w-[180px] font-semibold text-[#111621]">Authorised Signatory</span></div>
+            <div className="text-right">For {company?.company_name ?? "StoneWorld Traders"}<br /><br /><br /><span className="border-t border-slate-400 pt-2 inline-block min-w-[180px] font-semibold text-[#111621]">{design.signatoryName?.trim() || "Authorised Signatory"}</span></div>
           </div>
-          {design.footerPosition === "page-bottom" && footerLogoBlock}
+          {(design.footerPosition === "page-bottom" || design.footerOnEveryPage) && footerLogoBlock}
         </section>
       </article>
 
-      <style>{`@media print { @page { size: A4; margin: 10mm; } body { background: white !important; } .print\\:hidden { display: none !important; } #print-area { width: 190mm; } .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; } }`}</style>
+      <style>{`@media print { @page { size: A4; margin: 14mm 12mm 22mm 12mm; } body { background: white !important; } .print\\:hidden { display: none !important; } #print-area { width: 186mm; } .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; } tr, .sw-row { page-break-inside: avoid; } thead { display: table-header-group; } tfoot { display: table-footer-group; } }`}</style>
     </div>
   );
 }
