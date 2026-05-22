@@ -264,18 +264,23 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
-  // Swipe-down-to-close: track a single touch, close at >110px drag or >60px with downward velocity.
+  // Swipe-down-to-close. Works from the header handle OR anywhere on the
+  // scrollable body when it's already scrolled to top. Closes at >110px drag
+  // or >60px with downward velocity, with rubber-band visual response.
   const [drag, setDrag] = useState(0);
   const dragRef = { current: 0 };
+  const scrollRef = React.useRef<HTMLDivElement>(null);
+  const armedRef = React.useRef(false);
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
     (onTouchStart as any)._s = { y: t.clientY, t: Date.now() };
     dragRef.current = 0;
+    armedRef.current = true;
     setDrag(0);
   };
   const onTouchMove = (e: React.TouchEvent) => {
     const s = (onTouchStart as any)._s as { y: number; t: number } | undefined;
-    if (!s) return;
+    if (!s || !armedRef.current) return;
     const dy = e.touches[0].clientY - s.y;
     if (dy > 0) {
       dragRef.current = dy;
@@ -290,13 +295,30 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     const velocity = elapsed > 0 ? dy / elapsed : 0;
     if (dy > 110 || (dy > 60 && velocity > 0.5)) onOpenChange(false);
     setDrag(0);
+    armedRef.current = false;
   };
+  // Body gesture: only arms when the scroll container is already at the top.
+  const onBodyTouchStart = (e: React.TouchEvent) => {
+    const el = scrollRef.current;
+    if (!el || el.scrollTop > 0) { armedRef.current = false; return; }
+    onTouchStart(e);
+  };
+  const onBodyTouchMove = (e: React.TouchEvent) => {
+    const el = scrollRef.current;
+    if (el && el.scrollTop > 0) { armedRef.current = false; setDrag(0); return; }
+    onTouchMove(e);
+  };
+  // Rubber-band easing: less travel as the user drags further.
+  const eased = drag > 0 ? Math.round(drag * (1 - Math.min(drag, 600) / 1200)) : 0;
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="bottom"
         className="p-0 h-[88vh] rounded-t-2xl flex flex-col [&>button]:hidden"
-        style={{ transform: drag > 0 ? `translateY(${Math.min(drag, 300)}px)` : undefined, transition: drag > 0 ? "none" : undefined }}
+        style={{
+          transform: eased > 0 ? `translateY(${eased}px)` : undefined,
+          transition: drag > 0 ? "none" : "transform 220ms cubic-bezier(.2,.8,.2,1)",
+        }}
       >
         {/* Drag handle + aligned header */}
         <div
@@ -321,7 +343,13 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
             </button>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
+        <div
+          ref={scrollRef}
+          className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain"
+          onTouchStart={onBodyTouchStart}
+          onTouchMove={onBodyTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
           {[{ label: "Daily", items: [...pinned].slice(1).map((p) => ({ ...p })) }, ...moreGroups].map((g) => (
             <div key={g.label}>
               <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/80 mb-2 px-1">{g.label}</div>
