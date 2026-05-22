@@ -264,7 +264,10 @@ export function SegmentedTabs({
     <div
       role="tablist"
       className={cn(
-        "scroll-tabs w-full sm:w-auto max-w-full min-w-0 justify-start rounded-full bg-muted p-1 overflow-x-auto no-scrollbar snap-x overscroll-x-contain",
+        // Self-contained strip: visible border + slightly stronger muted fill
+        // so the bar reads as a single element even when the page background
+        // is also muted (fixes the "leaking" look on Money / Deposits).
+        "scroll-tabs w-full sm:w-auto max-w-full min-w-0 justify-start rounded-full bg-muted/70 ring-1 ring-border/60 p-1 overflow-x-auto no-scrollbar snap-x overscroll-x-contain",
         className,
       )}
     >
@@ -280,8 +283,9 @@ export function SegmentedTabs({
             className={cn(
               // Natural-width segments so long labels stay fully readable; the
               // row scrolls horizontally when content overflows (matches the
-              // Reports page tab behaviour). Same font metrics in both states.
-              "shrink-0 snap-start inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-4 h-8 rounded-full text-[12.5px] font-medium leading-none tracking-tight transition-colors",
+              // Reports page tab behaviour). Same font metrics in both states
+              // so switching tabs never reflows neighbours.
+              "shrink-0 snap-start inline-flex items-center justify-center gap-1.5 whitespace-nowrap px-3.5 h-8 rounded-full text-[13px] font-medium leading-none tracking-tight transition-colors",
               active
                 ? "bg-background text-foreground shadow-sm"
                 : "text-muted-foreground hover:text-foreground",
