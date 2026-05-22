@@ -264,15 +264,15 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
-  // Physics-based swipe-to-close. Uses direct DOM transform writes (no React
-  // re-render during drag) + non-passive touchmove to lock page scroll.
-  // Closes on: 90px drag, 30px drag + downward velocity > 0.3 px/ms, or
-  // a flick > 0.7 px/ms regardless of distance.
+  // Whole-screen, physics-based pull-down close. Listens at document capture
+  // while the sheet is open so drags starting on icons, empty space, footer, or
+  // the dim overlay all feel identical without React re-renders during motion.
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const blockClickUntilRef = useRef(0);
   const stateRef = useRef({
-    active: false, startY: 0, lastY: 0, lastT: 0, lastV: 0,
-    fromBody: false, height: 0,
+    tracking: false, dragging: false, startY: 0, lastY: 0, lastT: 0, lastV: 0,
+    startedInScroller: false, height: 0,
   });
 
   const setTransform = (y: number) => {
@@ -308,70 +308,84 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     el.style.transform = "";
     el.style.transition = "";
 
+    const isEditableTarget = (target: EventTarget | null) =>
+      target instanceof HTMLElement && !!target.closest("input, textarea, select, [contenteditable='true']");
     const begin = (y: number, target: EventTarget | null) => {
-      const fromBody = !!(scroller && target instanceof Node && scroller.contains(target));
-      if (fromBody && scroller && scroller.scrollTop > 0) return;
+      if (isEditableTarget(target)) return;
+      const startedInScroller = !!(scroller && target instanceof Node && scroller.contains(target));
       stateRef.current = {
-        active: true, startY: y, lastY: y, lastT: performance.now(),
-        lastV: 0, fromBody, height: el.getBoundingClientRect().height,
+        tracking: true, dragging: false, startY: y, lastY: y, lastT: performance.now(),
+        lastV: 0, startedInScroller, height: el.getBoundingClientRect().height,
       };
     };
     const move = (y: number, ev: Event) => {
       const s = stateRef.current;
-      if (!s.active) return;
+      if (!s.tracking) return;
       const dy = y - s.startY;
-      if (dy < -6) { s.active = false; setTransform(0); return; }
-      if (s.fromBody && scroller && scroller.scrollTop > 0) {
-        s.active = false; setTransform(0); return;
+      if (!s.dragging) {
+        if (dy < -8) { s.tracking = false; return; }
+        if (dy < 4) return;
+        if (s.startedInScroller && scroller && scroller.scrollTop > 1) return;
+        s.dragging = true;
+        s.startY = y - 1;
+        s.lastY = y;
+        s.lastT = performance.now();
+        s.lastV = 0;
       }
-      if (dy > 0) {
-        if (ev.cancelable) ev.preventDefault();
-        const now = performance.now();
-        const dt = now - s.lastT;
-        if (dt > 0) {
-          // EMA velocity for stability
-          const inst = (y - s.lastY) / dt;
-          s.lastV = s.lastV * 0.6 + inst * 0.4;
-        }
-        s.lastY = y; s.lastT = now;
-        setTransform(dy);
-      }
+      const drag = Math.max(0, y - s.startY);
+      if (ev.cancelable) ev.preventDefault();
+      const now = performance.now();
+      const dt = Math.max(1, now - s.lastT);
+      const inst = Math.max(-1.5, Math.min(2.5, (y - s.lastY) / dt));
+      s.lastV = s.lastV * 0.55 + inst * 0.45;
+      s.lastY = y; s.lastT = now;
+      setTransform(drag);
+      if (drag > 1) blockClickUntilRef.current = Date.now() + 500;
     };
     const end = () => {
       const s = stateRef.current;
-      if (!s.active) return;
-      s.active = false;
+      if (!s.tracking) return;
+      s.tracking = false;
+      if (!s.dragging) return;
+      s.dragging = false;
       const dy = s.lastY - s.startY;
       const v = s.lastV;
-      const shouldClose = dy > 90 || (dy > 30 && v > 0.3) || v > 0.7;
+      const shouldClose = dy > 54 || (dy > 18 && v > 0.16) || v > 0.42;
       if (shouldClose) animateClose();
       else setTransform(0);
     };
 
-    const onTouchStart = (e: TouchEvent) => begin(e.touches[0].clientY, e.target);
-    const onTouchMove = (e: TouchEvent) => move(e.touches[0].clientY, e);
+    const onTouchStart = (e: TouchEvent) => { const touch = e.touches[0]; if (touch) begin(touch.clientY, e.target); };
+    const onTouchMove = (e: TouchEvent) => { const touch = e.touches[0]; if (touch) move(touch.clientY, e); };
     const onTouchEnd = () => end();
     const onMouseDown = (e: MouseEvent) => begin(e.clientY, e.target);
-    const onMouseMove = (e: MouseEvent) => { if (stateRef.current.active) move(e.clientY, e); };
+    const onMouseMove = (e: MouseEvent) => { if (stateRef.current.tracking) move(e.clientY, e); };
     const onMouseUp = () => end();
 
-    el.addEventListener("touchstart", onTouchStart, { passive: true });
-    el.addEventListener("touchmove", onTouchMove, { passive: false });
-    el.addEventListener("touchend", onTouchEnd, { passive: true });
-    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
-    el.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
+    document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
+    document.addEventListener("touchend", onTouchEnd, { passive: true, capture: true });
+    document.addEventListener("touchcancel", onTouchEnd, { passive: true, capture: true });
+    document.addEventListener("mousedown", onMouseDown, true);
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
     return () => {
-      el.removeEventListener("touchstart", onTouchStart);
-      el.removeEventListener("touchmove", onTouchMove);
-      el.removeEventListener("touchend", onTouchEnd);
-      el.removeEventListener("touchcancel", onTouchEnd);
-      el.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("touchstart", onTouchStart, true);
+      document.removeEventListener("touchmove", onTouchMove, true);
+      document.removeEventListener("touchend", onTouchEnd, true);
+      document.removeEventListener("touchcancel", onTouchEnd, true);
+      document.removeEventListener("mousedown", onMouseDown, true);
       window.removeEventListener("mousemove", onMouseMove);
       window.removeEventListener("mouseup", onMouseUp);
     };
   }, [open, onOpenChange]);
+
+  const suppressClickAfterDrag = (event: React.MouseEvent) => {
+    if (Date.now() <= blockClickUntilRef.current) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -383,6 +397,7 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
           willChange: "transform",
           touchAction: "pan-y",
         }}
+        onClickCapture={suppressClickAfterDrag}
       >
         {/* Drag handle + aligned header */}
         <div
