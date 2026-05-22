@@ -522,6 +522,7 @@ function OnboardingPage() {
           </>
         )}
       </div>
+      </div>
 
       <div className="text-[11px] text-muted-foreground text-center mt-4">
         You can re-run this any time from <Link to="/app/settings" className="underline">Settings → Opening balances</Link>.
