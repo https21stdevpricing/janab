@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.prevent_duplicate_pending_cheque_allocation() FROM PUBLIC, anon, authenticated;
