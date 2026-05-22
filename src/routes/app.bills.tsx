@@ -457,65 +457,64 @@ function BillsPage() {
   useShortcut("p", () => { if (!payOpen) startNew("out"); }, !payOpen);
 
   return (
-    <div>
+    <div className="min-w-0 max-w-full overflow-hidden">
       <PageHeader
         title="Money"
         description="Collect, pay and review only cleared settlements in one place."
         actions={
-          <>
+          <div className="grid w-full grid-cols-[auto_1fr_1fr] gap-2 sm:flex sm:w-auto sm:items-center sm:justify-end">
             <ExcelBar onExport={onExport} />
-            <Button size="sm" variant="outline" onClick={() => startNew("in")}>
+            <Button size="sm" variant="outline" className="rounded-full" onClick={() => startNew("in")}>
               <ArrowDownLeft className="h-4 w-4" /> Receive
             </Button>
-            <Button size="sm" onClick={() => startNew("out")}>
+            <Button size="sm" className="rounded-full" onClick={() => startNew("out")}>
               <Plus className="h-4 w-4" /> Pay
             </Button>
-          </>
+          </div>
         }
       />
 
-      <KpiGrid cols={3} className="mb-4">
+      <KpiGrid cols={3} className="mb-4 grid-cols-1 sm:grid-cols-3">
         <KpiTile label="Collect" value={inr(kpis.recv)} tone="good" hint={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "All on time"} active={tab === "receivable"} onClick={() => setTab("receivable")} />
         <KpiTile label="Pay" value={inr(kpis.pay)} tone="bad" hint={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "All on time"} active={tab === "payable"} onClick={() => setTab("payable")} />
         <KpiTile label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} hint={kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"} />
       </KpiGrid>
 
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <SegmentedTabs
-          value={tab}
-          onValueChange={(v) => setTab(v as any)}
-          items={[
-            { value: "receivable", label: "Receivable", icon: <ArrowDownLeft className="h-3.5 w-3.5" /> },
-            { value: "payable", label: "Payable", icon: <ArrowUpRight className="h-3.5 w-3.5" /> },
-            { value: "history", label: "History", icon: <History className="h-3.5 w-3.5" /> },
-          ]}
-        />
-        {tab !== "history" && (
-          <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
-            <SelectTrigger className="h-9 sm:w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All ages</SelectItem>
-              <SelectItem value="0–30">0–30 days</SelectItem>
-              <SelectItem value="31–60">31–60 days</SelectItem>
-              <SelectItem value="61–90">61–90 days</SelectItem>
-              <SelectItem value="90+">90+ days</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-
-      <div className="mb-3">
-        <Input className="h-10" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
+      <div className="mb-4 min-w-0 overflow-hidden rounded-2xl border bg-card p-2.5 shadow-sm sm:p-3">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <SegmentedTabs
+            value={tab}
+            onValueChange={(v) => setTab(v as any)}
+            items={[
+              { value: "receivable", label: "Receivable", icon: <ArrowDownLeft className="h-3.5 w-3.5" /> },
+              { value: "payable", label: "Payable", icon: <ArrowUpRight className="h-3.5 w-3.5" /> },
+              { value: "history", label: "History", icon: <History className="h-3.5 w-3.5" /> },
+            ]}
+          />
+          {tab !== "history" && (
+            <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
+              <SelectTrigger className="h-9 w-full rounded-full sm:w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All ages</SelectItem>
+                <SelectItem value="0–30">0–30 days</SelectItem>
+                <SelectItem value="31–60">31–60 days</SelectItem>
+                <SelectItem value="61–90">61–90 days</SelectItem>
+                <SelectItem value="90+">90+ days</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <Input className="mt-2 h-10 rounded-xl" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
       </div>
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
-          <div className="rounded-2xl border bg-card overflow-hidden divide-y min-w-0">
+          <div className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm divide-y">
             {filteredPays.map(p => (
-              <button key={p.id} type="button" className="grid w-full grid-cols-[1fr_auto] gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:px-4" onClick={() => openPayView(p)}>
+              <button key={p.id} type="button" className="grid w-full min-w-0 grid-cols-1 gap-2 px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_auto] sm:gap-3 sm:px-4" onClick={() => openPayView(p)}>
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span className="font-mono text-sm font-medium">{p.payment_no}</span>
+                    <span className="min-w-0 max-w-full truncate font-mono text-sm font-medium">{p.payment_no}</span>
                     <span className="text-xs text-muted-foreground">{fmtDate(p.date)}</span>
                     {(p.mode === "Cheque" || p.cleared === false) && <ClearancePill cleared={p.cleared !== false} mode={p.mode} status={p.status} />}
                   </div>
@@ -526,8 +525,8 @@ function BillsPage() {
                     {p.ref_doc || p.cheque_no || p.txn_id || p.notes ? [p.ref_doc, p.cheque_no ? `Cheque ${p.cheque_no}` : null, p.txn_id ? `Txn ${p.txn_id}` : null, p.notes].filter(Boolean).join(" · ") : "Open details"}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className={`text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{p.direction === "in" ? "+" : "−"}{inr(p.amount)}</div>
+                <div className="min-w-0 text-left sm:text-right">
+                  <div className={`truncate text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{p.direction === "in" ? "+" : "−"}{inr(p.amount)}</div>
                   <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">{p.direction === "in" ? "Receipt" : "Payment"}</div>
                 </div>
               </button>
@@ -536,7 +535,7 @@ function BillsPage() {
         )
       ) : filtered.length === 0 ? <Empty>No outstanding {tab === "receivable" ? "receivables" : "payables"}.</Empty> : (
         <>
-        <div className="hidden md:block rounded-2xl border bg-card overflow-x-auto">
+        <div className="hidden rounded-2xl border bg-card shadow-sm overflow-x-auto md:block">
           <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-muted/40 text-xs uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
@@ -578,35 +577,36 @@ function BillsPage() {
             </tbody>
           </table>
         </div>
-        <div className="md:hidden rounded-2xl border bg-card overflow-hidden divide-y">
+        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm divide-y md:hidden">
           {filtered.map(r => {
             const d = ageDays(r.date); const b = bucket(d);
             const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
             const st = payStatus(Number(r.total), Number(r.paid), d);
+            const lock = lockMap.get(`${r.doc_kind}:${r.doc_id}`);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className="p-4 space-y-3">
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="min-w-0 space-y-3 p-3.5">
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="grid min-w-0 grid-cols-1 gap-2">
                     <div className="min-w-0">
                       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
-                      <div className="font-mono text-sm font-medium mt-0.5">{r.doc_no}</div>
+                      <div className="mt-0.5 truncate font-mono text-sm font-medium">{r.doc_no}</div>
                       <div className="text-sm truncate text-muted-foreground">{r.party_name ?? "—"}</div>
                     </div>
-                    <div className="text-right shrink-0">
-                      <div className="text-lg font-semibold tabular-nums">{inr(r.balance)}</div>
-                      <div className="mt-1 flex justify-end"><StatusBadge s={st} /></div>
+                    <div className="min-w-0">
+                      <div className={`truncate text-lg font-semibold tabular-nums ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div>
                     </div>
                   </div>
                 </button>
                 <PayProgress pct={pct} tab={tab} />
                 <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
                   <span>{inr(r.paid)} of {inr(r.total)} · {b}d</span>
-                  {lockMap.get(`${r.doc_kind}:${r.doc_id}`) && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Pending cheque</Badge>}
+                  {lock && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Pending cheque</Badge>}
                 </div>
                 <div>
-                  <Button size="sm" className="w-full" variant={lockMap.get(`${r.doc_kind}:${r.doc_id}`) ? "secondary" : "default"} onClick={() => settleBill(r)}>
+                  <Button size="sm" className="w-full rounded-full" variant={lock ? "secondary" : "default"} onClick={() => settleBill(r)}>
                     {tab === "receivable" ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
-                    {lockMap.get(`${r.doc_kind}:${r.doc_id}`) ? "View pending cheque" : tab === "receivable" ? "Receive" : "Pay"}
+                    {lock ? "View pending cheque" : tab === "receivable" ? "Receive" : "Pay"}
                   </Button>
                 </div>
               </div>
@@ -618,7 +618,7 @@ function BillsPage() {
 
       {/* Bill preview dialog */}
       <Dialog open={!!preview} onOpenChange={o => !o && setPreview(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto p-0 gap-0">
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-3xl overflow-y-auto overflow-x-hidden rounded-2xl p-0 gap-0 sm:w-full">
           <div className="px-4 py-3 border-b">
             <DialogTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Bill preview</DialogTitle>
           </div>
@@ -628,26 +628,26 @@ function BillsPage() {
 
       {/* Past payment detail dialog */}
       <Dialog open={!!viewPay} onOpenChange={(o) => !o && setViewPay(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle className="flex items-center gap-2"><Eye className="h-4 w-4" />{viewPay?.direction === "in" ? "Receipt" : "Payment"} · {viewPay?.payment_no}</DialogTitle></DialogHeader>
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-lg overflow-y-auto overflow-x-hidden rounded-2xl sm:w-full">
+          <DialogHeader><DialogTitle className="flex min-w-0 items-center gap-2 pr-6 text-base"><Eye className="h-4 w-4 shrink-0" /><span className="truncate">{viewPay?.direction === "in" ? "Receipt" : "Payment"} · {viewPay?.payment_no}</span></DialogTitle></DialogHeader>
           {viewPay && (
             <div className="space-y-4 text-sm">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+              <div className="grid grid-cols-1 gap-x-4 gap-y-3 sm:grid-cols-2">
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewPay.date)}</div></div>
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewPay.mode ?? "—"}</div></div>
-                <div className="col-span-2">
+                <div className="sm:col-span-2">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Applied as</div>
                   <Badge variant="outline" className="text-[10px]">
                     {viewPay.kind === "advance" ? "Advance payment" : viewPay.kind === "on_account" ? "On account" : "Against invoice"}
                   </Badge>
                 </div>
-                {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} status={viewPay.status} /></div>}
-                <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewPay.contact_name ?? "—"}</div></div>
-                <div className="col-span-2 rounded-md border bg-muted/30 p-3">
+                {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="sm:col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} status={viewPay.status} /></div>}
+                <div className="min-w-0 sm:col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="truncate font-medium">{viewPay.contact_name ?? "—"}</div></div>
+                <div className="min-w-0 rounded-xl border bg-muted/30 p-3 sm:col-span-2">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Amount</div>
-                  <div className={`text-2xl font-semibold tabular-nums ${viewPay.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(viewPay.amount)}</div>
+                  <div className={`truncate text-2xl font-semibold tabular-nums ${viewPay.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(viewPay.amount)}</div>
                 </div>
-                {viewPay.notes && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Notes</div><div>{viewPay.notes}</div></div>}
+                {viewPay.notes && <div className="min-w-0 sm:col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Notes</div><div className="break-words">{viewPay.notes}</div></div>}
               </div>
               <div>
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5">Applied to</div>
@@ -656,10 +656,10 @@ function BillsPage() {
                 ) : (
                   <div className="border rounded-md divide-y">
                     {viewAllocs.map((a, i) => (
-                      <div key={i} className="p-2.5 flex items-center gap-2 text-sm">
+                      <div key={i} className="grid min-w-0 grid-cols-1 gap-1 p-2.5 text-sm sm:flex sm:items-center sm:gap-2">
                         <Badge variant="outline" className="text-[10px]">{a.doc_kind === "sale" ? "Invoice" : a.doc_kind === "purchase" ? "Purchase" : a.doc_kind === "tp" ? "TP sale" : "TP purchase"}</Badge>
-                        <span className="font-mono text-xs">{a.doc_no}</span>
-                        <span className="ml-auto tabular-nums font-semibold">{inr(a.amount)}</span>
+                        <span className="truncate font-mono text-xs">{a.doc_no}</span>
+                        <span className="tabular-nums font-semibold sm:ml-auto">{inr(a.amount)}</span>
                       </div>
                     ))}
                   </div>
@@ -690,11 +690,11 @@ function BillsPage() {
 
       {/* Unified payment dialog */}
       <Dialog open={payOpen} onOpenChange={setPayOpen}>
-        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto p-0 gap-0">
+        <DialogContent className="max-h-[92vh] w-[calc(100vw-1.5rem)] max-w-3xl overflow-y-auto overflow-x-hidden rounded-2xl p-0 gap-0 sm:w-full">
           <DialogHeader>
             <div className="border-b px-4 py-4 sm:px-6">
-              <DialogTitle className="flex items-center gap-2 text-base">
-                {direction === "in" ? <ArrowDownLeft className="h-4 w-4 text-primary" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
+              <DialogTitle className="flex items-center gap-2 pr-6 text-base">
+                {direction === "in" ? <ArrowDownLeft className="h-4 w-4 shrink-0 text-primary" /> : <ArrowUpRight className="h-4 w-4 shrink-0 text-destructive" />}
                 {direction === "in" ? "Record receipt" : "Record payment"}
               </DialogTitle>
               {mode === "Cheque" && !cleared && <p className="mt-1 text-xs text-muted-foreground">This cheque will remain pending until you mark it cleared.</p>}
@@ -801,15 +801,15 @@ function BillsPage() {
 
           {contactId && kind === "against_invoice" && (
             <div className="mt-3">
-              <div className="flex items-center justify-between mb-1">
+              <div className="mb-2 grid gap-1 sm:flex sm:items-center sm:justify-between">
                 <Label className="text-xs">Open bills · click to allocate</Label>
                 <div className="text-xs text-muted-foreground">
                   Allocated <span className="font-semibold">{inr(allocatedSum)}</span> / Remaining <span className={remaining < 0 ? "text-destructive font-semibold" : "font-semibold"}>{inr(remaining)}</span>
                 </div>
               </div>
-              <div className="flex items-center justify-between mb-2 text-xs text-muted-foreground">
+              <div className="mb-2 grid gap-2 text-xs text-muted-foreground sm:flex sm:items-center sm:justify-between">
                 <span>Open total: <span className="font-semibold text-foreground">{inr(totalOpen)}</span></span>
-                <Button type="button" size="sm" variant="outline" className="h-7" onClick={autoAllocate} disabled={!amount || openDocs.length === 0}>Auto-allocate oldest</Button>
+                <Button type="button" size="sm" variant="outline" className="h-8 rounded-full sm:h-7" onClick={autoAllocate} disabled={!amount || openDocs.length === 0}>Auto-allocate oldest</Button>
               </div>
               {openDocs.length === 0 ? (
                 <div className="text-xs text-muted-foreground border rounded-md p-2">No open bills for this party — will sit as advance.</div>
