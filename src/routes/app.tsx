@@ -11,7 +11,7 @@ import {
   Home, ChevronDown, MoreHorizontal, X, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { History, PackageCheck, FileSpreadsheet, Keyboard } from "lucide-react";
+import { History, PackageCheck, Keyboard } from "lucide-react";
 import { BookOpenCheck } from "lucide-react";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { ShortcutsProvider, useShortcutsHelp } from "@/lib/shortcuts";
