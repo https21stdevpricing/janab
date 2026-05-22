@@ -11,11 +11,12 @@ export type PdfRgb = [number, number, number];
 export const swPdf = {
   teal: [0, 171, 181] as PdfRgb,
   tealDark: [0, 126, 135] as PdfRgb,
-  ink: [18, 24, 38] as PdfRgb,
-  muted: [86, 96, 112] as PdfRgb,
-  faint: [235, 240, 244] as PdfRgb,
-  soft: [244, 252, 253] as PdfRgb,
-  rule: [214, 222, 230] as PdfRgb,
+  ink: [17, 22, 33] as PdfRgb,
+  inkSoft: [55, 64, 80] as PdfRgb,
+  muted: [110, 120, 134] as PdfRgb,
+  faint: [232, 236, 242] as PdfRgb,
+  soft: [248, 250, 252] as PdfRgb,
+  rule: [220, 226, 234] as PdfRgb,
 };
 
 export type PdfCompany = {
@@ -25,6 +26,11 @@ export type PdfCompany = {
   email?: string | null;
   gstin?: string | null;
   state?: string | null;
+  pan?: string | null;
+  owner_name?: string | null;
+  bank_name?: string | null;
+  bank_account_no?: string | null;
+  bank_ifsc?: string | null;
 };
 
 export type PdfDocMeta = {
@@ -50,43 +56,53 @@ export function newStoneWorldPdf() {
 
 export function drawStoneWorldHeader(doc: jsPDF, company: PdfCompany | null | undefined, meta: PdfDocMeta, top = 30, design?: Partial<PrintDesign>) {
   const W = doc.internal.pageSize.getWidth();
-  const M = 34;
+  const M = 36;
   const co = company ?? {};
   const name = co.company_name || "StoneWorld Traders";
 
+  // Minimal, editorial-style header. Thin teal accent rule only.
   doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, W, 124, "F");
-  doc.setFillColor(...swPdf.teal);
-  doc.rect(0, 0, W, 7, "F");
+  doc.rect(0, 0, W, 130, "F");
 
-  try { doc.addImage(design?.logoDataUrl || swLogo, imageFormat(design?.logoDataUrl) as any, M, top + 7, 54, 54); } catch {}
-
-  doc.setFont("helvetica", "bold").setFontSize(20).setTextColor(...swPdf.ink);
-  doc.text(name, M + 68, top + 29, { maxWidth: 255 });
-  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...swPdf.muted);
-  const address = [co.address, co.state].filter(Boolean).join(", ");
-  const addressLines = address ? doc.splitTextToSize(address, 275).slice(0, 2) : [];
-  if (addressLines.length) doc.text(addressLines, M + 68, top + 44);
-  const contactLine = [co.phone && `Ph: ${co.phone}`, co.email, co.gstin && `GSTIN: ${co.gstin}`].filter(Boolean).join("  |  ");
-  if (contactLine) doc.text(doc.splitTextToSize(contactLine, 360).slice(0, 1), M + 68, top + 66);
-
-  doc.setFont("helvetica", "bold").setFontSize(24).setTextColor(...swPdf.ink);
-  doc.text(meta.title.toUpperCase(), W - M, top + 28, { align: "right" });
+  // Big title on the right, very tight letter spacing
+  doc.setFont("helvetica", "bold").setFontSize(22).setTextColor(...swPdf.ink);
+  doc.text(meta.title.toUpperCase(), W - M, top + 14, { align: "right" });
   if (meta.subtitle) {
-    doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.tealDark);
-    doc.text(String(meta.subtitle).toUpperCase(), W - M, top + 45, { align: "right", maxWidth: 190 });
+    doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
+    doc.text(String(meta.subtitle).toUpperCase(), W - M, top + 28, { align: "right" });
   }
-  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...swPdf.muted);
-  const metaLines = [
-    meta.reference ? `Ref: ${meta.reference}` : null,
-    meta.date ? `Date: ${fmtDate(meta.date)}` : null,
-    meta.validUntil ? `Valid until: ${fmtDate(meta.validUntil)}` : null,
-  ].filter(Boolean) as string[];
-  metaLines.slice(0, 3).forEach((line, index) => doc.text(line, W - M, top + 61 + index * 12, { align: "right" }));
 
-  doc.setDrawColor(...swPdf.rule).setLineWidth(0.6);
-  doc.line(M, 116, W - M, 116);
-  return { margin: M, y: 136 };
+  // Logo + company block (left)
+  try { doc.addImage(design?.logoDataUrl || swLogo, imageFormat(design?.logoDataUrl) as any, M, top, 46, 46); } catch {}
+  doc.setFont("helvetica", "bold").setFontSize(14).setTextColor(...swPdf.ink);
+  doc.text(name, M + 58, top + 14, { maxWidth: 280 });
+  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.inkSoft);
+  const address = [co.address, co.state].filter(Boolean).join(", ");
+  const addressLines = address ? doc.splitTextToSize(address, 290).slice(0, 2) : [];
+  if (addressLines.length) doc.text(addressLines, M + 58, top + 27);
+  const contactLine = [co.phone && `Tel: ${co.phone}`, co.email, co.gstin && `GSTIN ${co.gstin}`, co.pan && `PAN ${co.pan}`].filter(Boolean).join("   ·   ");
+  if (contactLine) doc.text(doc.splitTextToSize(contactLine, 290).slice(0, 2), M + 58, top + (addressLines.length > 1 ? 49 : 41));
+
+  // Meta lines under title
+  doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...swPdf.inkSoft);
+  const metaLines: Array<[string, string]> = [];
+  if (meta.reference) metaLines.push(["No.", String(meta.reference)]);
+  if (meta.date) metaLines.push(["Date", fmtDate(meta.date)]);
+  if (meta.validUntil) metaLines.push(["Valid", fmtDate(meta.validUntil)]);
+  metaLines.slice(0, 3).forEach(([k, v], i) => {
+    const y = top + 44 + i * 12;
+    doc.setFont("helvetica", "normal").setTextColor(...swPdf.muted);
+    doc.text(k, W - M - 110, y);
+    doc.setFont("helvetica", "bold").setTextColor(...swPdf.ink);
+    doc.text(v, W - M, y, { align: "right" });
+  });
+
+  // Thin double rule (hairline + teal accent)
+  doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
+  doc.line(M, 110, W - M, 110);
+  doc.setDrawColor(...swPdf.teal).setLineWidth(1.4);
+  doc.line(M, 114, M + 64, 114);
+  return { margin: M, y: 134 };
 }
 
 export function drawStoneWorldFooter(doc: jsPDF, company: PdfCompany | null | undefined, margin = 34) {
@@ -104,20 +120,32 @@ export function drawStoneWorldFooter(doc: jsPDF, company: PdfCompany | null | un
   }
 }
 
-export function drawCustomWatermark(doc: jsPDF, text?: string | null, opacityPct: number = 35, layer: "back" | "front" = "back") {
-  if (!text) return;
+export function drawCustomWatermark(doc: jsPDF, text?: string | null, opacityPct: number = 35, layer: "back" | "front" = "back", logoDataUrl?: string | null, logoScalePct: number = 55) {
+  if (!text && !logoDataUrl) return;
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const pageCount = doc.getNumberOfPages();
   const alpha = Math.max(0, Math.min(100, opacityPct)) / 100;
-  // jsPDF text gray ≈ 255*(1-alpha) gives "back" feel for back layer.
-  const gray = Math.round(255 - alpha * 200);
+  const supportsGState = typeof (doc as any).GState === "function";
   for (let page = 1; page <= pageCount; page++) {
     doc.setPage(page);
-    doc.setFont("helvetica", "bold").setFontSize(64).setTextColor(gray, gray, gray);
-    // Note: jsPDF lacks z-ordering; "front" is approximated by stronger contrast.
-    if (layer === "front") doc.setTextColor(Math.max(0, gray - 60), Math.max(0, gray - 60), Math.max(0, gray - 60));
-    doc.text(String(text).toUpperCase().slice(0, 24), W / 2, H / 2, { align: "center", angle: -28 });
+    if (supportsGState) {
+      const gs = new (doc as any).GState({ opacity: alpha });
+      (doc as any).setGState(gs);
+    }
+    if (logoDataUrl) {
+      const size = Math.max(120, Math.min(W - 80, (W * Math.max(20, Math.min(90, logoScalePct))) / 100));
+      try { doc.addImage(logoDataUrl, imageFormat(logoDataUrl) as any, (W - size) / 2, (H - size) / 2, size, size); } catch {}
+    }
+    if (text) {
+      const gray = supportsGState ? 90 : Math.round(255 - alpha * 200);
+      doc.setFont("helvetica", "bold").setFontSize(72).setTextColor(gray, gray, gray);
+      if (!supportsGState && layer === "front") doc.setTextColor(Math.max(0, gray - 60), Math.max(0, gray - 60), Math.max(0, gray - 60));
+      doc.text(String(text).toUpperCase().slice(0, 24), W / 2, H / 2, { align: "center", angle: -26 });
+    }
+    if (supportsGState) {
+      (doc as any).setGState(new (doc as any).GState({ opacity: 1 }));
+    }
   }
 }
 
@@ -160,40 +188,41 @@ export function ensurePdfSpace(doc: jsPDF, y: number, needed: number, margin = 3
 }
 
 export function drawKeyValuePanel(doc: jsPDF, x: number, y: number, w: number, title: string, rows: Array<[string, string | null | undefined]>, height = 92) {
-  doc.setFillColor(...swPdf.soft);
-  doc.setDrawColor(...swPdf.faint).setLineWidth(0.7);
-  doc.roundedRect(x, y, w, height, 5, 5, "FD");
-  doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...swPdf.tealDark);
-  doc.text(title.toUpperCase(), x + 14, y + 18);
-  let cy = y + 36;
+  // Minimal: no fill, top thin rule, label-stack rows
+  doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
+  doc.line(x, y, x + w, y);
+  doc.setFont("helvetica", "bold").setFontSize(7.5).setTextColor(...swPdf.muted);
+  doc.text(title.toUpperCase(), x, y + 14, { charSpace: 0.6 } as any);
+  let cy = y + 30;
   for (const [label, value] of rows.filter(([, v]) => v)) {
-    doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
-    doc.text(`${label}:`, x + 14, cy);
+    doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...swPdf.muted);
+    doc.text(label, x, cy);
     doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.ink);
-    const lines = doc.splitTextToSize(String(value), w - 92).slice(0, 2);
-    doc.text(lines, x + 74, cy);
-    cy += Math.max(13, lines.length * 10);
-    if (cy > y + height - 12) break;
+    const lines = doc.splitTextToSize(String(value), w).slice(0, 2);
+    doc.text(lines, x, cy + 11);
+    cy += 12 + Math.max(11, lines.length * 11);
+    if (cy > y + height - 4) break;
   }
   return y + height;
 }
 
 export function drawTotalsBlock(doc: jsPDF, x: number, y: number, w: number, rows: Array<[string, string]>, totalLabel: string, totalValue: string) {
-  doc.setDrawColor(...swPdf.rule).setLineWidth(0.7);
-  doc.roundedRect(x, y, w, 34 + rows.length * 18, 5, 5, "S");
+  // Minimal totals: borderless rows + single thick rule + grand total
   rows.forEach(([label, value], i) => {
-    const cy = y + 18 + i * 18;
+    const cy = y + 12 + i * 16;
     doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...swPdf.muted);
-    doc.text(label, x + 14, cy);
-    doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.ink);
-    doc.text(value, x + w - 14, cy, { align: "right" });
+    doc.text(label, x, cy);
+    doc.setFont("helvetica", "normal").setFontSize(9).setTextColor(...swPdf.ink);
+    doc.text(value, x + w, cy, { align: "right" });
   });
-  const gy = y + 22 + rows.length * 18;
-  doc.setFillColor(...swPdf.teal);
-  doc.roundedRect(x + 8, gy - 12, w - 16, 26, 4, 4, "F");
-  doc.setFont("helvetica", "bold").setFontSize(10).setTextColor(255, 255, 255);
-  doc.text(totalLabel, x + 18, gy + 5);
-  doc.text(totalValue, x + w - 18, gy + 5, { align: "right" });
+  const gy = y + 12 + rows.length * 16 + 4;
+  doc.setDrawColor(...swPdf.ink).setLineWidth(0.7);
+  doc.line(x, gy, x + w, gy);
+  doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(...swPdf.ink);
+  doc.text(totalLabel, x, gy + 16);
+  doc.text(totalValue, x + w, gy + 16, { align: "right" });
+  doc.setDrawColor(...swPdf.ink).setLineWidth(0.4);
+  doc.line(x, gy + 22, x + w, gy + 22);
 }
 
 export function stoneWorldTable(doc: jsPDF, options: Parameters<typeof autoTable>[1]) {
