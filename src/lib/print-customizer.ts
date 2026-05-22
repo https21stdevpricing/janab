@@ -26,6 +26,16 @@ export type PrintDesign = {
   showBankDetails: boolean;          // pre-filled bank block (invoice)
   showUpi: boolean;                  // pre-filled UPI line in bank block
   showGstSummary: boolean;           // CGST/SGST/IGST breakdown line
+  showHsnSummary: boolean;           // HSN/SAC-wise tax summary table (Tally style)
+  showTaxInWords: boolean;           // separate "Tax amount in words" line
+  showShipTo: boolean;               // separate Ship-To panel
+  showTransport: boolean;            // transport details panel (dispatch/vehicle/destination)
+  transporter?: string;              // editable transporter name
+  vehicleNo?: string;                // editable vehicle no
+  destination?: string;              // editable destination
+  dispatchDocNo?: string;            // editable dispatch doc no
+  shipToOverride?: string;           // free-text ship-to address override
+  declaration?: string;              // editable declaration / T&C override
   signatoryName?: string;            // override authorised signatory line
 };
 
@@ -50,6 +60,16 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   showBankDetails: true,
   showUpi: true,
   showGstSummary: true,
+  showHsnSummary: true,
+  showTaxInWords: true,
+  showShipTo: true,
+  showTransport: false,
+  transporter: "",
+  vehicleNo: "",
+  destination: "",
+  dispatchDocNo: "",
+  shipToOverride: "",
+  declaration: "",
   signatoryName: "",
 };
 
