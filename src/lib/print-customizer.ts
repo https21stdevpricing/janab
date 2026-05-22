@@ -10,6 +10,8 @@ export type PrintDesign = {
   watermarkText?: string;
   watermarkOpacity: number;          // 0-100
   watermarkLayer: PrintWatermarkLayer;
+  watermarkLogoDataUrl?: string | null;
+  watermarkLogoScale: number;        // 20-90 (% of page width)
   footerLogos: string[];
   footerRows: 1 | 2 | 3;             // arrangement of brand logos
   footerLogoSize: number;            // uniform height in px (HTML) / pt (PDF scaled)
@@ -23,6 +25,8 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   watermarkText: "",
   watermarkOpacity: 35,
   watermarkLayer: "back",
+  watermarkLogoDataUrl: null,
+  watermarkLogoScale: 55,
   footerLogos: [],
   footerRows: 1,
   footerLogoSize: 36,
