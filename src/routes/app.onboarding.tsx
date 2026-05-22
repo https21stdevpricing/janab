@@ -525,6 +525,9 @@ function Header({ n, title, hint, icon: Icon }: { n: number; title: string; hint
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1.5"><Label className="text-xs">{label}</Label>{children}</div>;
 }
+function RowField({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="space-y-1.5 sm:space-y-0"><Label className="text-[10px] text-muted-foreground sm:hidden">{label}</Label>{children}</div>;
+}
 function Foot({ children }: { children: React.ReactNode }) {
   return <div className="flex items-center justify-between pt-2">{children}</div>;
 }
