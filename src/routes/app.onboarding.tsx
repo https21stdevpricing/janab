@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/page-header";
 import { inr } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, FileUp, ClipboardCheck } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, FileUp } from "lucide-react";
 import { importWorkbook, pickSheet } from "@/lib/excel";
 import { useRef } from "react";
 
@@ -153,6 +153,13 @@ function OnboardingPage() {
   const validateGSTIN = (g: string) => !g || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]{3}$/.test(g.toUpperCase());
   const validateIFSC = (i: string) => !i || /^[A-Z]{4}0[A-Z0-9]{6}$/.test(i.toUpperCase());
   const needsPartners = biz.business_type === "partnership" || biz.business_type === "llp";
+  const steps: Array<{ n: Step; label: string; detail: string }> = [
+    { n: 1, label: "Business", detail: "Legal, tax, address" },
+    { n: 2, label: "Bank", detail: "Account and opening cash" },
+    { n: 3, label: "Stock", detail: "Products and values" },
+    { n: 4, label: "Parties", detail: "Receivable and payable" },
+    { n: 5, label: "Confirm", detail: "Post opening voucher" },
+  ];
 
   const importRef = useRef<HTMLInputElement | null>(null);
   const handleBackupImport = async (file: File) => {
