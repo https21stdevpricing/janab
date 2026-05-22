@@ -475,7 +475,7 @@ function BillsPage() {
         }
       />
 
-      <KpiGrid cols={2} className="mb-4">
+      <KpiGrid cols={2} className="mb-3 [&>*]:min-h-[96px] [&>*]:overflow-hidden">
         <KpiTile
           label="Collect"
           value={inr(kpis.recv)}
@@ -493,7 +493,7 @@ function BillsPage() {
           onClick={() => setTab("payable")}
         />
       </KpiGrid>
-      <div className="mb-4 -mt-1 px-1 text-xs text-muted-foreground">
+      <div className="mb-3 -mt-1 px-1 text-xs text-muted-foreground">
         Net position{" "}
         <span className={cn("font-medium tabular-nums", kpis.net >= 0 ? "text-primary" : "text-destructive")}>
           {inr(kpis.net)}
@@ -501,7 +501,7 @@ function BillsPage() {
         · {kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"}
       </div>
 
-      <div className="mb-4 min-w-0 overflow-hidden rounded-2xl border bg-card p-2.5 shadow-sm sm:p-3">
+      <div className="mb-3 min-w-0 overflow-hidden rounded-2xl border bg-card p-2 shadow-sm sm:p-3">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <SegmentedTabs
             value={tab}
@@ -525,7 +525,7 @@ function BillsPage() {
             </Select>
           )}
         </div>
-        <Input className="mt-2 h-10 rounded-xl" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
+        <Input className="mt-2 h-9 rounded-xl" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
       </div>
 
       {tab === "history" ? (
