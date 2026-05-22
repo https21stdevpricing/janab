@@ -822,22 +822,6 @@ function BillsPage() {
   );
 }
 
-function HeroCell({ label, value, tone, active, onClick }: { label: string; value: string; tone?: "good" | "bad"; active?: boolean; onClick?: () => void }) {
-  const clr = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "text-foreground";
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!onClick}
-      className={`text-left px-4 py-3 sm:py-4 transition-colors ${onClick ? "hover:bg-muted/40 active:bg-muted/60" : ""} ${active ? "bg-primary/5" : ""}`}
-    >
-      <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground">{label}</div>
-      <div className={`mt-1 font-semibold tabular-nums leading-tight text-lg ${clr}`} style={{ wordBreak: "break-word" }}>{value}</div>
-    </button>
-  );
-}
-
-
 function PayProgress({ pct, tab }: { pct: number; tab: "receivable" | "payable" | "history" }) {
   const bar = tab === "receivable" ? "bg-primary" : "bg-destructive";
   return (
