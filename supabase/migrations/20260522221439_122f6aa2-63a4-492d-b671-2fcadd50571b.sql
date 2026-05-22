@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.auto_allocate_payment(uuid) FROM PUBLIC, anon, authenticated;
