@@ -277,15 +277,15 @@ function BankPage() {
             )}
 
             {form.kind !== "cheque_deposit" && (
-              <div className="col-span-2 space-y-1.5"><Label className="text-xs">Transaction / reference ID</Label>
+              <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">Transaction / reference ID</Label>
                 <Input placeholder="UPI / NEFT / RTGS reference (optional)" value={form.txn_id} onChange={(e) => setForm({ ...form, txn_id: e.target.value })} /></div>
             )}
 
-            <div className="col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label>
+            <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} /></div>
 
             {form.kind === "cheque_deposit" && (
-              <label className="col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
+              <label className="sm:col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
                 <Checkbox checked={form.cleared} onCheckedChange={(v) => setForm({ ...form, cleared: !!v })} className="mt-0.5" />
                 <span>
                   <span className="block font-medium">Cheque is cleared</span>
