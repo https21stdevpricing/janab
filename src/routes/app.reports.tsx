@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SegmentedTabs } from "@/components/ui-tokens";
 import { inr, fmt } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert, Layers, Calculator, Check, Wrench } from "lucide-react";
@@ -335,8 +334,16 @@ function ReportsPage() {
       </div>
 
       <Tabs defaultValue="outlook">
-        <div className="-mx-1 px-1 mb-3 overflow-x-auto">
-          <SegmentedTabsBridge />
+        <div className="-mx-1 px-1 mb-3">
+          <TabsList className="scroll-tabs w-full sm:w-auto justify-start gap-0 bg-muted p-1 rounded-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <TabsTrigger value="outlook" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Overview</TabsTrigger>
+            <TabsTrigger value="pnl" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Profit &amp; Loss</TabsTrigger>
+            <TabsTrigger value="bs" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Balance Sheet</TabsTrigger>
+            <TabsTrigger value="wc" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Working Capital</TabsTrigger>
+            <TabsTrigger value="inv" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Inventory</TabsTrigger>
+            <TabsTrigger value="tb" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Trial Balance</TabsTrigger>
+            <TabsTrigger value="reconcile" className="rounded-full px-3.5 h-8 text-[12.5px] data-[state=active]:bg-background data-[state=active]:shadow-sm">Reconcile</TabsTrigger>
+          </TabsList>
         </div>
 
         <TabsContent value="outlook" className="space-y-3">
