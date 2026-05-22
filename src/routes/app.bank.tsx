@@ -10,10 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Empty } from "@/components/empty";
 import { inr, fmtDate, todayISO } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpFromLine, Banknote, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Banknote, CheckCircle2, Clock3, ShieldCheck, Trash2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CollapseFilters } from "@/components/collapse-filters";
 import { useDraft } from "@/hooks/use-draft";
+import { Checkbox } from "@/components/ui/checkbox";
 
 export const Route = createFileRoute("/app/bank")({ component: BankPage });
 
@@ -97,7 +97,7 @@ function BankPage() {
   }, [filtered]);
 
   const startNew = (k: Kind) => {
-    setForm({ ...EMPTY, kind: k, date: todayISO() });
+    setForm({ ...EMPTY, kind: k, date: todayISO(), cleared: k !== "cheque_deposit" });
     setOpen(true);
   };
 
@@ -106,6 +106,7 @@ function BankPage() {
     if (!user) return;
     if (form.amount <= 0) { toast.error("Amount must be > 0"); return; }
     if (form.kind === "cheque_deposit" && !form.cheque_no.trim()) { toast.error("Cheque number is required"); return; }
+    const finalCleared = form.kind === "cheque_deposit" ? form.cleared : true;
     const payload: any = {
       user_id: user.id,
       kind: form.kind,
@@ -116,8 +117,9 @@ function BankPage() {
       cheque_date: form.cheque_date || null,
       txn_id: form.txn_id || null,
       notes: form.notes || null,
-      cleared: form.cleared,
-      cleared_at: form.cleared ? form.date : null,
+      cleared: finalCleared,
+      status: finalCleared ? "cleared" : "pending",
+      cleared_at: finalCleared ? form.date : null,
     };
     const { error } = await supabase.from("bank_transfers" as never).insert(payload as never);
     if (error) { toast.error(error.message); return; }
@@ -133,8 +135,9 @@ function BankPage() {
   };
 
   const changeStatus = async (r: Row, status: Status) => {
+    const nextCleared = status === "cleared";
     const { error } = await supabase.from("bank_transfers" as never)
-      .update({ status } as never).eq("id" as never, r.id);
+      .update({ status, cleared: nextCleared, cleared_at: nextCleared ? todayISO() : null } as never).eq("id" as never, r.id);
     if (error) toast.error(error.message);
     else { toast.success(status === "cleared" ? "Marked cleared" : status === "bounced" ? "Marked bounced" : "Set to pending"); load(); }
   };
