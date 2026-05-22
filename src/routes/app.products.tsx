@@ -7,17 +7,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search, Rows3 } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
 import { CollapseFilters } from "@/components/collapse-filters";
+import { KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/products")({ component: ProductsPage });
 
@@ -222,7 +222,7 @@ function ProductsPage() {
           <>
             <ExcelBar onExport={onExport} onImport={onImport} />
             <Button size="sm" variant="outline" onClick={() => { setBulkKind(tab === "order" ? "order_basis" : "stocked"); setBulkOpen(true); }}>
-              <Rows3 className="h-4 w-4" /> Bulk add
+              <ListPlus className="h-4 w-4" /> Bulk add
             </Button>
             <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
               <Plus className="h-4 w-4" /> New product
@@ -231,27 +231,25 @@ function ProductsPage() {
         }
       />
 
-      {/* Top summary — cleaner 4-up with icons */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
-        <StatTile icon={Package} label="Total SKUs" value={String(summary.skus)} sub={`${counts.stocked} stocked · ${counts.order} on-order`} />
-        <StatTile icon={Boxes} label="Units on hand" value={fmt(summary.onHand)} sub="Across all stocked items" />
-        <StatTile icon={Calculator} label="Inventory value (cost)" value={inr(summary.valueCost)} sub={`Sale value: ${inr(summary.valueSale)}`} />
-        <StatTile icon={AlertTriangle} label="Low stock alerts" value={String(summary.low)} tone={summary.low > 0 ? "bad" : "good"} sub={summary.low > 0 ? "Action needed" : "All SKUs above reorder level"} />
-      </div>
+      {/* Top KPI strip — same shared tiles used across Stock / Money / Reports */}
+      <KpiGrid cols={4} className="mb-4">
+        <KpiTile label="Total SKUs" value={String(summary.skus)} hint={`${counts.stocked} stocked · ${counts.order} on-order`} />
+        <KpiTile label="Units on hand" value={fmt(summary.onHand)} hint="Across all stocked items" />
+        <KpiTile label="Inventory value" value={inr(summary.valueCost)} hint={`Sale value ${inr(summary.valueSale)}`} />
+        <KpiTile label="Low stock" value={String(summary.low)} tone={summary.low > 0 ? "bad" : "good"} hint={summary.low > 0 ? "Action needed" : "All above reorder"} />
+      </KpiGrid>
 
-      {/* Kind tabs — primary selector kept visible */}
-      <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="stocked" className="flex-1 sm:flex-none">
-            <Boxes className="h-3.5 w-3.5 mr-1" /> Stocked
-            <Badge variant="secondary" className="ml-1.5">{counts.stocked}</Badge>
-          </TabsTrigger>
-          <TabsTrigger value="order" className="flex-1 sm:flex-none">
-            <ClipboardList className="h-3.5 w-3.5 mr-1" /> On-order
-            <Badge variant="secondary" className="ml-1.5">{counts.order}</Badge>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Kind selector — shared segmented pill, same as Money page */}
+      <div className="mb-3">
+        <SegmentedTabs
+          value={tab}
+          onValueChange={(v) => setTab(v as any)}
+          items={[
+            { value: "stocked", label: <span>Stocked <span className="ml-1 text-muted-foreground">{counts.stocked}</span></span>, icon: <Boxes className="h-3.5 w-3.5" /> },
+            { value: "order", label: <span>On-order <span className="ml-1 text-muted-foreground">{counts.order}</span></span>, icon: <ClipboardList className="h-3.5 w-3.5" /> },
+          ]}
+        />
+      </div>
 
       <CollapseFilters
         summary={`${filtered.length} shown`}
@@ -437,7 +435,7 @@ function ProductsPage() {
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Rows3 className="h-4 w-4" /> Bulk add products</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><ListPlus className="h-4 w-4" /> Bulk add products</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-1">
@@ -472,23 +470,6 @@ function Field({ label, children, wide }: { label: string; children: React.React
     <div className={wide ? "col-span-2 space-y-1.5" : "space-y-1.5"}>
       <Label className="text-xs">{label}</Label>
       {children}
-    </div>
-  );
-}
-
-function StatTile({ icon: Icon, label, value, sub, tone }: { icon: any; label: string; value: string; sub?: string; tone?: "good" | "bad" }) {
-  const valueTone = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "";
-  const iconTone = tone === "bad" ? "text-destructive bg-destructive/10" : tone === "good" ? "text-primary bg-primary/10" : "text-muted-foreground bg-muted";
-  return (
-    <div className="rounded-xl border border-border/70 bg-card p-3 sm:p-4 flex gap-2.5 items-start min-w-0">
-      <div className={`h-8 w-8 rounded-md grid place-items-center shrink-0 ${iconTone}`}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground truncate">{label}</div>
-        <div className={`text-[15px] sm:text-lg font-semibold tabular-nums leading-tight truncate ${valueTone}`}>{value}</div>
-        {sub && <div className="text-[11px] text-muted-foreground truncate mt-0.5">{sub}</div>}
-      </div>
     </div>
   );
 }
