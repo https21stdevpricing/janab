@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus, ChevronRight, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
@@ -262,171 +262,189 @@ function ProductsPage() {
         </div>
       </CollapseFilters>
 
-      {/* Context strip — short explanation of current tab */}
-      <div className="text-xs text-muted-foreground mb-3 px-1">
-        {tab === "stocked"
-          ? "Stocked items live in your yard. They affect inventory value, stock movement reports and low-stock alerts."
-          : "On-order items are billed directly from supplier to buyer (drop-ship). They do not hold any yard stock."}
-      </div>
-
       {filtered.length === 0 ? (
         <Empty>No products yet — add your first SKU.</Empty>
       ) : (
-        <>
-        <div className="hidden md:block rounded-md border bg-card overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead><TableHead>Category</TableHead><TableHead>Unit</TableHead><TableHead>HSN</TableHead>
-                <TableHead className="text-right">Purchase ₹</TableHead><TableHead className="text-right">Sale ₹</TableHead>
-                {tab === "stocked" && <>
-                  <TableHead className="text-right">On hand</TableHead>
-                  <TableHead className="text-right">Value (cost)</TableHead>
-                </>}
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.map((r) => {
-                const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
-                const low = oh <= Number(r.reorder_level ?? 0);
-                const cost = oh * Number(r.purchase_rate ?? 0);
-                return (
-                <TableRow key={r.id} className="cursor-pointer hover:bg-muted/40" onClick={() => startEdit(r)}>
-                  <TableCell><div className="font-medium">{r.name}</div><div className="font-mono text-xs text-muted-foreground">{r.code || "Auto code"}</div></TableCell>
-                  <TableCell>{r.category || "—"}</TableCell>
-                  <TableCell>{r.unit}</TableCell>
-                  <TableCell className="font-mono text-xs">{r.hsn}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.purchase_rate)}</TableCell>
-                  <TableCell className="text-right tabular-nums">{fmt(r.sale_rate)}</TableCell>
-                  {tab === "stocked" && <>
-                    <TableCell className="text-right tabular-nums font-medium">
-                      {fmt(oh)} {low && <Badge variant="destructive" className="ml-1 text-[10px]">Low</Badge>}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">{inr(cost)}</TableCell>
-                  </>}
-                  <TableCell className="text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                    <Button variant="ghost" size="sm" onClick={() => startEdit(r)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => del(r.id)}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
-                  </TableCell>
-                </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="md:hidden space-y-2">
+        <div className="rounded-2xl border bg-card overflow-hidden divide-y">
           {filtered.map((r) => {
             const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
-            const low = oh <= Number(r.reorder_level ?? 0);
+            const low = !isOrderBasis(r) && oh <= Number(r.reorder_level ?? 0);
             const cost = oh * Number(r.purchase_rate ?? 0);
             return (
-              <div key={r.id} className="rounded-md border bg-card p-3 space-y-3">
-                <button type="button" className="w-full text-left" onClick={() => startEdit(r)}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="font-medium leading-snug">{r.name}</div>
-                      <div className="font-mono text-xs text-muted-foreground">{r.code || "Auto code"} · {r.unit || "unit"}{r.hsn ? ` · HSN ${r.hsn}` : ""}</div>
-                    </div>
-                    {tab === "stocked" && low && <Badge variant="destructive" className="text-[10px] shrink-0">Low</Badge>}
+              <button
+                key={r.id}
+                type="button"
+                onClick={() => startEdit(r)}
+                className="w-full text-left px-4 sm:px-5 py-4 hover:bg-muted/40 transition-colors flex items-center gap-4 group"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className="font-medium text-[15px] leading-tight truncate">{r.name}</div>
+                    {low && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
+                        <AlertTriangle className="h-3 w-3" /> Low
+                      </span>
+                    )}
                   </div>
-                </button>
-                <div className="grid grid-cols-3 gap-2 text-xs">
-                  <MiniStat label="Buy" value={inr(r.purchase_rate ?? 0)} />
-                  <MiniStat label="Sell" value={inr(r.sale_rate ?? 0)} />
-                  <MiniStat label={tab === "stocked" ? "On hand" : "Type"} value={tab === "stocked" ? fmt(oh) : "Order"} />
-                  {tab === "stocked" && <MiniStat label="Cost value" value={inr(cost)} />}
-                  <MiniStat label="Category" value={r.category || "—"} />
+                  <div className="text-xs text-muted-foreground truncate">
+                    {r.category || "Uncategorised"} · {r.unit || "unit"}
+                    {r.hsn ? ` · HSN ${r.hsn}` : ""}
+                    {r.code ? ` · ${r.code}` : ""}
+                  </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" className="flex-1" onClick={() => startEdit(r)}><Pencil className="h-3.5 w-3.5" /> Edit</Button>
-                  <Button variant="outline" size="sm" className="flex-1 text-destructive hover:text-destructive" onClick={() => del(r.id)}><Trash2 className="h-3.5 w-3.5" /> Delete</Button>
+                <div className="hidden sm:flex items-center gap-6 text-right shrink-0">
+                  <div className="min-w-[72px]">
+                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell</div>
+                    <div className="tabular-nums text-sm">{inr(r.sale_rate ?? 0)}</div>
+                  </div>
+                  {!isOrderBasis(r) && (
+                    <div className="min-w-[80px]">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">On hand</div>
+                      <div className="tabular-nums text-sm font-medium">{fmt(oh)}</div>
+                    </div>
+                  )}
+                  {!isOrderBasis(r) && (
+                    <div className="min-w-[88px]">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Value</div>
+                      <div className="tabular-nums text-sm">{inr(cost)}</div>
+                    </div>
+                  )}
                 </div>
-              </div>
+                <div className="sm:hidden text-right shrink-0">
+                  <div className="tabular-nums text-sm">{inr(r.sale_rate ?? 0)}</div>
+                  {!isOrderBasis(r) && (
+                    <div className="text-[11px] text-muted-foreground tabular-nums">{fmt(oh)} on hand</div>
+                  )}
+                </div>
+                <ChevronRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-muted-foreground shrink-0" />
+              </button>
             );
           })}
         </div>
-        </>
       )}
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+        <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b">
+            <DialogTitle className="flex items-center gap-2 text-lg">
               {form.kind === "order_basis" ? <ClipboardList className="h-4 w-4" /> : <Boxes className="h-4 w-4" />}
               {edit ? "Edit product" : (form.kind === "order_basis" ? "New on-order product" : "New inventory product")}
             </DialogTitle>
+            <div className="text-xs text-muted-foreground mt-1">
+              {form.kind === "stocked"
+                ? "Held in your yard — affects inventory value and low-stock alerts."
+                : "Billed direct from supplier to buyer — does not hold yard stock."}
+            </div>
           </DialogHeader>
 
-          {/* Kind switcher (also editable when fixing a mis-tagged item) */}
-          <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-1">
-            <button
-              type="button"
-              className={`text-xs px-2 py-1.5 rounded ${form.kind === "stocked" ? "bg-background shadow font-medium" : "text-muted-foreground"}`}
-              onClick={() => setForm({ ...form, kind: "stocked" })}
-            >Inventory (held in yard)</button>
-            <button
-              type="button"
-              className={`text-xs px-2 py-1.5 rounded ${form.kind === "order_basis" ? "bg-background shadow font-medium" : "text-muted-foreground"}`}
-              onClick={() => setForm({ ...form, kind: "order_basis", opening_stock: 0, reorder_level: 0 })}
-            >On-order only</button>
-          </div>
+          <div className="px-6 py-5 space-y-6">
+            {/* Kind switcher */}
+            <div>
+              <SectionLabel>Type</SectionLabel>
+              <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/60 p-1 ring-1 ring-border/60">
+                <button
+                  type="button"
+                  className={`text-xs px-3 py-2 rounded-md transition ${form.kind === "stocked" ? "bg-background shadow-sm font-medium" : "text-muted-foreground"}`}
+                  onClick={() => setForm({ ...form, kind: "stocked" })}
+                >Inventory · held in yard</button>
+                <button
+                  type="button"
+                  className={`text-xs px-3 py-2 rounded-md transition ${form.kind === "order_basis" ? "bg-background shadow-sm font-medium" : "text-muted-foreground"}`}
+                  onClick={() => setForm({ ...form, kind: "order_basis", opening_stock: 0, reorder_level: 0 })}
+                >On-order · drop-ship</button>
+              </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Code (auto if empty)"><Input value={form.code} placeholder="P-####" onChange={(e) => setForm({ ...form, code: e.target.value })} /></Field>
-            <Field label="Unit">
-              <Select value={form.unit ?? "sqft"} onValueChange={(v) => setForm({ ...form, unit: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </Field>
-            <Field label="Name *" wide><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Black Galaxy Granite" /></Field>
-            <Field label="HSN"><Input value={form.hsn ?? ""} onChange={(e) => setForm({ ...form, hsn: e.target.value })} placeholder="GST HSN code" /></Field>
-            <Field label="Category" wide><Input value={form.category ?? ""} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Granite / Marble / Tiles — used to group price lists" /></Field>
-            <Field label="Purchase rate (per unit)"><Input type="number" inputMode="decimal" value={form.purchase_rate ?? 0} onChange={(e) => setForm({ ...form, purchase_rate: +e.target.value })} /></Field>
-            <Field label="Sale rate (per unit)" wide={form.kind === "order_basis"}><Input type="number" inputMode="decimal" value={form.sale_rate ?? 0} onChange={(e) => setForm({ ...form, sale_rate: +e.target.value })} /></Field>
+            {/* Identity */}
+            <div>
+              <SectionLabel>Identity</SectionLabel>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Name *" wide><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Black Galaxy Granite" /></Field>
+                <Field label="Code"><Input value={form.code} placeholder="Auto if empty" onChange={(e) => setForm({ ...form, code: e.target.value })} /></Field>
+                <Field label="HSN"><Input value={form.hsn ?? ""} onChange={(e) => setForm({ ...form, hsn: e.target.value })} placeholder="GST HSN" /></Field>
+                <Field label="Category" wide><Input value={form.category ?? ""} onChange={(e) => setForm({ ...form, category: e.target.value })} placeholder="e.g. Granite / Marble / Tiles" /></Field>
+              </div>
+            </div>
+
+            {/* Pricing */}
+            <div>
+              <SectionLabel>Pricing</SectionLabel>
+              <div className="grid grid-cols-3 gap-3">
+                <Field label="Unit">
+                  <Select value={form.unit ?? "sqft"} onValueChange={(v) => setForm({ ...form, unit: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {UNITS.map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </Field>
+                <Field label="Purchase ₹"><Input type="number" inputMode="decimal" value={form.purchase_rate ?? 0} onChange={(e) => setForm({ ...form, purchase_rate: +e.target.value })} /></Field>
+                <Field label="Sale ₹"><Input type="number" inputMode="decimal" value={form.sale_rate ?? 0} onChange={(e) => setForm({ ...form, sale_rate: +e.target.value })} /></Field>
+              </div>
+              {Number(form.sale_rate ?? 0) > 0 && Number(form.purchase_rate ?? 0) > 0 && (
+                <div className="text-[11px] text-muted-foreground mt-2">
+                  Margin: {inr(Number(form.sale_rate) - Number(form.purchase_rate))} per {form.unit}
+                  {" · "}
+                  {(((Number(form.sale_rate) - Number(form.purchase_rate)) / Number(form.sale_rate)) * 100).toFixed(1)}%
+                </div>
+              )}
+            </div>
+
+            {/* Stock */}
             {form.kind === "stocked" && (
-              <>
-                <Field label="Opening stock"><Input type="number" inputMode="decimal" value={form.opening_stock ?? 0} onChange={(e) => setForm({ ...form, opening_stock: +e.target.value })} /></Field>
-                <Field label="Reorder level"><Input type="number" inputMode="decimal" value={form.reorder_level ?? 0} onChange={(e) => setForm({ ...form, reorder_level: +e.target.value })} /></Field>
-              </>
+              <div>
+                <SectionLabel>Stock</SectionLabel>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Opening stock"><Input type="number" inputMode="decimal" value={form.opening_stock ?? 0} onChange={(e) => setForm({ ...form, opening_stock: +e.target.value })} /></Field>
+                  <Field label="Reorder level"><Input type="number" inputMode="decimal" value={form.reorder_level ?? 0} onChange={(e) => setForm({ ...form, reorder_level: +e.target.value })} /></Field>
+                </div>
+              </div>
+            )}
+
+            {/* Calculator */}
+            {showCalc && (
+              <div>
+                <SectionLabel>
+                  <span className="inline-flex items-center gap-1.5"><Calculator className="h-3.5 w-3.5" /> Slab → sqft</span>
+                </SectionLabel>
+                <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
+                  <div className="grid grid-cols-4 gap-2">
+                    <div className="space-y-1"><Label className="text-[10px]">Length</Label><Input type="number" inputMode="decimal" value={dim.l || ""} onChange={(e) => setDim({ ...dim, l: +e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-[10px]">Breadth</Label><Input type="number" inputMode="decimal" value={dim.b || ""} onChange={(e) => setDim({ ...dim, b: +e.target.value })} /></div>
+                    <div className="space-y-1"><Label className="text-[10px]">Unit</Label>
+                      <Select value={dim.unit} onValueChange={(v) => setDim({ ...dim, unit: v as any })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {(["in", "cm", "mm", "ft", "m"] as const).map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1"><Label className="text-[10px]">Pieces</Label><Input type="number" inputMode="numeric" value={dim.pieces || ""} onChange={(e) => setDim({ ...dim, pieces: +e.target.value })} /></div>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <div>
+                      <span className="text-muted-foreground">Area: </span>
+                      <span className="font-semibold tabular-nums">{fmt(computedArea)} sqft</span>
+                      {dim.pieces > 1 && <span className="text-muted-foreground"> ({fmt(toSqft(dim.l, dim.b, dim.unit))} × {dim.pieces})</span>}
+                    </div>
+                    <Button size="sm" type="button" variant="outline" disabled={!computedArea}
+                      onClick={() => setForm({ ...form, opening_stock: +computedArea.toFixed(2) })}>
+                      Use as opening stock
+                    </Button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
-          {showCalc && (
-            <div className="rounded-md border bg-muted/30 p-3 space-y-2">
-              <div className="text-xs font-medium flex items-center gap-1.5"><Calculator className="h-3.5 w-3.5" /> Slab → sqft calculator</div>
-              <div className="grid grid-cols-4 gap-2">
-                <div className="space-y-1"><Label className="text-[10px]">Length</Label><Input type="number" inputMode="decimal" value={dim.l || ""} onChange={(e) => setDim({ ...dim, l: +e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-[10px]">Breadth</Label><Input type="number" inputMode="decimal" value={dim.b || ""} onChange={(e) => setDim({ ...dim, b: +e.target.value })} /></div>
-                <div className="space-y-1"><Label className="text-[10px]">Unit</Label>
-                  <Select value={dim.unit} onValueChange={(v) => setDim({ ...dim, unit: v as any })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      {(["in", "cm", "mm", "ft", "m"] as const).map(u => <SelectItem key={u} value={u}>{u}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1"><Label className="text-[10px]">Pieces</Label><Input type="number" inputMode="numeric" value={dim.pieces || ""} onChange={(e) => setDim({ ...dim, pieces: +e.target.value })} /></div>
-              </div>
-              <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-                <div>
-                  <span className="text-muted-foreground">Area: </span>
-                  <span className="font-semibold tabular-nums">{fmt(computedArea)} sqft</span>
-                  {dim.pieces > 1 && <span className="text-muted-foreground"> ({fmt(toSqft(dim.l, dim.b, dim.unit))} × {dim.pieces})</span>}
-                </div>
-                <Button size="sm" type="button" variant="outline" disabled={!computedArea}
-                  onClick={() => setForm({ ...form, opening_stock: +computedArea.toFixed(2) })}>
-                  Use as opening stock
-                </Button>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="mt-2">
-            <Button onClick={save} className="w-full sm:w-auto">Save product</Button>
+          <DialogFooter className="px-6 py-4 border-t bg-muted/20 gap-2">
+            {edit && (
+              <Button variant="ghost" className="text-destructive hover:text-destructive mr-auto" onClick={() => { del(edit.id); setOpen(false); }}>
+                <Trash2 className="h-3.5 w-3.5" /> Delete
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={save}>Save product</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -474,11 +492,7 @@ function Field({ label, children, wide }: { label: string; children: React.React
   );
 }
 
-function MiniStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-md bg-muted/40 p-2 min-w-0">
-      <div className="text-[10px] uppercase text-muted-foreground">{label}</div>
-      <div className="font-medium truncate tabular-nums">{value}</div>
-    </div>
-  );
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-2">{children}</div>;
+}
 }
