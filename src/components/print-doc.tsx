@@ -7,9 +7,30 @@ import swLogo from "@/assets/sw-logo.png";
 import { exportStoneWorldDocument } from "@/lib/pdf-theme";
 import { lookupDocById } from "@/lib/doc-lookup";
 import { amountInWords } from "@/lib/amount-words";
-import { DEFAULT_PRINT_DESIGN, fileToDataUrl, loadPrintDesign, savePrintDesign, type PrintDesign } from "@/lib/print-customizer";
+import { applyPrintPreset, DEFAULT_PRINT_DESIGN, fileToDataUrl, loadPrintDesign, savePrintDesign, type PrintDesign, type PrintCodePlacement, type PrintProductLayout, type PrintPreset } from "@/lib/print-customizer";
 import { digitalCopyUrl, generateBarcodeDataUrl, generateQrDataUrl, upiPayString } from "@/lib/doc-codes";
 import { stateWithCode } from "@/lib/india-states";
+
+const presetLabels: Record<PrintPreset, string> = {
+  minimal: "Minimal",
+  gst: "GST detail",
+  dispatch: "Dispatch",
+  letterhead: "Letterhead",
+};
+
+const productLayoutLabels: Record<PrintProductLayout, string> = {
+  standard: "Standard columns",
+  compact: "Compact list",
+  "description-first": "Description first",
+  "tax-detail": "GST detail",
+};
+
+const codePlacementLabels: Record<PrintCodePlacement, string> = {
+  totals: "Totals side",
+  header: "Header",
+  terms: "Terms side",
+  hidden: "Hidden",
+};
 
 export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }) {
   const [doc, setDoc] = useState<any>(null);
