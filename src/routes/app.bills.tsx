@@ -285,6 +285,13 @@ function BillsPage() {
 
   /* Click an outstanding bill → open dialog pre-filled to settle exactly that bill */
   const settleBill = async (r: Row) => {
+    const lock = lockMap.get(`${r.doc_kind}:${r.doc_id}`);
+    if (lock) {
+      const pending = pays.find((p) => p.id === lock.payment_id);
+      if (pending) openPayView(pending);
+      else toast.error(`Pending cheque ${lock.payment_no} is already linked. Mark it cleared or bounced first.`);
+      return;
+    }
     const dir: "in" | "out" = sideOf(r.doc_kind) === "receivable" ? "in" : "out";
     setDirection(dir); setDate(todayISO()); setMode("Bank"); setNotes("");
     setChequeNo(""); setChequeDate(""); setTxnId(""); setBankName(""); setCleared(true);
@@ -358,13 +365,14 @@ function BillsPage() {
       return;
     }
     const finalCleared = mode === "Cheque" ? cleared : true;
+    const finalStatus = mode === "Cheque" ? (finalCleared ? "cleared" : "pending") : "cleared";
     const { data: pay, error } = await supabase.from("payments").insert({
       user_id: user.id, direction, date, amount, mode, notes: notes || null,
       contact_id: contactId, contact_name: contactName,
       ref_doc: allocs.map(a => a.doc_no).join(", ") || null,
       cheque_no: chequeNo || null, cheque_date: chequeDate || null,
       txn_id: txnId || null, bank_name: bankName || null,
-      cleared: finalCleared, cleared_at: finalCleared ? date : null,
+      cleared: finalCleared, cleared_at: finalCleared ? date : null, status: finalStatus,
     } as never).select().single() as { data: any; error: any };
     if (error) { toast.error(error.message); return; }
     if (allocs.length) {
@@ -390,10 +398,18 @@ function BillsPage() {
   };
 
   const markPayCleared = async (p: PayRow) => {
-    const { error } = await supabase.from("payments").update({ cleared: true, cleared_at: todayISO() } as never).eq("id", p.id);
+    const { error } = await supabase.from("payments").update({ status: "cleared", cleared: true, cleared_at: todayISO() } as never).eq("id", p.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Payment marked cleared");
-    setViewPay({ ...p, cleared: true, cleared_at: todayISO() });
+    setViewPay({ ...p, status: "cleared", cleared: true, cleared_at: todayISO() });
+    load();
+  };
+
+  const markPayBounced = async (p: PayRow) => {
+    const { error } = await supabase.from("payments").update({ status: "bounced", cleared: false, cleared_at: null } as never).eq("id", p.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Cheque marked bounced");
+    setViewPay({ ...p, status: "bounced", cleared: false, cleared_at: null });
     load();
   };
 
