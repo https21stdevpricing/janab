@@ -21,7 +21,7 @@ import { lookupDoc, openDocsFor, type DocLookupResult } from "@/lib/doc-lookup";
 import { toast } from "sonner";
 import { useShortcut } from "@/lib/shortcuts";
 import { exportStoneWorldPayment } from "@/lib/pdf-theme";
-import { ActionStack, SegmentedTabs } from "@/components/ui-tokens";
+import { ActionStack, KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/bills")({
   component: BillsPage,
@@ -445,15 +445,12 @@ function BillsPage() {
       <PageHeader title="Money" description="Collect, pay and review only cleared settlements in one place." actions={<ExcelBar onExport={onExport} />} />
 
       <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_260px]">
-        <div className="surface overflow-hidden">
-          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-            <HeroCell label="Collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
-            <HeroCell label="Pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
-            <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
-          </div>
-          <div className="border-t border-border/60 px-4 py-2 text-xs text-muted-foreground">
-            Overdue: <span className="font-medium text-foreground">{inr(kpis.overdue)}</span>
-          </div>
+        <div className="space-y-2">
+          <KpiGrid cols={3}>
+            <KpiTile label="Collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
+            <KpiTile label="Pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
+            <KpiTile label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} hint={`Overdue ${inr(kpis.overdue)}`} />
+          </KpiGrid>
         </div>
         <ActionStack
           title="Quick actions"
