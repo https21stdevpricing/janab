@@ -24,17 +24,36 @@ function ReportsPage() {
   const [allocations, setAllocations] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from("ledger_view").select("*").then(({ data }) => setRows(data ?? []));
-    supabase.from("products").select("id,name,kind,opening_stock,purchase_rate,sale_rate").then(({ data }) => setProducts(data ?? []));
-    supabase.from("sale_items").select("product_id,qty").then(({ data }) => setSaleItems(data ?? []));
-    supabase.from("purchase_items").select("product_id,qty,rate").then(({ data }) => setPurchaseItems(data ?? []));
-    (supabase as any).from("purchase_items").select("product_id,qty,rate,purchases!inner(date)").then(({ data }: any) => setPurchaseHdr(data ?? []));
-    (supabase as any).from("fixed_assets").select("*").then(({ data }: any) => setFixedAssets(data ?? []));
-    supabase.from("payments").select("id,amount,direction").then(({ data }) => setPayments(data ?? []));
-    (supabase as any).from("payment_allocations").select("payment_id,amount").then(({ data }: any) => setAllocations(data ?? []));
-    (supabase as any).from("settings").select("cogs_method").maybeSingle().then(({ data }: any) => {
-      if (data?.cogs_method) setCogsMethod(data.cogs_method);
-    });
+    const loadAll = () => {
+      supabase.from("ledger_view").select("*").then(({ data }) => setRows(data ?? []));
+      supabase.from("products").select("id,name,kind,opening_stock,purchase_rate,sale_rate,hsn").then(({ data }) => setProducts(data ?? []));
+      supabase.from("sale_items").select("product_id,qty").then(({ data }) => setSaleItems(data ?? []));
+      supabase.from("purchase_items").select("product_id,qty,rate").then(({ data }) => setPurchaseItems(data ?? []));
+      (supabase as any).from("purchase_items").select("product_id,qty,rate,purchases!inner(date)").then(({ data }: any) => setPurchaseHdr(data ?? []));
+      (supabase as any).from("fixed_assets").select("*").then(({ data }: any) => setFixedAssets(data ?? []));
+      supabase.from("payments").select("id,amount,direction").then(({ data }) => setPayments(data ?? []));
+      (supabase as any).from("payment_allocations").select("payment_id,amount").then(({ data }: any) => setAllocations(data ?? []));
+      (supabase as any).from("settings").select("cogs_method").maybeSingle().then(({ data }: any) => {
+        if (data?.cogs_method) setCogsMethod(data.cogs_method);
+      });
+    };
+    let refreshTimer: number | undefined;
+    const scheduleLoad = () => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(loadAll, 180);
+    };
+    loadAll();
+    const ch = supabase.channel("reports-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "journal_lines" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "journal_entries" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "sale_items" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_items" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "fixed_assets" }, scheduleLoad)
+      .subscribe();
+    return () => { window.clearTimeout(refreshTimer); supabase.removeChannel(ch); };
   }, []);
 
   const saveCogsMethod = async (m: "weighted_average" | "fifo") => {
