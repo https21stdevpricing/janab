@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus, ChevronRight, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus, ChevronRight, AlertTriangle, Pencil } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
@@ -44,6 +44,7 @@ function ProductsPage() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Row | null>(null);
+  const [preview, setPreview] = useState<Row | null>(null);
   const [form, setForm] = useState<Omit<Row, "id">>(empty);
   // bulk add
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -73,16 +74,16 @@ function ProductsPage() {
       const ob = isOrderBasis(r);
       if (tab === "stocked" && ob) return false;
       if (tab === "order" && !ob) return false;
-      if (ql && !`${r.code} ${r.name} ${r.hsn ?? ""}`.toLowerCase().includes(ql)) return false;
+      if (ql && !`${r.code} ${r.name} ${r.category ?? ""} ${r.hsn ?? ""}`.toLowerCase().includes(ql)) return false;
       return true;
     });
-  }, [rows, stock, tab, q]);
+  }, [rows, tab, q]);
 
   const counts = useMemo(() => {
     let stocked = 0, order = 0;
     for (const r of rows) (isOrderBasis(r) ? order++ : stocked++);
     return { stocked, order };
-  }, [rows, stock]);
+  }, [rows]);
 
   const summary = useMemo(() => {
     let onHand = 0, valueCost = 0, valueSale = 0, low = 0, skus = rows.length;
@@ -101,6 +102,7 @@ function ProductsPage() {
   };
   const startEdit = (r: Row) => {
     setEdit(r);
+    setPreview(null);
     setForm({ code: r.code, name: r.name, unit: r.unit, hsn: r.hsn, purchase_rate: r.purchase_rate, sale_rate: r.sale_rate, opening_stock: r.opening_stock, reorder_level: r.reorder_level, kind: r.kind ?? "stocked", category: r.category ?? "" });
     setDim({ l: 0, b: 0, pieces: 1, unit: "in" });
     setOpen(true);
@@ -127,7 +129,7 @@ function ProductsPage() {
   const del = async (id: string) => {
     if (!confirm("Delete this product?")) return;
     const { error } = await supabase.from("products").delete().eq("id", id);
-    if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
+    if (error) toast.error(error.message); else { toast.success("Deleted"); setPreview(null); load(); }
   };
 
   const onExport = () => {
@@ -259,7 +261,7 @@ function ProductsPage() {
       {filtered.length === 0 ? (
         <Empty>No products yet — tap “New” to add one.</Empty>
       ) : (
-        <div className="rounded-3xl border border-border/60 bg-card overflow-hidden">
+        <div className="overflow-hidden rounded-2xl border border-border/60 bg-card">
           <ul className="divide-y divide-border/50">
             {filtered.map((r) => {
               const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
@@ -268,8 +270,8 @@ function ProductsPage() {
                 <li key={r.id}>
                   <button
                     type="button"
-                    onClick={() => startEdit(r)}
-                    className="w-full text-left px-5 sm:px-6 py-5 hover:bg-muted/30 active:bg-muted/40 transition-colors flex items-center gap-4 group"
+                    onClick={() => setPreview(r)}
+                    className="group grid w-full grid-cols-[1fr_auto_auto] items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/30 active:bg-muted/40 sm:px-5"
                   >
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
@@ -280,12 +282,12 @@ function ProductsPage() {
                           </span>
                         )}
                       </div>
-                      <div className="mt-1 text-[12.5px] text-muted-foreground truncate">
-                        {r.category || "Uncategorised"} · {r.unit || "unit"}
+                      <div className="mt-1 text-[12px] text-muted-foreground truncate">
+                        {r.code || "No code"} · {r.category || "Uncategorised"} · {r.unit || "unit"}
                         {!isOrderBasis(r) && <> · {fmt(oh)} on hand</>}
                       </div>
                     </div>
-                    <div className="text-right shrink-0">
+                    <div className="min-w-0 text-right">
                       <div className="tabular-nums text-[15px] font-medium leading-tight">{inr(r.sale_rate ?? 0)}</div>
                       <div className="text-[11px] text-muted-foreground mt-0.5">per {r.unit || "unit"}</div>
                     </div>
@@ -305,6 +307,19 @@ function ProductsPage() {
           <ListPlus className="h-4 w-4" /> Bulk add
         </Button>
       </div>
+
+      <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-lg overflow-y-auto rounded-2xl p-0 sm:w-full">
+          {preview && (
+            <ProductPreview
+              row={preview}
+              stock={stock[preview.id]}
+              onEdit={() => startEdit(preview)}
+              onDelete={() => del(preview.id)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0">
@@ -462,6 +477,63 @@ function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+function ProductPreview({ row, stock, onEdit, onDelete }: { row: Row; stock?: StockMeta; onEdit: () => void; onDelete: () => void }) {
+  const onHand = Number(stock?.on_hand ?? row.opening_stock ?? 0);
+  const isOrder = row.kind === "order_basis";
+  const margin = Number(row.sale_rate ?? 0) - Number(row.purchase_rate ?? 0);
+  return (
+    <div className="min-w-0">
+      <div className="border-b px-5 py-4">
+        <DialogTitle className="truncate text-base font-semibold">{row.name}</DialogTitle>
+        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-mono">{row.code || "No code"}</span>
+          <span>·</span>
+          <span>{isOrder ? "On-order" : "Stocked"}</span>
+          {row.category && <><span>·</span><span className="truncate">{row.category}</span></>}
+        </div>
+      </div>
+
+      <div className="space-y-4 px-5 py-4 text-sm">
+        <div className="grid grid-cols-2 gap-2">
+          <PreviewStat label="Sale rate" value={inr(row.sale_rate ?? 0)} tone="good" />
+          <PreviewStat label="Purchase" value={inr(row.purchase_rate ?? 0)} />
+          <PreviewStat label="Unit" value={row.unit || "—"} />
+          <PreviewStat label="HSN" value={row.hsn || "—"} />
+        </div>
+        <div className="rounded-xl border bg-muted/25 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{isOrder ? "Inventory mode" : "Available stock"}</div>
+              <div className="mt-0.5 font-semibold tabular-nums">{isOrder ? "Billed on order" : `${fmt(onHand)} ${row.unit || ""}`}</div>
+            </div>
+            {!isOrder && <div className="text-right text-xs text-muted-foreground">Reorder at<br /><span className="font-medium text-foreground tabular-nums">{fmt(row.reorder_level ?? 0)}</span></div>}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span>Margin per {row.unit || "unit"}</span>
+          <span className="font-semibold tabular-nums text-foreground">{inr(margin)}</span>
+        </div>
+      </div>
+
+      <DialogFooter className="border-t bg-muted/15 px-5 py-4">
+        <Button variant="outline" className="mr-auto text-destructive hover:text-destructive" onClick={onDelete}>
+          <Trash2 className="h-4 w-4" /> Delete
+        </Button>
+        <Button onClick={onEdit}><Pencil className="h-4 w-4" /> Edit</Button>
+      </DialogFooter>
+    </div>
+  );
+}
+
+function PreviewStat({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "good" }) {
+  return (
+    <div className="min-w-0 rounded-xl border bg-card p-3">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`mt-1 truncate font-semibold tabular-nums ${tone === "good" ? "text-primary" : ""}`}>{value}</div>
     </div>
   );
 }

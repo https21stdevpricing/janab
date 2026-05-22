@@ -475,7 +475,7 @@ function BillsPage() {
         }
       />
 
-      <KpiGrid cols={2} className="mb-4">
+      <KpiGrid cols={2} className="mb-3 [&>*]:min-h-[96px] [&>*]:overflow-hidden">
         <KpiTile
           label="Collect"
           value={inr(kpis.recv)}
@@ -493,7 +493,7 @@ function BillsPage() {
           onClick={() => setTab("payable")}
         />
       </KpiGrid>
-      <div className="mb-4 -mt-1 px-1 text-xs text-muted-foreground">
+      <div className="mb-3 -mt-1 px-1 text-xs text-muted-foreground">
         Net position{" "}
         <span className={cn("font-medium tabular-nums", kpis.net >= 0 ? "text-primary" : "text-destructive")}>
           {inr(kpis.net)}
@@ -501,7 +501,7 @@ function BillsPage() {
         · {kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"}
       </div>
 
-      <div className="mb-4 min-w-0 overflow-hidden rounded-2xl border bg-card p-2.5 shadow-sm sm:p-3">
+      <div className="mb-3 min-w-0 overflow-hidden rounded-2xl border bg-card p-2 shadow-sm sm:p-3">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <SegmentedTabs
             value={tab}
@@ -525,14 +525,14 @@ function BillsPage() {
             </Select>
           )}
         </div>
-        <Input className="mt-2 h-10 rounded-xl" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
+        <Input className="mt-2 h-9 rounded-xl" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
       </div>
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
           <div className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm divide-y">
             {filteredPays.map(p => (
-              <button key={p.id} type="button" className="grid w-full min-w-0 grid-cols-1 gap-2 px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_auto] sm:gap-3 sm:px-4" onClick={() => openPayView(p)}>
+              <button key={p.id} type="button" className="grid w-full min-w-0 grid-cols-[1fr_auto] items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/30 sm:px-4" onClick={() => openPayView(p)}>
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <span className="min-w-0 max-w-full truncate font-mono text-sm font-medium">{p.payment_no}</span>
@@ -546,7 +546,7 @@ function BillsPage() {
                     {p.ref_doc || p.cheque_no || p.txn_id || p.notes ? [p.ref_doc, p.cheque_no ? `Cheque ${p.cheque_no}` : null, p.txn_id ? `Txn ${p.txn_id}` : null, p.notes].filter(Boolean).join(" · ") : "Open details"}
                   </div>
                 </div>
-                <div className="min-w-0 text-left sm:text-right">
+                <div className="min-w-0 text-right">
                   <div className={`truncate text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{p.direction === "in" ? "+" : "−"}{inr(p.amount)}</div>
                   <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">{p.direction === "in" ? "Receipt" : "Payment"}</div>
                 </div>
@@ -605,17 +605,17 @@ function BillsPage() {
             const st = payStatus(Number(r.total), Number(r.paid), d);
             const lock = lockMap.get(`${r.doc_kind}:${r.doc_id}`);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className="min-w-0 space-y-3 p-3.5">
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="min-w-0 space-y-2.5 p-3">
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
-                  <div className="grid min-w-0 grid-cols-1 gap-2">
+                  <div className="grid min-w-0 grid-cols-[1fr_auto] items-start gap-3">
                     <div className="min-w-0">
                       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
                       <div className="mt-0.5 truncate font-mono text-sm font-medium">{r.doc_no}</div>
                       <div className="text-sm truncate text-muted-foreground">{r.party_name ?? "—"}</div>
                     </div>
-                    <div className="min-w-0">
-                      <div className={`truncate text-lg font-semibold tabular-nums ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div>
+                    <div className="min-w-0 text-right">
+                      <div className={`truncate text-base font-semibold tabular-nums ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</div>
+                      <div className="mt-1 flex flex-wrap items-center justify-end gap-1.5"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div>
                     </div>
                   </div>
                 </button>

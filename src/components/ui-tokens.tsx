@@ -153,15 +153,15 @@ export function KpiTile({
     <Comp
       onClick={onClick}
       className={cn(
-        "surface text-left w-full min-w-0 p-3 sm:p-4 transition-colors",
+        "surface relative isolate overflow-hidden text-left w-full min-w-0 p-3 sm:p-4 transition-colors",
         interactive && "hover:bg-muted/35",
-        active && "ring-1 ring-primary/40",
+        active && "border-primary/35 bg-primary/5",
       )}
     >
       <div className="eyebrow truncate">{label}</div>
       <div
         className={cn(
-          "stat-num mt-1.5 text-base sm:text-lg md:text-xl tracking-tight break-words leading-tight",
+          "stat-num mt-1.5 text-base sm:text-lg md:text-xl tracking-tight break-words leading-tight [overflow-wrap:anywhere]",
           valueCls,
         )}
         title={typeof value === "string" ? value : undefined}
@@ -169,7 +169,7 @@ export function KpiTile({
         {value}
       </div>
       {hint && (
-        <div className="text-[11px] text-muted-foreground mt-1 leading-snug break-words">{hint}</div>
+        <div className="text-[11px] text-muted-foreground mt-1 leading-snug break-words [overflow-wrap:anywhere]">{hint}</div>
       )}
     </Comp>
   );
