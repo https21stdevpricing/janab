@@ -402,11 +402,11 @@ function BillsPage() {
 
   return (
     <div>
-      <PageHeader title="Money" description="Receivables, payables and cleared payment history." actions={<ExcelBar onExport={onExport} />} />
+      <PageHeader title="Money" description="Collect, pay and review only cleared settlements in one place." actions={<ExcelBar onExport={onExport} />} />
 
-      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_300px]">
+      <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_260px]">
         <div className="surface overflow-hidden">
-          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+          <div className="grid grid-cols-3 divide-x divide-border/60">
             <HeroCell label="Collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
             <HeroCell label="Pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
             <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
@@ -417,7 +417,7 @@ function BillsPage() {
         </div>
         <div className="surface p-3">
           <div className="eyebrow">Quick actions</div>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 grid grid-cols-1 gap-2">
             <Button variant="outline" className="justify-start" onClick={() => startNew("in")}><ArrowDownLeft className="h-4 w-4" /> Receive</Button>
             <Button className="justify-start" onClick={() => startNew("out")}><ArrowUpRight className="h-4 w-4" /> Pay</Button>
           </div>
@@ -513,7 +513,6 @@ function BillsPage() {
                     </td>
                     <td className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div></td>
                     <td className="p-3 text-right whitespace-nowrap">
-                      <Button size="sm" variant="ghost" onClick={() => openPreview(r.doc_no)} title="Preview bill"><Eye className="h-3.5 w-3.5" /></Button>
                       <Button size="sm" variant="outline" onClick={() => settleBill(r)}>
                         {tab === "receivable" ? "Receive" : "Pay"}
                       </Button>
@@ -546,9 +545,8 @@ function BillsPage() {
                 </button>
                 <PayProgress pct={pct} tab={tab} />
                 <div className="text-[11px] text-muted-foreground tabular-nums">{inr(r.paid)} of {inr(r.total)} · {b}d</div>
-                <div className="grid grid-cols-2 gap-2">
-                  <Button size="sm" variant="outline" onClick={() => openPreview(r.doc_no)}><Eye className="h-3.5 w-3.5" /> Preview</Button>
-                  <Button size="sm" onClick={() => settleBill(r)}>
+                <div>
+                  <Button size="sm" className="w-full" onClick={() => settleBill(r)}>
                     {tab === "receivable" ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
                     {tab === "receivable" ? "Receive" : "Pay"}
                   </Button>
