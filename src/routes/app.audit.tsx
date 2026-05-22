@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
-import { ExternalLink, RotateCcw, Search, Plus, Pencil, Trash2, Clock, FileText, Hash, User as UserIcon } from "lucide-react";
+import { ExternalLink, RotateCcw, Search, Plus, Pencil, Trash2, Clock, FileText, Hash, User as UserIcon, X } from "lucide-react";
 import { toast } from "sonner";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 export const Route = createFileRoute("/app/audit")({ component: AuditPage });
 
@@ -204,19 +205,48 @@ function AuditPage() {
             ))}
           </div>
 
-          {/* Detail panel */}
+          {/* Desktop side panel */}
           {selected && (
-            <AuditDetailPanel
-              selected={selected}
-              entityLabel={entityLabel}
-              actionTone={actionTone}
-              ActionIcon={ActionIcon}
-              restoring={restoring}
-              onRestore={restore}
-            />
+            <div className="hidden lg:block">
+              <AuditDetailPanel
+                selected={selected}
+                entityLabel={entityLabel}
+                actionTone={actionTone}
+                ActionIcon={ActionIcon}
+                restoring={restoring}
+                onRestore={restore}
+              />
+            </div>
           )}
         </div>
       )}
+
+      {/* Mobile / tablet — slide-over detail sheet */}
+      <Sheet
+        open={!!selectedId && filtered.some(r => r.id === selectedId)}
+        onOpenChange={(o) => { if (!o) setSelectedId(null); }}
+      >
+        <SheetContent side="bottom" className="lg:hidden p-0 max-h-[88vh] rounded-t-3xl overflow-hidden">
+          {selected && (
+            <div className="flex flex-col max-h-[88vh]">
+              <div className="flex justify-center pt-2 pb-1">
+                <div className="h-1 w-10 rounded-full bg-border" />
+              </div>
+              <div className="overflow-y-auto">
+                <AuditDetailPanel
+                  selected={selected}
+                  entityLabel={entityLabel}
+                  actionTone={actionTone}
+                  ActionIcon={ActionIcon}
+                  restoring={restoring}
+                  onRestore={restore}
+                  flush
+                />
+              </div>
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
@@ -228,6 +258,7 @@ function AuditDetailPanel({
   ActionIcon,
   restoring,
   onRestore,
+  flush = false,
 }: {
   selected: Row;
   entityLabel: Record<string, string>;
@@ -235,6 +266,7 @@ function AuditDetailPanel({
   ActionIcon: (props: { a: string }) => ReactElement;
   restoring: Record<string, boolean>;
   onRestore: (id: string) => void;
+  flush?: boolean;
 }) {
   const diff = selected.diff ?? {};
   const diffEntries = Object.entries(diff) as Array<[string, any]>;
@@ -244,7 +276,13 @@ function AuditDetailPanel({
   const isMoney = (k: string) => /amount|total|paid|balance|rate|qty|cost|opening|salary|price/i.test(k);
 
   return (
-    <aside className="lg:sticky lg:top-4 lg:self-start rounded-2xl bg-card border border-border/60 overflow-hidden h-fit">
+    <aside
+      className={
+        flush
+          ? "bg-background"
+          : "lg:sticky lg:top-4 lg:self-start rounded-2xl bg-card border border-border/60 overflow-hidden h-fit"
+      }
+    >
       {/* Header */}
       <div className="px-6 pt-6 pb-5 border-b border-border/40">
         <div className="flex items-start gap-3.5">
