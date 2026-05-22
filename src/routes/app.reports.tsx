@@ -434,6 +434,9 @@ function ReportsPage() {
               <Row label="Total Current Liabilities" value={currentLiab} bold />
               <Sep />
               <Section title="Equity" />
+              {openingCapital > 0 && (
+                <Row label="Opening Capital (Owner's contribution)" value={openingCapital} hint="Value of inventory you brought into the business at start-up. Auto-credited so the books balance." />
+              )}
               <Row label="Retained Earnings (Net Profit)" value={netProfit} hint="Cumulative profit reinvested." />
               <Sep /><Row label="Total Liabilities + Equity" value={totalLiab + equity} bold />
               <div className={`mt-2 text-xs flex items-center gap-1.5 ${balanceCheck ? "text-primary" : "text-destructive"}`}>
