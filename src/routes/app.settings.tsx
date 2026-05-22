@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { seedDemoData, clearAllData } from "@/lib/seed-demo";
 import { downloadFullBackup, getLastBackupAt } from "@/lib/backup";
-import { Download, ShieldCheck, AlertTriangle, Users, Hash, LogOut, Trash2, Plus, Sparkles } from "lucide-react";
+import { Download, ShieldCheck, AlertTriangle, Users, Hash, LogOut, Trash2, Plus, Building2, Wand2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/settings")({ component: SettingsPage });
@@ -108,7 +108,25 @@ function SettingsPage() {
   return (
     <div>
       <PageHeader title="Settings" description="Company profile and tools" />
-      <Card className="mb-4">
+      {/* Section quick nav — minimal sticky strip */}
+      <nav className="sticky top-14 md:top-12 z-10 -mx-3 sm:-mx-4 lg:-mx-6 mb-4 px-3 sm:px-4 lg:px-6 py-2 border-b border-border/60 bg-background/85 backdrop-blur-xl">
+        <div className="flex gap-1 overflow-x-auto no-scrollbar text-xs">
+          {[
+            { id: "profile", label: "Profile" },
+            { id: "opening", label: "Opening balances" },
+            { id: "numbering", label: "Numbering" },
+            { id: "team", label: "Team" },
+            { id: "backups", label: "Backups" },
+            { id: "danger", label: "Danger zone" },
+          ].map(t => (
+            <a key={t.id} href={`#${t.id}`} className="px-3 py-1.5 rounded-full border border-border/60 hover:border-foreground/30 hover:bg-muted/50 whitespace-nowrap text-muted-foreground hover:text-foreground transition-colors">
+              {t.label}
+            </a>
+          ))}
+        </div>
+      </nav>
+
+      <Card className="mb-4 scroll-mt-24" id="profile">
         <CardHeader><CardTitle>Company profile</CardTitle></CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <F label="Company name"><Input value={s.company_name ?? ""} onChange={(e) => setS({ ...s, company_name: e.target.value })} /></F>
@@ -123,9 +141,9 @@ function SettingsPage() {
       </Card>
 
       {/* Opening balances re-run */}
-      <Card className="mb-4">
+      <Card className="mb-4 scroll-mt-24" id="opening">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4 text-primary" /> Opening balances</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><Wand2 className="h-4 w-4 text-primary" /> Opening balances</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
@@ -138,7 +156,7 @@ function SettingsPage() {
       </Card>
 
       {/* Numbering & document prefixes */}
-      <Card className="mb-4">
+      <Card className="mb-4 scroll-mt-24" id="numbering">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Hash className="h-4 w-4" /> Numbering & document prefixes</CardTitle>
         </CardHeader>
@@ -160,7 +178,7 @@ function SettingsPage() {
       </Card>
 
       {/* Team invites */}
-      <Card className="mb-4">
+      <Card className="mb-4 scroll-mt-24" id="team">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><Users className="h-4 w-4" /> Team</CardTitle>
         </CardHeader>
@@ -201,7 +219,7 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card className="mb-4">
+      <Card className="mb-4 scroll-mt-24" id="backups">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base"><ShieldCheck className="h-4 w-4 text-emerald-600" /> Backups &amp; data safety</CardTitle>
         </CardHeader>
@@ -243,7 +261,7 @@ function SettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="scroll-mt-24" id="danger">
         <CardHeader><CardTitle>Data tools</CardTitle></CardHeader>
         <CardContent className="space-y-4">
           <div>
