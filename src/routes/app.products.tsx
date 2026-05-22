@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search, Rows3 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
@@ -48,6 +49,10 @@ function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Row | null>(null);
   const [form, setForm] = useState<Omit<Row, "id">>(empty);
+  // bulk add
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkKind, setBulkKind] = useState<"stocked" | "order_basis">("stocked");
   // dimension calculator
   const [dim, setDim] = useState<{ l: number; b: number; pieces: number; unit: "in" | "cm" | "mm" | "ft" | "m" }>({ l: 0, b: 0, pieces: 1, unit: "in" });
 
@@ -174,6 +179,37 @@ function ProductsPage() {
     } catch (e: any) { toast.error(e.message ?? "Import failed"); }
   };
 
+  const saveBulk = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Sign-in required"); return; }
+    const lines = bulkText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) { toast.error("Paste at least one row"); return; }
+    const payload: any[] = [];
+    for (const ln of lines) {
+      // Accept tab / comma / pipe separators
+      const parts = ln.split(/[\t|,]/).map(p => p.trim());
+      const [name, unit, qty, purchase, sale, hsn] = parts;
+      if (!name) continue;
+      payload.push({
+        user_id: user.id,
+        kind: bulkKind,
+        name,
+        code: "",
+        unit: unit || "sqft",
+        hsn: hsn || null,
+        purchase_rate: Number(purchase) || 0,
+        sale_rate: Number(sale) || 0,
+        opening_stock: bulkKind === "order_basis" ? 0 : (Number(qty) || 0),
+        reorder_level: 0,
+      });
+    }
+    if (payload.length === 0) { toast.error("No valid rows"); return; }
+    const { error } = await supabase.from("products").insert(payload as never);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Added ${payload.length} products`);
+    setBulkText(""); setBulkOpen(false); load();
+  };
+
   const computedArea = toSqft(dim.l, dim.b, dim.unit) * (dim.pieces || 1);
   const showCalc = (form.unit ?? "").toLowerCase() === "sqft" && form.kind === "stocked";
 
@@ -185,6 +221,9 @@ function ProductsPage() {
         actions={
           <>
             <ExcelBar onExport={onExport} onImport={onImport} />
+            <Button size="sm" variant="outline" onClick={() => { setBulkKind(tab === "order" ? "order_basis" : "stocked"); setBulkOpen(true); }}>
+              <Rows3 className="h-4 w-4" /> Bulk add
+            </Button>
             <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
               <Plus className="h-4 w-4" /> New product
             </Button>
@@ -390,6 +429,37 @@ function ProductsPage() {
 
           <DialogFooter className="mt-2">
             <Button onClick={save} className="w-full sm:w-auto">Save product</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk add */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Rows3 className="h-4 w-4" /> Bulk add products</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-1">
+              <button type="button" className={`text-xs px-2 py-1.5 rounded ${bulkKind === "stocked" ? "bg-background shadow font-medium" : "text-muted-foreground"}`} onClick={() => setBulkKind("stocked")}>Inventory</button>
+              <button type="button" className={`text-xs px-2 py-1.5 rounded ${bulkKind === "order_basis" ? "bg-background shadow font-medium" : "text-muted-foreground"}`} onClick={() => setBulkKind("order_basis")}>On-order</button>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              One product per line. Separate fields with <span className="font-mono">tab</span>, <span className="font-mono">,</span> or <span className="font-mono">|</span>.<br />
+              <span className="font-mono">Name | Unit | Qty | PurchaseRate | SaleRate | HSN</span>
+            </div>
+            <Textarea
+              rows={10}
+              className="font-mono text-xs"
+              placeholder={"Italian Marble 24x24 | sqft | 1200 | 95 | 145 | 6802\nGreen Granite | sqft | 800 | 75 | 110 | 6802\nKota Stone | sqft | 0 | 40 | 65 | 6802"}
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+            />
+            <div className="text-[11px] text-muted-foreground">{bulkText.split(/\r?\n/).filter(l => l.trim()).length} row(s) ready</div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
+            <Button onClick={saveBulk}>Add products</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
