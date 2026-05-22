@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { seedDemoData, clearAllData } from "@/lib/seed-demo";
 import { downloadFullBackup, getLastBackupAt } from "@/lib/backup";
-import { Download, ShieldCheck, AlertTriangle, Users, Hash, LogOut, Trash2, Plus, Sparkles } from "lucide-react";
+import { Download, ShieldCheck, AlertTriangle, Users, Hash, LogOut, Trash2, Plus, ClipboardCheck } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/settings")({ component: SettingsPage });
@@ -125,7 +125,7 @@ function SettingsPage() {
       {/* Opening balances re-run */}
       <Card className="mb-4">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base"><Sparkles className="h-4 w-4 text-primary" /> Opening balances</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-base"><ClipboardCheck className="h-4 w-4 text-primary" /> Opening balances</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">
