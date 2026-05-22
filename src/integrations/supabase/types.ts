@@ -1131,6 +1131,7 @@ export type Database = {
       }
       settings: {
         Row: {
+          account_closed_at: string | null
           address: string | null
           cogs_method: string
           company_name: string
@@ -1141,11 +1142,18 @@ export type Database = {
           gstin: string | null
           low_stock_threshold: number | null
           phone: string | null
+          prefix_delivery: string
+          prefix_payment: string
+          prefix_purchase: string
+          prefix_quote: string
+          prefix_sale: string
+          prefix_tp: string
           state: string | null
           updated_at: string
           user_id: string
         }
         Insert: {
+          account_closed_at?: string | null
           address?: string | null
           cogs_method?: string
           company_name?: string
@@ -1156,11 +1164,18 @@ export type Database = {
           gstin?: string | null
           low_stock_threshold?: number | null
           phone?: string | null
+          prefix_delivery?: string
+          prefix_payment?: string
+          prefix_purchase?: string
+          prefix_quote?: string
+          prefix_sale?: string
+          prefix_tp?: string
           state?: string | null
           updated_at?: string
           user_id: string
         }
         Update: {
+          account_closed_at?: string | null
           address?: string | null
           cogs_method?: string
           company_name?: string
@@ -1171,8 +1186,95 @@ export type Database = {
           gstin?: string | null
           low_stock_threshold?: number | null
           phone?: string | null
+          prefix_delivery?: string
+          prefix_payment?: string
+          prefix_purchase?: string
+          prefix_quote?: string
+          prefix_sale?: string
+          prefix_tp?: string
           state?: string | null
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      stock_adjustments: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          product_id: string
+          qty: number
+          reason: string
+          unit_cost: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          product_id: string
+          qty: number
+          reason: string
+          unit_cost?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          product_id?: string
+          qty?: number
+          reason?: string
+          unit_cost?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_adjustments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_adjustments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "stock_view"
+            referencedColumns: ["product_id"]
+          },
+        ]
+      }
+      team_invites: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          invited_at: string
+          role: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          invited_at?: string
+          role?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          invited_at?: string
+          role?: string
+          status?: string
           user_id?: string
         }
         Relationships: []
@@ -1482,6 +1584,7 @@ export type Database = {
       }
       stock_view: {
         Row: {
+          adjusted: number | null
           code: string | null
           name: string | null
           on_hand: number | null
@@ -1494,6 +1597,7 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          adjusted?: never
           code?: string | null
           name?: string | null
           on_hand?: never
@@ -1506,6 +1610,7 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          adjusted?: never
           code?: string | null
           name?: string | null
           on_hand?: never
@@ -1567,6 +1672,7 @@ export type Database = {
       post_journal_purchase: { Args: { _id: string }; Returns: undefined }
       post_journal_sale: { Args: { _id: string }; Returns: undefined }
       post_journal_tp: { Args: { _id: string }; Returns: undefined }
+      restore_audit_entry: { Args: { _audit_id: string }; Returns: string }
     }
     Enums: {
       contact_type: "buyer" | "supplier" | "both"

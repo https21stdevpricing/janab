@@ -210,7 +210,7 @@ const GROUPS: Group[] = [
       {
         q: "A buyer paid me by cheque — how do I track it until it clears?",
         a: "Open Payments → Receipt, pick mode 'Cheque', enter the cheque number, date and drawee bank. Uncheck 'Already cleared' — it stays as a pending entry. Once cleared, open it and tick 'Cleared'.",
-        links: [{ label: "Payments", to: "/app/payments" }],
+        links: [{ label: "Payments", to: "/app/bills" }],
       },
       {
         q: "Where do I deposit a buyer's cheque?",
@@ -262,7 +262,7 @@ const GROUPS: Group[] = [
       {
         q: "A buyer paid for one specific invoice — can I override the allocation?",
         a: "Yes. On the receipt screen, switch to Manual allocation and tick exactly which bills to settle. The auto-FIFO is just a default to save you time.",
-        links: [{ label: "Payments", to: "/app/payments" }],
+        links: [{ label: "Payments", to: "/app/bills" }],
       },
       {
         q: "What is an aging bucket and which one should I chase?",
@@ -287,7 +287,7 @@ const GROUPS: Group[] = [
       {
         q: "How do I refund a buyer?",
         a: "Record a Payment (money out) with the buyer as the contact and 'Refund' in the notes. The balance on their ledger reduces; if you also need to reverse the invoice itself, edit or delete it.",
-        links: [{ label: "Payments", to: "/app/payments" }],
+        links: [{ label: "Payments", to: "/app/bills" }],
       },
     ],
   },

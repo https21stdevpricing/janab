@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
-import { ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { ExternalLink, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/app/audit")({ component: AuditPage });
 
@@ -22,6 +23,7 @@ function AuditPage() {
   const [entity, setEntity] = useState<string>("all");
   const [action, setAction] = useState<string>("all");
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [restoring, setRestoring] = useState<Record<string, boolean>>({});
 
   const load = async () => {
     const { data } = await supabase.from("audit_log" as never).select("*").order("at", { ascending: false }).limit(500) as any;
@@ -54,6 +56,16 @@ function AuditPage() {
 
   const actBadge = (a: string) =>
     a === "insert" ? "default" : a === "update" ? "secondary" : "destructive";
+
+  const restore = async (id: string) => {
+    if (!confirm("Restore this deleted record? It will be re-inserted exactly as it was.")) return;
+    setRestoring(r => ({ ...r, [id]: true }));
+    const { data, error } = await supabase.rpc("restore_audit_entry" as never, { _audit_id: id } as never) as any;
+    setRestoring(r => ({ ...r, [id]: false }));
+    if (error) { toast.error(error.message); return; }
+    toast.success((data as string) ?? "Restored");
+    load();
+  };
 
   const entityLabel: Record<string, string> = {
     sales: "Sale", purchases: "Purchase", third_party: "Third-party", quotations: "Quote",
@@ -134,6 +146,11 @@ function AuditPage() {
                     <Link to="/app/lookup" search={{ q: r.ref_no } as any}>
                       <ExternalLink className="h-3 w-3" /> Open
                     </Link>
+                  </Button>
+                )}
+                {r.action === "delete" && (
+                  <Button size="sm" variant="outline" className="h-6 px-2 text-[11px]" onClick={() => restore(r.id)} disabled={!!restoring[r.id]}>
+                    <RotateCcw className="h-3 w-3" /> {restoring[r.id] ? "Restoring…" : "Restore"}
                   </Button>
                 )}
               </div>
