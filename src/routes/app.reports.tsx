@@ -711,9 +711,9 @@ function Headline({ label, value, sub, tone }: { label: string; value: string; s
 function ReportHeroMetric({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" | "bad" }) {
   const toneCls = tone === "good" ? "text-primary" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : tone === "bad" ? "text-destructive" : "text-foreground";
   return (
-    <div className="rounded-2xl border border-border/70 bg-background p-3 min-w-0">
+    <div className="px-3 py-3 sm:px-4 sm:py-4 min-w-0">
       <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground truncate">{label}</div>
-      <div className={`mt-1 truncate text-base font-semibold tabular-nums sm:text-lg ${toneCls}`}>{value}</div>
+      <div className={`mt-1 text-base font-semibold tabular-nums leading-tight sm:text-lg ${toneCls}`} style={{ wordBreak: "break-word" }}>{value}</div>
     </div>
   );
 }
