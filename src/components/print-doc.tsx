@@ -402,11 +402,15 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                     {company?.bank_name && <><span className="text-[#6e7886]">Bank</span><span className="font-semibold">{company.bank_name}</span></>}
                     {company?.bank_account_no && <><span className="text-[#6e7886]">A/c No.</span><span className="font-mono font-semibold">{company.bank_account_no}</span></>}
                     {company?.bank_ifsc && <><span className="text-[#6e7886]">IFSC</span><span className="font-mono font-semibold">{company.bank_ifsc}</span></>}
+                    {design.showUpi && company?.upi_id && <><span className="text-[#6e7886]">UPI</span><span className="font-mono font-semibold">{company.upi_id}</span></>}
                   </div>
                 </div>
               )}
-              {design.barcodeDataUrl && (
-                <div className="mt-4"><img src={design.barcodeDataUrl} alt="barcode" className="h-10 object-contain" /></div>
+              {renderedBarcode && (
+                <div className="mt-4">
+                  <img src={renderedBarcode} alt={`barcode ${documentNo}`} className="h-10 object-contain" />
+                  <p className="mt-1 text-[9px] text-[#6e7886] tracking-wide">{documentNo}</p>
+                </div>
               )}
               {doc.notes && <p className="mt-4"><span className="text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">Notes</span><br />{doc.notes}</p>}
               <p className="mt-4 text-[9.5px] font-bold uppercase tracking-[0.1em] text-[#6e7886]">{kind === "invoice" ? "Terms & Conditions" : "Terms of Proposal"}</p>
@@ -415,10 +419,10 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 : "Prices valid until the date shown above. Quotation does not constitute a tax invoice. Stock and lot variation may apply. E&OE."}</p>
             </div>
             <div className="text-[11.5px] relative">
-              {design.qrCodeDataUrl && (
+              {renderedQr && (
                 <div className="mb-3 flex flex-col items-end">
-                  <img src={design.qrCodeDataUrl} alt="qr" className="h-24 w-24 object-contain" />
-                  <span className="text-[9px] text-[#6e7886] mt-1">Scan to pay / verify</span>
+                  <img src={renderedQr} alt="qr" className="h-24 w-24 object-contain" />
+                  {qrCaption && <span className="text-[9px] text-[#6e7886] mt-1">{qrCaption}</span>}
                 </div>
               )}
               <SummaryLine label="Subtotal" value={totals.subtotal} />
