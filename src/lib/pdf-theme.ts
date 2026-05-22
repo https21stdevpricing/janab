@@ -4,6 +4,7 @@ import { fmt, fmtDate, todayISO } from "@/lib/format";
 import swLogo from "@/assets/sw-logo.png";
 import type { DocLookupResult } from "@/lib/doc-lookup";
 import { imageFormat, type PrintDesign } from "@/lib/print-customizer";
+import { amountInWords } from "@/lib/amount-words";
 
 export type PdfRgb = [number, number, number];
 
