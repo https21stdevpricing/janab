@@ -335,28 +335,21 @@ function ReportsPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="outlook">
-        <div className="-mx-1 px-1 mb-3">
-          {/* Visual parity with SegmentedTabs (Money, Deposits, Products, Audit) */}
-          <TabsList className="scroll-tabs w-full sm:w-auto justify-start gap-0 bg-muted/70 ring-1 ring-border/60 p-1 rounded-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {[
-              ["outlook", "Overview"],
-              ["pnl", "Profit & Loss"],
-              ["bs", "Balance Sheet"],
-              ["wc", "Working Capital"],
-              ["inv", "Inventory"],
-              ["tb", "Trial Balance"],
-              ["reconcile", "Reconcile"],
-            ].map(([v, label]) => (
-              <TabsTrigger
-                key={v}
-                value={v}
-                className="shrink-0 snap-start whitespace-nowrap rounded-full px-3.5 h-8 text-[13px] font-medium leading-none tracking-tight data-[state=active]:bg-background data-[state=active]:shadow-sm"
-              >
-                {label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+      <Tabs value={reportTab} onValueChange={setReportTab}>
+        <div className="mb-3">
+          <SegmentedTabs
+            value={reportTab}
+            onValueChange={setReportTab}
+            items={[
+              { value: "outlook", label: "Overview" },
+              { value: "pnl", label: "Profit & Loss" },
+              { value: "bs", label: "Balance Sheet" },
+              { value: "wc", label: "Working Capital" },
+              { value: "inv", label: "Inventory" },
+              { value: "tb", label: "Trial Balance" },
+              { value: "reconcile", label: "Reconcile" },
+            ]}
+          />
         </div>
 
         <TabsContent value="outlook" className="space-y-3">
