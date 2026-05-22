@@ -76,10 +76,10 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               <option value="balanced">Balanced body</option><option value="spacious">Spacious body</option><option value="dense">Dense body</option>
             </select>
             <input className="h-9 rounded-md border bg-background px-2 text-sm" placeholder="Watermark text" value={design.watermarkText ?? ""} onChange={(e) => updateDesign({ ...design, watermarkText: e.target.value })} />
-            <label className="h-9 rounded-md border bg-background px-2 text-sm flex items-center justify-center cursor-pointer">Logo PNG<input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadLogo(e.target.files?.[0])} /></label>
+            <label className="h-9 rounded-md border bg-background px-2 text-sm flex items-center justify-center cursor-pointer">Logo PNG<input type="file" accept="image/png" className="hidden" onChange={(e) => uploadLogo(e.target.files?.[0])} /></label>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <label className="h-8 rounded-md border bg-background px-3 text-xs flex items-center cursor-pointer">Add footer brand logos ({design.footerLogos.length}/20)<input type="file" accept="image/png,image/jpeg" multiple className="hidden" onChange={(e) => uploadFooterLogos(e.target.files)} /></label>
+            <label className="h-8 rounded-md border bg-background px-3 text-xs flex items-center cursor-pointer">Add footer brand logos ({design.footerLogos.length}/20)<input type="file" accept="image/png" multiple className="hidden" onChange={(e) => uploadFooterLogos(e.target.files)} /></label>
             {design.footerLogos.length > 0 && <Button variant="ghost" size="sm" onClick={() => updateDesign({ ...design, footerLogos: [] })}>Clear logos</Button>}
           </div>
         </div>
@@ -91,8 +91,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
 
       <article id="print-area" className="sw-print-doc bg-white text-[#121826] mx-auto max-w-[820px] rounded-md border border-slate-200 shadow-sm overflow-hidden print:border-0 print:shadow-none print:max-w-full print:rounded-none">
         <div className="h-2 bg-[#00abb5]" />
-        <header className="px-9 pt-7 pb-5 border-b border-slate-200">
-          <div className="flex items-start justify-between gap-6">
+        <header className={`${design.headerStyle === "compact" ? "px-8 pt-5 pb-4" : "px-9 pt-7 pb-5"} border-b border-slate-200 ${design.headerStyle === "editorial" ? "bg-[#f4fcfd]" : ""}`}>
+          <div className={`flex items-start justify-between gap-6 ${design.headerStyle === "editorial" ? "border-l-4 border-[#00abb5] pl-4" : ""}`}>
             <div className="flex items-start gap-4 min-w-0">
               <img src={design.logoDataUrl || swLogo} alt="StoneWorld Traders logo" className="h-16 w-16 object-contain shrink-0" />
               <div className="min-w-0">
@@ -127,7 +127,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           ]} />
         </section>
 
-        <section className="px-9 py-5 relative">
+        <section className={`${design.bodyLayout === "dense" ? "px-8 py-4" : design.bodyLayout === "spacious" ? "px-10 py-7" : "px-9 py-5"} relative`}>
           {design.watermarkText && <div className="pointer-events-none absolute inset-0 grid place-items-center text-6xl font-black uppercase tracking-normal text-slate-200/50 rotate-[-24deg] select-none">{design.watermarkText}</div>}
           <table className="w-full border-collapse text-[12px] leading-4">
             <thead>
@@ -146,13 +146,13 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 const base = Number(it.qty || 0) * Number(it.rate || 0);
                 return (
                   <tr key={i} className="border-b border-slate-100 break-inside-avoid">
-                    <td className="py-3 px-2 text-center text-[#566070]">{i + 1}</td>
-                    <td className="py-3 px-2 font-semibold text-[#121826]">{it.product_name ?? "—"}</td>
-                    <td className="py-3 px-2 text-right tabular-nums">{fmt(it.qty)}</td>
-                    <td className="py-3 px-2 text-center text-[#566070]">{it.unit ?? "—"}</td>
-                    <td className="py-3 px-2 text-right tabular-nums font-semibold">{fmt(it.rate)}</td>
-                    <td className="py-3 px-2 text-right tabular-nums text-[#566070]">{fmt(it.gst_pct, Number(it.gst_pct ?? 0) % 1 === 0 ? 0 : 2)}%</td>
-                    <td className="py-3 px-2 text-right tabular-nums font-semibold text-[#007e87]">{fmt(base)}</td>
+                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-center text-[#566070]`}>{i + 1}</td>
+                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 font-semibold text-[#121826]`}>{it.product_name ?? "—"}</td>
+                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-right tabular-nums`}>{fmt(it.qty)}</td>
+                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-center text-[#566070]`}>{it.unit ?? "—"}</td>
+                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-right tabular-nums font-semibold`}>{fmt(it.rate)}</td>
+                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-right tabular-nums text-[#566070]`}>{fmt(it.gst_pct, Number(it.gst_pct ?? 0) % 1 === 0 ? 0 : 2)}%</td>
+                    <td className={`${design.bodyLayout === "dense" ? "py-2" : "py-3"} px-2 text-right tabular-nums font-semibold text-[#007e87]`}>{fmt(base)}</td>
                   </tr>
                 );
               })}
