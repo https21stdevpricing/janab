@@ -229,6 +229,7 @@ function Dashboard() {
   const [today, setToday] = useState<Today | null>(null);
   const [metric, setMetric] = useState<MetricKey>("revenue");
   const [range, setRange] = useState<RangeKey>("30d");
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
   // First-time intro tour
   useEffect(() => {
@@ -306,27 +307,38 @@ function Dashboard() {
       tStats.saleCount = sc ?? 0;
       tStats.purchaseCount = pc ?? 0;
       setToday(tStats);
+      setUpdatedAt(new Date());
   };
 
   useEffect(() => {
+    let refreshTimer: number | undefined;
+    const scheduleLoad = () => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => loadAll(), 180);
+    };
     loadAll();
     // Realtime: refresh when anything that affects the dashboard changes.
     const ch = supabase.channel("dash-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "purchases" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "bank_transfers" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "journal_lines" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "sale_items" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchases" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_items" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "third_party" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tp_items" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bank_transfers" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "journal_entries" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "journal_lines" }, scheduleLoad)
       .subscribe();
     // Refresh on tab focus too, in case realtime is throttled.
     const onFocus = () => loadAll();
     const onVisible = () => { if (document.visibilityState === "visible") loadAll(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisible);
-    return () => { supabase.removeChannel(ch); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVisible); };
+    return () => { window.clearTimeout(refreshTimer); supabase.removeChannel(ch); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
 
   // Re-aggregate the raw lines into buckets matching the chosen range.
