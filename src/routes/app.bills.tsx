@@ -10,7 +10,7 @@ import { Empty } from "@/components/empty";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { inr, fmtDate, todayISO } from "@/lib/format";
-import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Clock3, Eye, History, Printer, ShieldCheck, Trash2, X } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, CheckCircle2, Clock3, Eye, History, Printer, ShieldCheck, Trash2, X, Plus } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogHeader, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -20,7 +20,7 @@ import { lookupDoc, openDocsFor, type DocLookupResult } from "@/lib/doc-lookup";
 import { toast } from "sonner";
 import { useShortcut } from "@/lib/shortcuts";
 import { exportStoneWorldPayment } from "@/lib/pdf-theme";
-import { ActionStack, KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
+import { KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/bills")({
   component: BillsPage,
@@ -458,26 +458,29 @@ function BillsPage() {
 
   return (
     <div>
-      <PageHeader title="Money" description="Collect, pay and review only cleared settlements in one place." actions={<ExcelBar onExport={onExport} />} />
+      <PageHeader
+        title="Money"
+        description="Collect, pay and review only cleared settlements in one place."
+        actions={
+          <>
+            <ExcelBar onExport={onExport} />
+            <Button size="sm" variant="outline" onClick={() => startNew("in")}>
+              <ArrowDownLeft className="h-4 w-4" /> Receive
+            </Button>
+            <Button size="sm" onClick={() => startNew("out")}>
+              <Plus className="h-4 w-4" /> Pay
+            </Button>
+          </>
+        }
+      />
 
-      <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_260px]">
-        <div className="space-y-2">
-          <KpiGrid cols={3}>
-            <KpiTile label="Collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
-            <KpiTile label="Pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
-            <KpiTile label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} hint={`Overdue ${inr(kpis.overdue)}`} />
-          </KpiGrid>
-        </div>
-        <ActionStack
-          title="Quick actions"
-          items={[
-            { label: "Receive", icon: <ArrowDownLeft className="h-4 w-4" />, onClick: () => startNew("in") },
-            { label: "Pay", icon: <ArrowUpRight className="h-4 w-4" />, onClick: () => startNew("out"), primary: true },
-          ]}
-        />
-      </div>
+      <KpiGrid cols={3} className="mb-4">
+        <KpiTile label="Collect" value={inr(kpis.recv)} tone="good" hint={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "All on time"} active={tab === "receivable"} onClick={() => setTab("receivable")} />
+        <KpiTile label="Pay" value={inr(kpis.pay)} tone="bad" hint={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "All on time"} active={tab === "payable"} onClick={() => setTab("payable")} />
+        <KpiTile label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} hint={kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"} />
+      </KpiGrid>
 
-      <div className="mb-3 space-y-3">
+      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <SegmentedTabs
           value={tab}
           onValueChange={(v) => setTab(v as any)}
@@ -487,26 +490,27 @@ function BillsPage() {
             { value: "history", label: "History", icon: <History className="h-3.5 w-3.5" /> },
           ]}
         />
-        <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
-          <Input className="h-10" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
-          {tab !== "history" && (
-            <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
-              <SelectTrigger className="h-10 sm:w-36"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All ages</SelectItem>
-                <SelectItem value="0–30">0–30 days</SelectItem>
-                <SelectItem value="31–60">31–60 days</SelectItem>
-                <SelectItem value="61–90">61–90 days</SelectItem>
-                <SelectItem value="90+">90+ days</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+        {tab !== "history" && (
+          <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
+            <SelectTrigger className="h-9 sm:w-40"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All ages</SelectItem>
+              <SelectItem value="0–30">0–30 days</SelectItem>
+              <SelectItem value="31–60">31–60 days</SelectItem>
+              <SelectItem value="61–90">61–90 days</SelectItem>
+              <SelectItem value="90+">90+ days</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
+      </div>
+
+      <div className="mb-3">
+        <Input className="h-10" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
       </div>
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
-          <div className="surface divide-y divide-border/60 overflow-hidden min-w-0">
+          <div className="rounded-2xl border bg-card overflow-hidden divide-y min-w-0">
             {filteredPays.map(p => (
               <button key={p.id} type="button" className="grid w-full grid-cols-[1fr_auto] gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:px-4" onClick={() => openPayView(p)}>
                 <div className="min-w-0">
@@ -532,7 +536,7 @@ function BillsPage() {
         )
       ) : filtered.length === 0 ? <Empty>No outstanding {tab === "receivable" ? "receivables" : "payables"}.</Empty> : (
         <>
-        <div className="hidden md:block surface overflow-x-auto">
+        <div className="hidden md:block rounded-2xl border bg-card overflow-x-auto">
           <table className="w-full text-sm min-w-[640px]">
             <thead className="bg-muted/40 text-xs uppercase tracking-[0.08em] text-muted-foreground">
               <tr>
@@ -574,13 +578,13 @@ function BillsPage() {
             </tbody>
           </table>
         </div>
-        <div className="md:hidden space-y-2">
+        <div className="md:hidden rounded-2xl border bg-card overflow-hidden divide-y">
           {filtered.map(r => {
             const d = ageDays(r.date); const b = bucket(d);
             const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
             const st = payStatus(Number(r.total), Number(r.paid), d);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className="surface p-3 space-y-3">
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="p-4 space-y-3">
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -698,24 +702,22 @@ function BillsPage() {
           </DialogHeader>
 
           <div className="space-y-5 p-4 sm:p-6">
-          {/* Direction switch inside dialog */}
-          <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/30 p-1">
+          {/* Direction segmented switch */}
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-muted/60 p-1 ring-1 ring-border/60">
             <button type="button" onClick={() => { setDirection("in"); setAllocs([]); }}
-              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "in" ? "border-primary bg-background shadow-sm" : "border-transparent hover:bg-background/70"}`}>
-              <div className="flex items-center gap-2 text-xs font-medium"><ArrowDownLeft className="h-3.5 w-3.5 text-primary" /> Money in (receipt)</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">From a buyer / customer</div>
+              className={`inline-flex items-center justify-center gap-1.5 h-8 rounded-full text-[13px] font-medium transition-colors ${direction === "in" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              <ArrowDownLeft className="h-3.5 w-3.5 text-primary" /> Money in
             </button>
             <button type="button" onClick={() => { setDirection("out"); setAllocs([]); }}
-              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "out" ? "border-destructive bg-background shadow-sm" : "border-transparent hover:bg-background/70"}`}>
-              <div className="flex items-center gap-2 text-xs font-medium"><ArrowUpRight className="h-3.5 w-3.5 text-destructive" /> Money out (payment)</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">To a supplier / vendor</div>
+              className={`inline-flex items-center justify-center gap-1.5 h-8 rounded-full text-[13px] font-medium transition-colors ${direction === "out" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              <ArrowUpRight className="h-3.5 w-3.5 text-destructive" /> Money out
             </button>
           </div>
 
           {/* Transaction kind: against invoice / advance / on-account */}
           <div>
-            <Label className="text-xs">Apply as</Label>
-            <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Apply as</Label>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {([
                 { v: "against_invoice", t: "Against invoice", d: "Knock off specific pending bill(s)." },
                 { v: "advance", t: "Advance payment", d: direction === "in" ? "Park as Advance from Customers." : "Park as Advances to Suppliers." },
@@ -723,7 +725,7 @@ function BillsPage() {
               ] as const).map((k) => (
                 <button key={k.v} type="button"
                   onClick={() => { setKind(k.v); if (k.v !== "against_invoice") setAllocs([]); }}
-                  className={`rounded-md border p-2.5 text-left transition-colors ${kind === k.v ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:bg-muted/40"}`}>
+                  className={`rounded-xl border p-3 text-left transition-colors ${kind === k.v ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:bg-muted/40"}`}>
                   <div className="text-xs font-medium">{k.t}</div>
                   <div className="mt-0.5 text-[10px] text-muted-foreground">{k.d}</div>
                 </button>
