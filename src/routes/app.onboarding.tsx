@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeader } from "@/components/page-header";
 import { inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X } from "lucide-react";
+import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/app/onboarding")({
   component: OnboardingPage,
@@ -41,6 +41,14 @@ function OnboardingPage() {
   // Counts for context
   const [counts, setCounts] = useState({ products: 0, openingStockValue: 0, recv: 0, pay: 0 });
 
+  // Step 3 — inline product rows
+  type ProdRow = { id?: string; name: string; unit: string; opening_stock: number; purchase_rate: number; _dirty?: boolean };
+  const [prods, setProds] = useState<ProdRow[]>([]);
+
+  // Step 4 — inline contact rows
+  type ContactRow = { id?: string; name: string; type: "buyer" | "supplier"; opening_balance: number; phone?: string; _dirty?: boolean };
+  const [contacts, setContacts] = useState<ContactRow[]>([]);
+
   useEffect(() => {
     (async () => {
       const { data: st } = await supabase.from("settings").select("*").maybeSingle();
@@ -58,14 +66,73 @@ function OnboardingPage() {
         bank_ifsc: (st as any).bank_ifsc ?? "",
       });
       if (st && Array.isArray((st as any).partners)) setPartners((st as any).partners as Partner[]);
-      const { data: ps } = await supabase.from("products").select("opening_stock,purchase_rate");
-      const osv = (ps ?? []).reduce((a: number, p: any) => a + Number(p.opening_stock || 0) * Number(p.purchase_rate || 0), 0);
-      const { data: cs } = await supabase.from("contacts").select("type,opening_balance");
-      const recv = (cs ?? []).filter((c: any) => c.type === "buyer").reduce((a: number, c: any) => a + Number(c.opening_balance || 0), 0);
-      const pay  = (cs ?? []).filter((c: any) => c.type === "supplier").reduce((a: number, c: any) => a + Number(c.opening_balance || 0), 0);
-      setCounts({ products: (ps ?? []).length, openingStockValue: osv, recv, pay });
+      await refreshInline();
     })();
   }, []);
+
+  const refreshInline = async () => {
+    const { data: ps } = await supabase.from("products").select("id,name,unit,opening_stock,purchase_rate").order("name");
+    const { data: cs } = await supabase.from("contacts").select("id,name,type,opening_balance,phone").order("name");
+    const prodRows = (ps ?? []).map((p: any) => ({ id: p.id, name: p.name ?? "", unit: p.unit ?? "pc", opening_stock: Number(p.opening_stock || 0), purchase_rate: Number(p.purchase_rate || 0) }));
+    setProds(prodRows);
+    setContacts((cs ?? []).map((c: any) => ({ id: c.id, name: c.name ?? "", type: c.type, opening_balance: Number(c.opening_balance || 0), phone: c.phone ?? "" })));
+    const osv = prodRows.reduce((a, p) => a + p.opening_stock * p.purchase_rate, 0);
+    const recv = (cs ?? []).filter((c: any) => c.type === "buyer").reduce((a: number, c: any) => a + Number(c.opening_balance || 0), 0);
+    const pay  = (cs ?? []).filter((c: any) => c.type === "supplier").reduce((a: number, c: any) => a + Number(c.opening_balance || 0), 0);
+    setCounts({ products: prodRows.length, openingStockValue: osv, recv, pay });
+  };
+
+  const liveOpeningStockValue = useMemo(() => prods.reduce((a, p) => a + Number(p.opening_stock || 0) * Number(p.purchase_rate || 0), 0), [prods]);
+  const liveRecv = useMemo(() => contacts.filter(c => c.type === "buyer").reduce((a, c) => a + Number(c.opening_balance || 0), 0), [contacts]);
+  const livePay  = useMemo(() => contacts.filter(c => c.type === "supplier").reduce((a, c) => a + Number(c.opening_balance || 0), 0), [contacts]);
+
+  const saveProducts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const dirty = prods.filter(p => p._dirty || !p.id);
+    if (dirty.length === 0) { setStep(4); return; }
+    setBusy(true);
+    try {
+      const inserts = dirty.filter(p => !p.id && p.name.trim()).map(p => ({ user_id: user.id, name: p.name.trim(), unit: p.unit || "pc", opening_stock: Number(p.opening_stock || 0), purchase_rate: Number(p.purchase_rate || 0) }));
+      const updates = dirty.filter(p => p.id);
+      if (inserts.length) {
+        const { error } = await supabase.from("products").insert(inserts as never);
+        if (error) throw error;
+      }
+      for (const u of updates) {
+        const { error } = await supabase.from("products").update({ name: u.name, unit: u.unit, opening_stock: Number(u.opening_stock || 0), purchase_rate: Number(u.purchase_rate || 0) } as never).eq("id", u.id!);
+        if (error) throw error;
+      }
+      await refreshInline();
+      toast.success("Opening stock saved");
+      setStep(4);
+    } catch (e: any) { toast.error(e?.message ?? "Save failed"); }
+    finally { setBusy(false); }
+  };
+
+  const saveContacts = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const dirty = contacts.filter(c => c._dirty || !c.id);
+    if (dirty.length === 0) { setStep(5); return; }
+    setBusy(true);
+    try {
+      const inserts = dirty.filter(c => !c.id && c.name.trim()).map(c => ({ user_id: user.id, name: c.name.trim(), type: c.type, opening_balance: Number(c.opening_balance || 0), phone: c.phone || null }));
+      const updates = dirty.filter(c => c.id);
+      if (inserts.length) {
+        const { error } = await supabase.from("contacts").insert(inserts as never);
+        if (error) throw error;
+      }
+      for (const u of updates) {
+        const { error } = await supabase.from("contacts").update({ name: u.name, opening_balance: Number(u.opening_balance || 0), phone: u.phone || null } as never).eq("id", u.id!);
+        if (error) throw error;
+      }
+      await refreshInline();
+      toast.success("Opening balances saved");
+      setStep(5);
+    } catch (e: any) { toast.error(e?.message ?? "Save failed"); }
+    finally { setBusy(false); }
+  };
 
   const validatePAN = (p: string) => !p || /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(p.toUpperCase());
   const validateGSTIN = (g: string) => !g || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][0-9A-Z]{3}$/.test(g.toUpperCase());
@@ -258,30 +325,49 @@ function OnboardingPage() {
 
         {step === 3 && (
           <>
-            <Header n={3} title="Opening stock" hint="Pre-load your existing inventory. Each product carries an opening qty and a purchase rate." icon={Boxes} />
-            <div className="rounded-lg border p-4 bg-muted/20 text-sm space-y-2">
-              <div>You currently have <b>{counts.products}</b> products. Opening stock value: <b className="tabular-nums">{inr(counts.openingStockValue)}</b>.</div>
-              <div className="text-muted-foreground text-xs">Open the Products page, set <b>Opening stock</b> and <b>Purchase rate</b> on each item. Come back here when done — that value will post into Inventory automatically.</div>
+            <Header n={3} title="Opening stock" hint="Add each product with current quantity and purchase rate. Edit inline — no need to leave this page." icon={Boxes} />
+            <div className="rounded-lg border bg-muted/10">
+              <div className="grid grid-cols-[1fr_70px_90px_110px_32px] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
+                <div>Product</div><div>Unit</div><div className="text-right">Qty</div><div className="text-right">Rate ₹</div><div></div>
+              </div>
+              <div className="max-h-[40vh] overflow-y-auto divide-y">
+                {prods.length === 0 && <div className="px-3 py-6 text-center text-xs text-muted-foreground">No products yet. Add your first below.</div>}
+                {prods.map((p, i) => (
+                  <div key={p.id ?? `n-${i}`} className="grid grid-cols-[1fr_70px_90px_110px_32px] gap-2 px-3 py-1.5 items-center">
+                    <Input className="h-8 text-sm" value={p.name} placeholder="e.g. Marble 24×24" onChange={e => { const c = [...prods]; c[i] = { ...c[i], name: e.target.value, _dirty: true }; setProds(c); }} />
+                    <Input className="h-8 text-sm" value={p.unit} onChange={e => { const c = [...prods]; c[i] = { ...c[i], unit: e.target.value, _dirty: true }; setProds(c); }} />
+                    <Input className="h-8 text-sm text-right tabular-nums" type="number" value={p.opening_stock} onChange={e => { const c = [...prods]; c[i] = { ...c[i], opening_stock: +e.target.value, _dirty: true }; setProds(c); }} />
+                    <Input className="h-8 text-sm text-right tabular-nums" type="number" value={p.purchase_rate} onChange={e => { const c = [...prods]; c[i] = { ...c[i], purchase_rate: +e.target.value, _dirty: true }; setProds(c); }} />
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => { if (p.id) { if (!confirm(`Delete "${p.name}"?`)) return; await supabase.from("products").delete().eq("id", p.id); } setProds(prods.filter((_, j) => j !== i)); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
+                ))}
+              </div>
+              <div className="border-t flex items-center justify-between px-3 py-2 bg-card">
+                <Button size="sm" variant="outline" onClick={() => setProds([...prods, { name: "", unit: "pc", opening_stock: 0, purchase_rate: 0, _dirty: true }])}><Plus className="h-3.5 w-3.5" /> Add product</Button>
+                <div className="text-xs">Stock value: <span className="font-semibold tabular-nums">{inr(liveOpeningStockValue)}</span></div>
+              </div>
             </div>
-            <Button variant="outline" asChild className="w-full"><Link to="/app/products">Open Products →</Link></Button>
+            <Note>Saved here directly. Full management later in <Link className="underline" to="/app/products">Products</Link>.</Note>
             <Foot>
               <Button variant="ghost" onClick={() => setStep(2)}><ArrowLeft className="h-4 w-4" /> Back</Button>
-              <Button onClick={() => setStep(4)}>Next <ArrowRight className="h-4 w-4" /></Button>
+              <Button onClick={saveProducts} disabled={busy}>Save & Next <ArrowRight className="h-4 w-4" /></Button>
             </Foot>
           </>
         )}
 
         {step === 4 && (
           <>
-            <Header n={4} title="Who owes you / who you owe" hint="Set opening balances on each contact." icon={Users} />
+            <Header n={4} title="Who owes you / who you owe" hint="Add buyers and suppliers with their opening balance. Edit inline — no detour." icon={Users} />
             <div className="grid grid-cols-2 gap-3">
-              <Stat label="Receivable" value={inr(counts.recv)} tone="good" />
-              <Stat label="Payable" value={inr(counts.pay)} tone="bad" />
+              <Stat label="Receivable (Buyers)" value={inr(liveRecv)} tone="good" />
+              <Stat label="Payable (Suppliers)" value={inr(livePay)} tone="bad" />
             </div>
-            <div className="text-xs text-muted-foreground">Open <Link to="/app/buyers" className="underline">Buyers</Link> and <Link to="/app/suppliers" className="underline">Suppliers</Link> and set the <b>Opening balance</b> on each party. They'll be posted into Accounts Receivable / Payable.</div>
+            <InlineContacts kind="buyer" rows={contacts} setRows={setContacts} />
+            <InlineContacts kind="supplier" rows={contacts} setRows={setContacts} />
+            <Note>Saved here directly. Full management later in <Link className="underline" to="/app/buyers">Buyers</Link> / <Link className="underline" to="/app/suppliers">Suppliers</Link>.</Note>
             <Foot>
               <Button variant="ghost" onClick={() => setStep(3)}><ArrowLeft className="h-4 w-4" /> Back</Button>
-              <Button onClick={() => setStep(5)}>Next <ArrowRight className="h-4 w-4" /></Button>
+              <Button onClick={saveContacts} disabled={busy}>Save & Next <ArrowRight className="h-4 w-4" /></Button>
             </Foot>
           </>
         )}
@@ -292,9 +378,9 @@ function OnboardingPage() {
             <div className="rounded-lg border divide-y text-sm">
               <Line label="Cash on hand" value={inr(cashOpen)} side="Dr" />
               <Line label="Bank balance" value={inr(bankOpen)} side="Dr" />
-              <Line label="Inventory (from products — auto)" value={inr(counts.openingStockValue)} side="" />
-              <Line label="Accounts Receivable (from buyers)" value={inr(counts.recv)} side="Dr" />
-              <Line label="Accounts Payable (from suppliers)" value={inr(counts.pay)} side="Cr" />
+              <Line label="Inventory (from products — auto)" value={inr(liveOpeningStockValue)} side="" />
+              <Line label="Accounts Receivable (from buyers)" value={inr(liveRecv)} side="Dr" />
+              <Line label="Accounts Payable (from suppliers)" value={inr(livePay)} side="Cr" />
               <Line label="Owner's Capital" value="Auto-balanced" side="Cr" />
             </div>
             <Note>Inventory carries from your Products page directly to the Balance Sheet (matched by Opening Capital). Cash, bank and party balances post as one journal voucher.</Note>
@@ -350,3 +436,46 @@ function Line({ label, value, side }: { label: string; value: string; side: stri
     </div>
   );
 }
+
+function InlineContacts({ kind, rows, setRows }: {
+  kind: "buyer" | "supplier";
+  rows: Array<{ id?: string; name: string; type: "buyer" | "supplier"; opening_balance: number; phone?: string; _dirty?: boolean }>;
+  setRows: (r: any) => void;
+}) {
+  const list = rows.filter(r => r.type === kind);
+  const label = kind === "buyer" ? "Buyers (Receivable)" : "Suppliers (Payable)";
+  const tone = kind === "buyer" ? "text-primary" : "text-destructive";
+  return (
+    <div className="rounded-lg border bg-muted/10">
+      <div className="px-3 py-2 border-b text-[11px] font-medium uppercase tracking-wider text-muted-foreground flex items-center justify-between">
+        <span>{label}</span>
+        <span className={`tabular-nums ${tone}`}>{inrLocal(list.reduce((a, r) => a + Number(r.opening_balance || 0), 0))}</span>
+      </div>
+      <div className="max-h-[28vh] overflow-y-auto divide-y">
+        {list.length === 0 && <div className="px-3 py-4 text-center text-xs text-muted-foreground">No {kind}s yet.</div>}
+        {list.map((r) => {
+          const idx = rows.indexOf(r);
+          return (
+            <div key={r.id ?? `n-${idx}`} className="grid grid-cols-[1fr_110px_130px_32px] gap-2 px-3 py-1.5 items-center">
+              <Input className="h-8 text-sm" value={r.name} placeholder="Name" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], name: e.target.value, _dirty: true }; setRows(c); }} />
+              <Input className="h-8 text-sm" value={r.phone ?? ""} placeholder="Phone" onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], phone: e.target.value, _dirty: true }; setRows(c); }} />
+              <Input className="h-8 text-sm text-right tabular-nums" type="number" value={r.opening_balance} onChange={e => { const c = [...rows]; c[idx] = { ...c[idx], opening_balance: +e.target.value, _dirty: true }; setRows(c); }} />
+              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={async () => {
+                if (r.id) { if (!confirm(`Delete "${r.name}"?`)) return; await supabase.from("contacts").delete().eq("id", r.id); }
+                setRows(rows.filter((_, j) => j !== idx));
+              }}><X className="h-3.5 w-3.5" /></Button>
+            </div>
+          );
+        })}
+      </div>
+      <div className="border-t px-3 py-2 bg-card">
+        <Button size="sm" variant="outline" onClick={() => setRows([...rows, { name: "", type: kind, opening_balance: 0, phone: "", _dirty: true }])}>
+          <Plus className="h-3.5 w-3.5" /> Add {kind}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// local re-export to keep InlineContacts self-contained without re-importing inr
+function inrLocal(n: number) { return inr(n); }

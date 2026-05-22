@@ -71,6 +71,20 @@ function bucketTone(b: string) {
   return b === "0–30" ? "secondary" : b === "31–60" ? "default" : "destructive";
 }
 
+function payStatus(total: number, paid: number, ageDaysVal: number): { label: string; tone: "warn" | "info" | "bad" | "good" } {
+  if (paid <= 0) return ageDaysVal > 30 ? { label: "Overdue", tone: "bad" } : { label: "Unpaid", tone: "warn" };
+  if (paid < total) return ageDaysVal > 30 ? { label: "Overdue · Partial", tone: "bad" } : { label: "Partial", tone: "info" };
+  return { label: "Paid", tone: "good" };
+}
+
+function StatusBadge({ s }: { s: { label: string; tone: "warn" | "info" | "bad" | "good" } }) {
+  const cls = s.tone === "bad" ? "border-destructive/40 text-destructive bg-destructive/5"
+    : s.tone === "warn" ? "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/5"
+    : s.tone === "info" ? "border-primary/30 text-primary bg-primary/5"
+    : "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/5";
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${cls}`}>{s.label}</span>;
+}
+
 function BillsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [pays, setPays] = useState<PayRow[]>([]);
@@ -447,13 +461,10 @@ function BillsPage() {
             <thead className="bg-muted/40 text-xs uppercase">
               <tr>
                 <th className="text-left p-2">Doc</th>
-                <th className="text-left p-2">Date</th>
                 <th className="text-left p-2">Party</th>
-                <th className="text-right p-2">Total</th>
-                <th className="text-right p-2">Paid</th>
-                <th className="text-right p-2">Balance</th>
-                <th className="text-left p-2 w-32">Progress</th>
-                <th className="text-left p-2">Age</th>
+                <th className="text-right p-2">Remaining</th>
+                <th className="text-left p-2 w-40">Paid / Total</th>
+                <th className="text-left p-2">Status</th>
                 <th className="text-right p-2">Action</th>
               </tr>
             </thead>
@@ -461,16 +472,20 @@ function BillsPage() {
               {filtered.map(r => {
                 const d = ageDays(r.date); const b = bucket(d);
                 const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
+                const st = payStatus(Number(r.total), Number(r.paid), d);
                 return (
                   <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t">
-                    <td className="p-2"><button onClick={() => openPreview(r.doc_no)} className="font-mono text-primary hover:underline">{r.doc_no}</button><div><Badge variant="outline" className="mt-1 text-[10px]">{docKindLabel(r.doc_kind)}</Badge></div></td>
-                    <td className="p-2">{fmtDate(r.date)}</td>
-                    <td className="p-2 truncate max-w-[200px]">{r.party_name ?? "—"}</td>
-                    <td className="p-2 text-right tabular-nums">{inr(r.total)}</td>
-                    <td className="p-2 text-right tabular-nums">{inr(r.paid)}</td>
-                    <td className={`p-2 text-right tabular-nums font-semibold ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</td>
-                    <td className="p-2"><PayProgress pct={pct} tab={tab} /></td>
-                    <td className="p-2"><Badge variant={bucketTone(b) as any}>{b} · {d}d</Badge></td>
+                    <td className="p-2">
+                      <button onClick={() => openPreview(r.doc_no)} className="font-mono text-primary hover:underline">{r.doc_no}</button>
+                      <div className="text-[10px] text-muted-foreground mt-0.5">{docKindLabel(r.doc_kind)} · {fmtDate(r.date)}</div>
+                    </td>
+                    <td className="p-2 truncate max-w-[220px]">{r.party_name ?? "—"}</td>
+                    <td className={`p-2 text-right tabular-nums text-base font-semibold ${tab === "receivable" ? "text-primary" : "text-destructive"}`}>{inr(r.balance)}</td>
+                    <td className="p-2">
+                      <PayProgress pct={pct} tab={tab} />
+                      <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">{inr(r.paid)} of {inr(r.total)}</div>
+                    </td>
+                    <td className="p-2"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div></td>
                     <td className="p-2 text-right whitespace-nowrap">
                       <Button size="sm" variant="ghost" onClick={() => openPreview(r.doc_no)} title="Preview bill"><Eye className="h-3.5 w-3.5" /></Button>
                       <Button size="sm" variant="outline" onClick={() => settleBill(r)}>
@@ -489,6 +504,7 @@ function BillsPage() {
             const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
             const sideClr = tab === "receivable" ? "text-primary" : "text-destructive";
             const sideBdr = tab === "receivable" ? "border-l-primary" : "border-l-destructive";
+            const st = payStatus(Number(r.total), Number(r.paid), d);
             return (
               <div key={`${r.doc_kind}-${r.doc_id}`} className={`rounded-md border border-l-4 ${sideBdr} bg-card p-3 space-y-3`}>
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
@@ -499,8 +515,9 @@ function BillsPage() {
                       <div className="text-[10px] uppercase tracking-wide text-muted-foreground mt-0.5">{docKindLabel(r.doc_kind)}</div>
                     </div>
                     <div className="text-right shrink-0">
+                      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Remaining</div>
                       <div className={`text-lg font-semibold tabular-nums ${sideClr}`}>{inr(r.balance)}</div>
-                      <Badge variant={bucketTone(b) as any} className="text-[10px]">{b} · {d}d</Badge>
+                      <div className="mt-1 flex justify-end gap-1"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div>
                     </div>
                   </div>
                 </button>
