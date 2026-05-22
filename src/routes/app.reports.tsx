@@ -298,29 +298,20 @@ function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Reports" description="Ledger-backed business health for mobile review and desktop accounting work." />
+      <PageHeader title="Reports" description="Your books at a glance." />
 
-      <div className="mb-4 rounded-[1.75rem] border border-border/70 bg-card p-4 shadow-sm sm:p-5">
-        <div className="grid gap-4 lg:grid-cols-[1.1fr_1.9fr] lg:items-end">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.14em] text-muted-foreground">Financial control center</div>
-            <div className="mt-1 text-2xl font-semibold tracking-tight sm:text-3xl">Know what changed, why it changed, and whether books still tie out.</div>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs">
-              <IntegrityBadge ok={tbBalanced} okLabel="Trial balance OK" badLabel="Trial balance drift" />
-              <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet OK" badLabel="Balance sheet drift" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <ReportHeroMetric label="Revenue" value={inr(revenue)} />
-            <ReportHeroMetric label="Net profit" value={inr(netProfit)} tone={netProfit >= 0 ? "good" : "bad"} />
-            <ReportHeroMetric label="Cash + Bank" value={inr(liquid)} tone={liquid >= 0 ? "good" : "bad"} />
-            <ReportHeroMetric label="AR − AP" value={inr(arApDelta)} tone={arApDelta >= 0 ? "good" : "warn"} />
-          </div>
+      {/* Minimal hero — four numbers, one integrity strip, no marketing copy */}
+      <div className="mb-4 rounded-2xl border border-border/70 bg-card overflow-hidden">
+        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-border/60">
+          <ReportHeroMetric label="Revenue" value={inr(revenue)} />
+          <ReportHeroMetric label="Net profit" value={inr(netProfit)} tone={netProfit >= 0 ? "good" : "bad"} />
+          <ReportHeroMetric label="Cash + Bank" value={inr(liquid)} tone={liquid >= 0 ? "good" : "bad"} />
+          <ReportHeroMetric label="AR − AP" value={inr(arApDelta)} tone={arApDelta >= 0 ? "good" : "warn"} />
         </div>
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-xs text-muted-foreground">
-          <span>Inventory method: <span className="font-medium text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span></span>
-          <span className="hidden sm:inline">·</span>
-          <span>Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
+        <div className="px-4 py-2 border-t border-border/60 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+          <IntegrityBadge ok={tbBalanced} okLabel="Trial balance OK" badLabel="Trial balance drift" />
+          <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet OK" badLabel="Balance sheet drift" />
+          <span className="ml-auto">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span>
         </div>
       </div>
 
