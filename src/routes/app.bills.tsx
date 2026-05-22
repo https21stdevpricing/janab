@@ -632,28 +632,26 @@ function BillsPage() {
                 {direction === "in" ? <ArrowDownLeft className="h-4 w-4 text-primary" /> : <ArrowUpRight className="h-4 w-4 text-destructive" />}
                 {direction === "in" ? "Record receipt" : "Record payment"}
               </DialogTitle>
-              <p className="mt-1 text-xs text-muted-foreground">Cheque entries stay pending until cleared, so accounts and outstanding balances remain safe.</p>
+              {mode === "Cheque" && !cleared && <p className="mt-1 text-xs text-muted-foreground">This cheque will remain pending until you mark it cleared.</p>}
             </div>
           </DialogHeader>
 
-          <div className="space-y-4 p-4 sm:p-6">
+          <div className="space-y-5 p-4 sm:p-6">
           {/* Direction switch inside dialog */}
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/30 p-1">
             <button type="button" onClick={() => { setDirection("in"); setAllocs([]); }}
-              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "in" ? "border-primary bg-primary/5" : "hover:bg-muted/40"}`}>
+              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "in" ? "border-primary bg-background shadow-sm" : "border-transparent hover:bg-background/70"}`}>
               <div className="flex items-center gap-2 text-xs font-medium"><ArrowDownLeft className="h-3.5 w-3.5 text-primary" /> Money in (receipt)</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">From a buyer / customer</div>
             </button>
             <button type="button" onClick={() => { setDirection("out"); setAllocs([]); }}
-              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "out" ? "border-destructive bg-destructive/5" : "hover:bg-muted/40"}`}>
+              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "out" ? "border-destructive bg-background shadow-sm" : "border-transparent hover:bg-background/70"}`}>
               <div className="flex items-center gap-2 text-xs font-medium"><ArrowUpRight className="h-3.5 w-3.5 text-destructive" /> Money out (payment)</div>
               <div className="text-[10px] text-muted-foreground mt-0.5">To a supplier / vendor</div>
             </button>
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label className="text-xs">No.</Label>
-              <Input className="font-mono" placeholder="Auto" disabled value="(auto)" /></div>
             <div className="space-y-1.5"><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
             <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">{direction === "in" ? "From buyer" : "To supplier"}</Label>
               <ContactPicker filter={direction === "in" ? "buyer" : "supplier"} value={contactId} onChange={(id, n) => { setContactId(id); setContactName(n); setAllocs([]); }} />
