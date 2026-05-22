@@ -460,6 +460,12 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <dt className="text-[#6e7886]">Date</dt><dd className="font-bold tabular-nums text-[#111621]">{fmtDate(doc.date)}</dd>
                 {doc.valid_until && <><dt className="text-[#6e7886]">Valid</dt><dd className="font-bold tabular-nums text-[#111621]">{fmtDate(doc.valid_until)}</dd></>}
               </dl>
+              {(qrPlacement === "header" || barcodePlacement === "header") && (
+                <div className="mt-3 flex items-end justify-end gap-3">
+                  {qrPlacement === "header" && renderedQr && <img src={renderedQr} alt="qr" className="h-16 w-16 object-contain" />}
+                  {barcodePlacement === "header" && renderedBarcode && <img src={renderedBarcode} alt={`barcode ${documentNo}`} className="h-9 max-w-[150px] object-contain" />}
+                </div>
+              )}
             </div>
           </div>
           <div className="mt-5 h-px bg-slate-200" />
