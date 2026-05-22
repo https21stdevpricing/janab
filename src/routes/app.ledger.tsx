@@ -264,7 +264,14 @@ function LedgerPage() {
           </div>
           <div className="space-y-1">
             <Label className="text-[10px] uppercase text-muted-foreground">Side</Label>
-            <Select value={side} onValueChange={(v: any) => setSide(v)}>
+            <Select
+              value={side}
+              onValueChange={(v) => {
+                if (SIDE_VALUES.includes(v as (typeof SIDE_VALUES)[number])) {
+                  setSide(v as (typeof SIDE_VALUES)[number]);
+                }
+              }}
+            >
               <SelectTrigger className="h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -277,7 +284,14 @@ function LedgerPage() {
           </div>
           <div className="space-y-1">
             <Label className="text-[10px] uppercase text-muted-foreground">Sort by</Label>
-            <Select value={sortBy} onValueChange={(v: any) => setSortBy(v)}>
+            <Select
+              value={sortBy}
+              onValueChange={(v) => {
+                if (SORT_BY_VALUES.includes(v as (typeof SORT_BY_VALUES)[number])) {
+                  setSortBy(v as (typeof SORT_BY_VALUES)[number]);
+                }
+              }}
+            >
               <SelectTrigger className="h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -290,7 +304,14 @@ function LedgerPage() {
           </div>
           <div className="space-y-1">
             <Label className="text-[10px] uppercase text-muted-foreground">Direction</Label>
-            <Select value={sortDir} onValueChange={(v: any) => setSortDir(v)}>
+            <Select
+              value={sortDir}
+              onValueChange={(v) => {
+                if (SORT_DIR_VALUES.includes(v as (typeof SORT_DIR_VALUES)[number])) {
+                  setSortDir(v as (typeof SORT_DIR_VALUES)[number]);
+                }
+              }}
+            >
               <SelectTrigger className="h-8">
                 <SelectValue />
               </SelectTrigger>
@@ -365,7 +386,7 @@ function LedgerPage() {
                       {r.ref_no ? (
                         <Link
                           to="/app/lookup"
-                          search={{ q: r.ref_no } as any}
+                          search={{ q: r.ref_no }}
                           className="text-primary hover:underline"
                         >
                           {r.ref_no}
