@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search, Rows3 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
@@ -48,6 +49,10 @@ function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Row | null>(null);
   const [form, setForm] = useState<Omit<Row, "id">>(empty);
+  // bulk add
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkText, setBulkText] = useState("");
+  const [bulkKind, setBulkKind] = useState<"stocked" | "order_basis">("stocked");
   // dimension calculator
   const [dim, setDim] = useState<{ l: number; b: number; pieces: number; unit: "in" | "cm" | "mm" | "ft" | "m" }>({ l: 0, b: 0, pieces: 1, unit: "in" });
 
@@ -174,6 +179,37 @@ function ProductsPage() {
     } catch (e: any) { toast.error(e.message ?? "Import failed"); }
   };
 
+  const saveBulk = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { toast.error("Sign-in required"); return; }
+    const lines = bulkText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (lines.length === 0) { toast.error("Paste at least one row"); return; }
+    const payload: any[] = [];
+    for (const ln of lines) {
+      // Accept tab / comma / pipe separators
+      const parts = ln.split(/[\t|,]/).map(p => p.trim());
+      const [name, unit, qty, purchase, sale, hsn] = parts;
+      if (!name) continue;
+      payload.push({
+        user_id: user.id,
+        kind: bulkKind,
+        name,
+        code: "",
+        unit: unit || "sqft",
+        hsn: hsn || null,
+        purchase_rate: Number(purchase) || 0,
+        sale_rate: Number(sale) || 0,
+        opening_stock: bulkKind === "order_basis" ? 0 : (Number(qty) || 0),
+        reorder_level: 0,
+      });
+    }
+    if (payload.length === 0) { toast.error("No valid rows"); return; }
+    const { error } = await supabase.from("products").insert(payload as never);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Added ${payload.length} products`);
+    setBulkText(""); setBulkOpen(false); load();
+  };
+
   const computedArea = toSqft(dim.l, dim.b, dim.unit) * (dim.pieces || 1);
   const showCalc = (form.unit ?? "").toLowerCase() === "sqft" && form.kind === "stocked";
 
@@ -185,6 +221,9 @@ function ProductsPage() {
         actions={
           <>
             <ExcelBar onExport={onExport} onImport={onImport} />
+            <Button size="sm" variant="outline" onClick={() => { setBulkKind(tab === "order" ? "order_basis" : "stocked"); setBulkOpen(true); }}>
+              <Rows3 className="h-4 w-4" /> Bulk add
+            </Button>
             <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
               <Plus className="h-4 w-4" /> New product
             </Button>
