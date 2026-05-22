@@ -405,23 +405,41 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           <div className="mt-1 h-[2px] w-16 bg-[#00abb5]" />
         </header>
 
-        <section className="px-9 py-6 grid grid-cols-2 gap-10">
-          <InfoPanel title={kind === "invoice" ? "Bill To" : "Quoted To"} rows={[
+        <section className={`px-9 py-6 grid gap-10 ${design.showShipTo ? "md:grid-cols-3" : "grid-cols-2"}`}>
+          <InfoPanel title={kind === "invoice" ? "Bill To (Buyer)" : "Quoted To"} rows={[
             ["Name", doc.buyer_name ?? buyer?.name ?? "—"],
             ["Address", partyAddress],
-            ["State", buyer?.state],
+            ["State", stateWithCode(buyer?.state)],
             ["GSTIN", buyer?.gstin],
             ["Phone", buyer?.phone],
           ]} />
+          {design.showShipTo && (
+            <InfoPanel title="Ship To (Consignee)" rows={[
+              ["Address", shipToText],
+              ["State", stateWithCode(buyer?.state)],
+              ["GSTIN", buyer?.gstin],
+            ]} />
+          )}
           <InfoPanel title={kind === "invoice" ? "Invoice Info" : "Quotation Info"} rows={[
             [kind === "invoice" ? "Invoice No" : "Quote No", documentNo],
             ["Date", fmtDate(doc.date)],
             ...(doc.valid_until ? [["Valid Until", fmtDate(doc.valid_until)] as [string, string]] : []),
-            ["Place of Supply", buyer?.state ?? "—"],
+            ["Place of Supply", stateWithCode(buyer?.state) || "—"],
             ["GST Treatment", sameState ? "Intra-state (CGST + SGST)" : "Inter-state (IGST)"],
             ["Reverse Charge", "No"],
           ]} />
         </section>
+
+        {kind === "invoice" && design.showTransport && (design.dispatchDocNo || design.transporter || design.vehicleNo || design.destination) && (
+          <section className="px-9 pb-2">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 border border-slate-200 rounded p-3 text-[11px]">
+              {design.dispatchDocNo && <div><div className="text-[9.5px] uppercase tracking-wide text-[#6e7886]">Dispatch Doc No.</div><div className="font-semibold text-[#111621] mt-0.5">{design.dispatchDocNo}</div></div>}
+              {design.transporter && <div><div className="text-[9.5px] uppercase tracking-wide text-[#6e7886]">Dispatched through</div><div className="font-semibold text-[#111621] mt-0.5">{design.transporter}</div></div>}
+              {design.vehicleNo && <div><div className="text-[9.5px] uppercase tracking-wide text-[#6e7886]">Vehicle No.</div><div className="font-semibold text-[#111621] mt-0.5 font-mono">{design.vehicleNo}</div></div>}
+              {design.destination && <div><div className="text-[9.5px] uppercase tracking-wide text-[#6e7886]">Destination</div><div className="font-semibold text-[#111621] mt-0.5">{design.destination}</div></div>}
+            </div>
+          </section>
+        )}
 
         <section className={`${design.bodyLayout === "dense" ? "px-8 pb-4" : design.bodyLayout === "spacious" ? "px-10 pb-7" : "px-9 pb-6"} relative`}>
           <table className="w-full border-collapse text-[11.5px] leading-4">
