@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, type ReactElement, type ReactNode } from "react";
+import { useCallback, useMemo, useState, type ReactElement, type ReactNode } from "react";
 import {
   Activity,
   CalendarClock,
@@ -28,8 +28,11 @@ import { exportToExcel } from "@/lib/excel";
 import { KpiGrid, KpiTile, SegmentedTabs, Surface } from "@/components/ui-tokens";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { useLiveSync } from "@/hooks/use-live-sync";
 
 export const Route = createFileRoute("/app/audit")({ component: AuditPage });
+
+const AUDIT_LIVE_TABLES = ["audit_log"];
 
 type Row = {
   id: string;
@@ -83,12 +86,13 @@ function AuditPage() {
   const [restoring, setRestoring] = useState<Record<string, boolean>>({});
   const [authReady, setAuthReady] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     setAuthReady(true);
-    if (!session?.user) {
+    if (authError || !user) {
       setRows([]);
       return;
     }
@@ -105,29 +109,12 @@ function AuditPage() {
       return;
     }
     setRows((data ?? []) as Row[]);
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-    const reload = () => {
-      if (!cancelled) load();
-    };
-
-    reload();
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => reload());
-    const ch = supabase
-      .channel("audit-live")
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "audit_log" }, reload)
-      .subscribe();
-
-    return () => {
-      cancelled = true;
-      subscription.unsubscribe();
-      supabase.removeChannel(ch);
-    };
   }, []);
+  const { isLive, isRefreshing, lastSyncedAt, lastError, refresh } = useLiveSync({
+    channelName: "audit-live",
+    tables: AUDIT_LIVE_TABLES,
+    load,
+  });
 
   const counts = useMemo(() => {
     const c: Record<ActionFilter | string, number> = {
@@ -246,9 +233,21 @@ function AuditPage() {
     <div className="max-w-full overflow-hidden">
       <PageHeader
         title="Audit"
-        description="Every saved change, live-synced with field-level detail."
-        actions={<ExcelBar onExport={onExport} />}
+        description={`Every saved change · ${isLive ? "live" : "syncing"}${lastSyncedAt ? ` · updated ${lastSyncedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+        actions={
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={refresh} disabled={isRefreshing}>
+              {isRefreshing ? "Syncing…" : "Refresh"}
+            </Button>
+            <ExcelBar onExport={onExport} />
+          </div>
+        }
       />
+      {lastError && (
+        <div className="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          Audit sync failed: {lastError.message}
+        </div>
+      )}
 
       <KpiGrid cols={4} className="mb-4">
         <KpiTile label="Events" value={String(filtered.length)} hint={`${rows.length} total`} />
