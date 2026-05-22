@@ -481,6 +481,63 @@ function ProductsPage() {
   );
 }
 
+function ProductPreview({ row, stock, onEdit, onDelete }: { row: Row; stock?: StockMeta; onEdit: () => void; onDelete: () => void }) {
+  const onHand = Number(stock?.on_hand ?? row.opening_stock ?? 0);
+  const isOrder = row.kind === "order_basis";
+  const margin = Number(row.sale_rate ?? 0) - Number(row.purchase_rate ?? 0);
+  return (
+    <div className="min-w-0">
+      <div className="border-b px-5 py-4">
+        <DialogTitle className="truncate text-base font-semibold">{row.name}</DialogTitle>
+        <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-mono">{row.code || "No code"}</span>
+          <span>·</span>
+          <span>{isOrder ? "On-order" : "Stocked"}</span>
+          {row.category && <><span>·</span><span className="truncate">{row.category}</span></>}
+        </div>
+      </div>
+
+      <div className="space-y-4 px-5 py-4 text-sm">
+        <div className="grid grid-cols-2 gap-2">
+          <PreviewStat label="Sale rate" value={inr(row.sale_rate ?? 0)} tone="good" />
+          <PreviewStat label="Purchase" value={inr(row.purchase_rate ?? 0)} />
+          <PreviewStat label="Unit" value={row.unit || "—"} />
+          <PreviewStat label="HSN" value={row.hsn || "—"} />
+        </div>
+        <div className="rounded-xl border bg-muted/25 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{isOrder ? "Inventory mode" : "Available stock"}</div>
+              <div className="mt-0.5 font-semibold tabular-nums">{isOrder ? "Billed on order" : `${fmt(onHand)} ${row.unit || ""}`}</div>
+            </div>
+            {!isOrder && <div className="text-right text-xs text-muted-foreground">Reorder at<br /><span className="font-medium text-foreground tabular-nums">{fmt(row.reorder_level ?? 0)}</span></div>}
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <span>Margin per {row.unit || "unit"}</span>
+          <span className="font-semibold tabular-nums text-foreground">{inr(margin)}</span>
+        </div>
+      </div>
+
+      <DialogFooter className="border-t bg-muted/15 px-5 py-4">
+        <Button variant="outline" className="mr-auto text-destructive hover:text-destructive" onClick={onDelete}>
+          <Trash2 className="h-4 w-4" /> Delete
+        </Button>
+        <Button onClick={onEdit}><Pencil className="h-4 w-4" /> Edit</Button>
+      </DialogFooter>
+    </div>
+  );
+}
+
+function PreviewStat({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "good" }) {
+  return (
+    <div className="min-w-0 rounded-xl border bg-card p-3">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`mt-1 truncate font-semibold tabular-nums ${tone === "good" ? "text-primary" : ""}`}>{value}</div>
+    </div>
+  );
+}
+
 function Field({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className={wide ? "col-span-2 space-y-1.5" : "space-y-1.5"}>
