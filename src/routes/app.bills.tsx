@@ -490,32 +490,27 @@ function BillsPage() {
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
-          <div className="grid gap-2 lg:grid-cols-2 min-w-0">
+          <div className="surface divide-y divide-border/60 overflow-hidden min-w-0">
             {filteredPays.map(p => (
-              <div key={p.id} className="surface p-3 cursor-pointer transition-colors hover:bg-muted/35 min-w-0" onClick={() => openPayView(p)}>
-                <div className="grid grid-cols-[auto_1fr] gap-3 sm:flex sm:items-start">
-                <Badge variant={p.direction === "in" ? "default" : "secondary"} className="shrink-0 mt-0.5">{p.direction === "in" ? "IN" : "OUT"}</Badge>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-sm">{p.payment_no}</span>
+              <button key={p.id} type="button" className="grid w-full grid-cols-[1fr_auto] gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:px-4" onClick={() => openPayView(p)}>
+                <div className="min-w-0">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="font-mono text-sm font-medium">{p.payment_no}</span>
                     <span className="text-xs text-muted-foreground">{fmtDate(p.date)}</span>
                     {(p.mode === "Cheque" || p.cleared === false) && <ClearancePill cleared={p.cleared !== false} mode={p.mode} status={p.status} />}
-                    {p.ref_doc && (
-                      <span className="text-xs text-muted-foreground flex flex-wrap gap-1">
-                        {p.ref_doc.split(",").map(s => s.trim()).filter(Boolean).map((ref, idx) => (
-                          <span key={idx} className="font-mono">{ref}</span>
-                        ))}
-                      </span>
-                    )}
                   </div>
-                  <div className="text-sm truncate">{p.contact_name ?? "—"} <span className="text-muted-foreground">via {p.mode}</span></div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {p.cheque_no ? `Cheque ${p.cheque_no}` : p.txn_id ? `Txn ${p.txn_id}` : p.notes || "Tap to view details"}
+                  <div className="mt-1 truncate text-sm">
+                    {p.contact_name ?? "—"} <span className="text-muted-foreground">· {p.mode ?? "Mode not set"}</span>
+                  </div>
+                  <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                    {p.ref_doc || p.cheque_no || p.txn_id || p.notes ? [p.ref_doc, p.cheque_no ? `Cheque ${p.cheque_no}` : null, p.txn_id ? `Txn ${p.txn_id}` : null, p.notes].filter(Boolean).join(" · ") : "Open details"}
                   </div>
                 </div>
-                <div className={`col-span-2 text-right text-base font-semibold tabular-nums sm:col-span-1 ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(p.amount)}</div>
+                <div className="text-right">
+                  <div className={`text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{p.direction === "in" ? "+" : "−"}{inr(p.amount)}</div>
+                  <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">{p.direction === "in" ? "Receipt" : "Payment"}</div>
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         )

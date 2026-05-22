@@ -229,6 +229,7 @@ function Dashboard() {
   const [today, setToday] = useState<Today | null>(null);
   const [metric, setMetric] = useState<MetricKey>("revenue");
   const [range, setRange] = useState<RangeKey>("30d");
+  const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
   // First-time intro tour
   useEffect(() => {
@@ -306,27 +307,38 @@ function Dashboard() {
       tStats.saleCount = sc ?? 0;
       tStats.purchaseCount = pc ?? 0;
       setToday(tStats);
+      setUpdatedAt(new Date());
   };
 
   useEffect(() => {
+    let refreshTimer: number | undefined;
+    const scheduleLoad = () => {
+      window.clearTimeout(refreshTimer);
+      refreshTimer = window.setTimeout(() => loadAll(), 180);
+    };
     loadAll();
     // Realtime: refresh when anything that affects the dashboard changes.
     const ch = supabase.channel("dash-live")
-      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "purchases" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "bank_transfers" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "journal_lines" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "sale_items" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchases" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "purchase_items" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "third_party" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "tp_items" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "bank_transfers" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "journal_entries" }, scheduleLoad)
+      .on("postgres_changes", { event: "*", schema: "public", table: "journal_lines" }, scheduleLoad)
       .subscribe();
     // Refresh on tab focus too, in case realtime is throttled.
     const onFocus = () => loadAll();
     const onVisible = () => { if (document.visibilityState === "visible") loadAll(); };
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisible);
-    return () => { supabase.removeChannel(ch); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVisible); };
+    return () => { window.clearTimeout(refreshTimer); supabase.removeChannel(ch); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
 
   // Re-aggregate the raw lines into buckets matching the chosen range.
@@ -434,6 +446,7 @@ function Dashboard() {
           <div className="text-sm font-medium tabular-nums">
             {new Date().toLocaleDateString(undefined, { day: "numeric", month: "short" })}
           </div>
+          {updatedAt && <div className="mt-0.5 text-[10px] text-muted-foreground">Updated {updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>}
         </div>
       </header>
 
@@ -484,7 +497,7 @@ function Dashboard() {
       </section>
 
       {/* ─────────── Section 2 · TRENDS — graphical view with filters ─────────── */}
-      <section className="rounded-3xl border border-border/70 bg-card overflow-hidden">
+      <section className="surface overflow-hidden">
         <div className="p-5 sm:p-7 space-y-5">
           {/* Top row: title + tap-to-lock pill */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -585,9 +598,7 @@ function Dashboard() {
               <Link
                 key={a.to}
                 to={a.to}
-                className={cn(
-                  "group rounded-2xl border border-border/70 bg-card p-4 sm:p-5 transition-all hover:border-foreground/30 hover:shadow-sm active:scale-[0.99]",
-                )}
+                  className="group surface p-4 sm:p-5 transition-all hover:border-foreground/30 hover:shadow-sm active:scale-[0.99]"
               >
                 <div className="flex items-center justify-between">
                   <div
@@ -636,7 +647,7 @@ function Dashboard() {
 
       {/* New-user tip — only first session */}
       {s && s.revenue === 0 && s.purchases === 0 && (
-        <section className="rounded-2xl border border-dashed border-border/70 p-4 flex items-start gap-3 bg-muted/20">
+        <section className="surface-muted border-dashed p-4 flex items-start gap-3">
           <div className="h-8 w-8 rounded-xl bg-background border grid place-items-center shrink-0">
             <Sparkles className="h-4 w-4 text-primary" />
           </div>
@@ -679,7 +690,7 @@ function TodayTile({
   return (
     <Link
       to={to}
-      className="group rounded-2xl border border-border/70 bg-card p-3 sm:p-4 transition-all hover:border-foreground/30 hover:shadow-sm active:scale-[0.99]"
+      className="group surface p-3 sm:p-4 transition-all hover:border-foreground/30 hover:shadow-sm active:scale-[0.99]"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="h-7 w-7 rounded-lg bg-muted grid place-items-center">
@@ -708,7 +719,7 @@ function MiniStat({
   return (
     <Link
       to={to}
-      className="group rounded-2xl border border-border/70 bg-card p-4 flex items-center gap-3 hover:border-foreground/30 transition-all"
+      className="group surface p-4 flex items-center gap-3 hover:border-foreground/30 transition-all"
     >
       <div className="h-9 w-9 rounded-xl bg-muted grid place-items-center shrink-0">
         <Icon className={cn("h-4 w-4", toneClass)} />
