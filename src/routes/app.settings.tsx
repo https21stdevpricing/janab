@@ -109,8 +109,8 @@ function SettingsPage() {
     <div>
       <PageHeader title="Settings" description="Company profile and tools" />
       {/* Section quick nav — minimal sticky strip */}
-      <nav className="sticky top-14 md:top-12 z-10 -mx-3 sm:-mx-4 lg:-mx-6 mb-4 px-3 sm:px-4 lg:px-6 py-2 border-b border-border/60 bg-background/85 backdrop-blur-xl">
-        <div className="flex gap-1 overflow-x-auto no-scrollbar text-xs">
+      <nav className="sticky top-12 md:top-12 z-20 -mx-3 sm:-mx-4 lg:-mx-6 mb-4 px-3 sm:px-4 lg:px-6 py-2 border-b border-border/60 frosted">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar text-xs">
           {[
             { id: "profile", label: "Profile" },
             { id: "opening", label: "Opening balances" },
