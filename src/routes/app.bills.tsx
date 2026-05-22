@@ -71,6 +71,20 @@ function bucketTone(b: string) {
   return b === "0–30" ? "secondary" : b === "31–60" ? "default" : "destructive";
 }
 
+function payStatus(total: number, paid: number, ageDaysVal: number): { label: string; tone: "warn" | "info" | "bad" | "good" } {
+  if (paid <= 0) return ageDaysVal > 30 ? { label: "Overdue", tone: "bad" } : { label: "Unpaid", tone: "warn" };
+  if (paid < total) return ageDaysVal > 30 ? { label: "Overdue · Partial", tone: "bad" } : { label: "Partial", tone: "info" };
+  return { label: "Paid", tone: "good" };
+}
+
+function StatusBadge({ s }: { s: { label: string; tone: "warn" | "info" | "bad" | "good" } }) {
+  const cls = s.tone === "bad" ? "border-destructive/40 text-destructive bg-destructive/5"
+    : s.tone === "warn" ? "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/5"
+    : s.tone === "info" ? "border-primary/30 text-primary bg-primary/5"
+    : "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/5";
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${cls}`}>{s.label}</span>;
+}
+
 function BillsPage() {
   const [rows, setRows] = useState<Row[]>([]);
   const [pays, setPays] = useState<PayRow[]>([]);
