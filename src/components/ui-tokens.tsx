@@ -160,13 +160,16 @@ export function KpiTile({
     >
       <div className="eyebrow truncate">{label}</div>
       <div
-        className={cn("stat-num mt-1.5 text-[15px] sm:text-xl truncate tracking-tight", valueCls)}
+        className={cn(
+          "stat-num mt-1.5 text-base sm:text-lg md:text-xl tracking-tight break-words leading-tight",
+          valueCls,
+        )}
         title={typeof value === "string" ? value : undefined}
       >
         {value}
       </div>
       {hint && (
-        <div className="text-[11px] text-muted-foreground mt-1 leading-snug truncate">{hint}</div>
+        <div className="text-[11px] text-muted-foreground mt-1 leading-snug break-words">{hint}</div>
       )}
     </Comp>
   );
