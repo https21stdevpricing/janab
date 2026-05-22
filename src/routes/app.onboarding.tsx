@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/page-header";
 import { inr } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, FileUp } from "lucide-react";
+import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, FileUp, ClipboardCheck } from "lucide-react";
 import { importWorkbook, pickSheet } from "@/lib/excel";
 import { useRef } from "react";
 
@@ -46,6 +47,7 @@ function OnboardingPage() {
   // Step 3 — inline product rows
   type ProdRow = { id?: string; name: string; unit: string; opening_stock: number; purchase_rate: number; _dirty?: boolean };
   const [prods, setProds] = useState<ProdRow[]>([]);
+  const [bulkStockText, setBulkStockText] = useState("");
 
   // Step 4 — inline contact rows
   type ContactRow = { id?: string; name: string; type: "buyer" | "supplier"; opening_balance: number; phone?: string; _dirty?: boolean };
