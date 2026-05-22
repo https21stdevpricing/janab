@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 // Maps an ID prefix to the actual tables it lives in.
-export type DocKind = "sale" | "purchase" | "tp" | "quote" | "payment";
+export type DocKind = "sale" | "purchase" | "tp" | "quote" | "payment" | "deposit";
 export type PrintableDocKind = Exclude<DocKind, "payment">;
 
 const MAP: Record<string, { kind: DocKind; table: string; items?: string; fk?: string; noCol: string }> = {
@@ -11,6 +11,7 @@ const MAP: Record<string, { kind: DocKind; table: string; items?: string; fk?: s
   QUO: { kind: "quote",    table: "quotations",  items: "quotation_items",  fk: "quotation_id", noCol: "quote_no" },
   RI:  { kind: "payment",  table: "payments",                                                    noCol: "payment_no" },
   PY:  { kind: "payment",  table: "payments",                                                    noCol: "payment_no" },
+  BT:  { kind: "deposit",  table: "bank_transfers",                                              noCol: "transfer_no" },
 };
 
 export function prefixOf(id: string): string | null {
@@ -79,6 +80,8 @@ export async function lookupDoc(rawId: string): Promise<DocLookupResult | null> 
     }
   } else if (cfg.kind === "payment") {
     outstanding = { total: Number(header.amount), paid: Number(header.amount), balance: 0, status: "paid" };
+  } else if (cfg.kind === "deposit") {
+    outstanding = { total: Number(header.amount), paid: Number(header.amount), balance: 0, status: header.cleared ? "cleared" : (header.status ?? "pending") };
   }
 
   // Party

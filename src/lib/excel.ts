@@ -46,6 +46,24 @@ export async function importFromExcel(file: File): Promise<Record<string, any>[]
   return XLSX.utils.sheet_to_json(ws, { defval: null }) as Record<string, any>[];
 }
 
+// Read every sheet of a workbook keyed by sheet name (case-insensitive lookup helper provided).
+export async function importWorkbook(file: File): Promise<Record<string, Record<string, any>[]>> {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  const out: Record<string, Record<string, any>[]> = {};
+  for (const name of wb.SheetNames) {
+    out[name] = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: null }) as Record<string, any>[];
+  }
+  return out;
+}
+
+export function pickSheet(wb: Record<string, any[]>, ...names: string[]): any[] {
+  const lower: Record<string, any[]> = {};
+  for (const k of Object.keys(wb)) lower[k.toLowerCase().trim()] = wb[k];
+  for (const n of names) { const v = lower[n.toLowerCase().trim()]; if (v) return v; }
+  return [];
+}
+
 // Multi-sheet workbook export. Each sheet gets auto-width columns.
 export function exportWorkbook(opts: {
   filename: string;
