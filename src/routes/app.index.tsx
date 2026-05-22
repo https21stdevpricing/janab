@@ -5,7 +5,7 @@ import { inr } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import {
-  ShoppingCart, Truck, Wallet, Boxes, ArrowRight, ArrowUpRight, ArrowDownRight,
+  ShoppingCart, Truck, Wallet, ArrowRight, ArrowUpRight, ArrowDownRight,
   TrendingUp, AlertTriangle, Sparkles, Receipt, ArrowDownLeft, ArrowUpLeft, HelpCircle, Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
