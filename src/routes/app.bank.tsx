@@ -178,13 +178,12 @@ function BankPage() {
         </TabsList>
       </Tabs>
 
-      <CollapseFilters
-        summary={`${filtered.length} of ${rows.length} entries · Deposits ${inr(totals.dep)} · Withdrawals ${inr(totals.wd)}`}
-        active={q ? 1 : 0}
-        onClear={() => setQ("")}
-      >
-        <Input placeholder="Search no / bank / cheque / txn id…" value={q} onChange={(e) => setQ(e.target.value)} />
-      </CollapseFilters>
+      <div className="mb-3 flex flex-col gap-2 rounded-xl border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-xs text-muted-foreground">
+          {filtered.length} of {rows.length} entries · Deposits {inr(totals.dep)} · Withdrawals {inr(totals.wd)}
+        </div>
+        <Input className="h-9 sm:max-w-xs" placeholder="Search no / bank / cheque / txn id…" value={q} onChange={(e) => setQ(e.target.value)} />
+      </div>
 
       {filtered.length === 0 ? (
         <Empty>No bank entries yet. Record a cash deposit or cheque deposit to begin.</Empty>
