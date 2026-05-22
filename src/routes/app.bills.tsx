@@ -379,6 +379,14 @@ function BillsPage() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
+  const markPayCleared = async (p: PayRow) => {
+    const { error } = await supabase.from("payments").update({ cleared: true, cleared_at: todayISO() } as never).eq("id", p.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Payment marked cleared");
+    setViewPay({ ...p, cleared: true, cleared_at: todayISO() });
+    load();
+  };
+
   const openPayView = async (r: PayRow) => {
     setViewPay(r);
     const [{ data }, { data: st }] = await Promise.all([
@@ -586,6 +594,7 @@ function BillsPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewPay.date)}</div></div>
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewPay.mode ?? "—"}</div></div>
+                <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} /></div>
                 <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewPay.contact_name ?? "—"}</div></div>
                 <div className="col-span-2 rounded-md border bg-muted/30 p-3">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Amount</div>
@@ -612,6 +621,11 @@ function BillsPage() {
             </div>
           )}
           <div className="mt-2 flex flex-col gap-2 pt-3 border-t">
+            {viewPay?.cleared === false && (
+              <Button variant="outline" className="w-full" onClick={() => viewPay && markPayCleared(viewPay)}>
+                <CheckCircle2 className="h-4 w-4" /> Mark cleared and post accounts
+              </Button>
+            )}
             <Button variant="outline" className="w-full" onClick={() => viewPay && exportStoneWorldPayment(viewPay, viewAllocs, company)}>
               <Printer className="h-4 w-4" /> Download Branded PDF
             </Button>
