@@ -402,41 +402,29 @@ function BillsPage() {
 
   return (
     <div>
-      <PageHeader
-        title="Money"
-        description="Bills to collect, bills to pay, and payment history in one place."
-        actions={
-          <>
-            <ExcelBar onExport={onExport} />
-            <Button size="sm" variant="outline" onClick={() => startNew("in")} title="Receipt (R)"><ArrowDownLeft className="h-4 w-4" /> Receive</Button>
-            <Button size="sm" onClick={() => startNew("out")} title="Payment (P)"><ArrowUpRight className="h-4 w-4" /> Pay</Button>
-          </>
-        }
-      />
+      <PageHeader title="Money" description="Receivables, payables and cleared payment history." actions={<ExcelBar onExport={onExport} />} />
 
-      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_280px]">
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_300px]">
         <div className="surface overflow-hidden">
-          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-            <HeroCell label="To collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
-            <HeroCell label="To pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
-            <HeroCell label="Net position" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
+          <div className="grid grid-cols-3 divide-x divide-border/60">
+            <HeroCell label="Collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
+            <HeroCell label="Pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
+            <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
           </div>
-          {kpis.overdue > 0 && (
-            <div className="border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground">
-              Overdue over 30 days: <span className="font-medium text-foreground">{inr(kpis.overdue)}</span>
-            </div>
-          )}
+          <div className="border-t border-border/60 px-4 py-2 text-xs text-muted-foreground">
+            Overdue: <span className="font-medium text-foreground">{inr(kpis.overdue)}</span>
+          </div>
         </div>
         <div className="surface p-3">
           <div className="eyebrow">Quick actions</div>
-          <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
-            <Button variant="outline" className="justify-start" onClick={() => startNew("in")}><ArrowDownLeft className="h-4 w-4" /> New receipt</Button>
-            <Button variant="outline" className="justify-start" onClick={() => startNew("out")}><ArrowUpRight className="h-4 w-4" /> New payment</Button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button variant="outline" className="justify-start" onClick={() => startNew("in")}><ArrowDownLeft className="h-4 w-4" /> Receive</Button>
+            <Button className="justify-start" onClick={() => startNew("out")}><ArrowUpRight className="h-4 w-4" /> Pay</Button>
           </div>
         </div>
       </div>
 
-      <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="mb-3 space-y-3">
         <Tabs value={tab} onValueChange={v => setTab(v as any)}>
           <TabsList className="scroll-tabs w-full justify-start rounded-full bg-muted p-1 sm:w-auto">
             <TabsTrigger value="receivable" className="gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
@@ -444,11 +432,11 @@ function BillsPage() {
             <TabsTrigger value="history" className="gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Input className="h-9 sm:w-72" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-center">
+          <Input className="h-10" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
           {tab !== "history" && (
             <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
-              <SelectTrigger className="h-9 sm:w-36"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="h-10 sm:w-36"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All ages</SelectItem>
                 <SelectItem value="0–30">0–30 days</SelectItem>
