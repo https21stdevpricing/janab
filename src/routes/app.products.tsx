@@ -1,23 +1,19 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus, ChevronRight, AlertTriangle } from "lucide-react";
+import { Plus, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus, ChevronRight, AlertTriangle } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
-import { CollapseFilters } from "@/components/collapse-filters";
-import { KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
+import { SegmentedTabs } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/products")({ component: ProductsPage });
 
@@ -214,114 +210,101 @@ function ProductsPage() {
   const showCalc = (form.unit ?? "").toLowerCase() === "sqft" && form.kind === "stocked";
 
   return (
-    <div>
-      <PageHeader
-        title="Products"
-        description="Your catalog of stones, slabs and SKUs — both items you stock and items you sell on order."
-        actions={
-          <>
-            <ExcelBar onExport={onExport} onImport={onImport} />
-            <Button size="sm" variant="outline" onClick={() => { setBulkKind(tab === "order" ? "order_basis" : "stocked"); setBulkOpen(true); }}>
-              <ListPlus className="h-4 w-4" /> Bulk add
-            </Button>
-            <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
-              <Plus className="h-4 w-4" /> New product
-            </Button>
-          </>
-        }
-      />
+    <div className="min-w-0 max-w-full">
+      {/* Quiet hero — Apple style: large title, breathing room, one primary action */}
+      <div className="mb-6 sm:mb-8">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-[28px] sm:text-[34px] font-semibold tracking-tight leading-none">Products</h1>
+            <p className="mt-2 text-[13px] sm:text-sm text-muted-foreground">
+              {summary.skus} {summary.skus === 1 ? "item" : "items"}
+              {summary.low > 0 && (
+                <> · <span className="text-destructive font-medium">{summary.low} low stock</span></>
+              )}
+            </p>
+          </div>
+          <Button
+            size="sm"
+            className="rounded-full h-9 px-4 shrink-0"
+            onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}
+          >
+            <Plus className="h-4 w-4" /> New
+          </Button>
+        </div>
+      </div>
 
-      {/* Top KPI strip — same shared tiles used across Stock / Money / Reports */}
-      <KpiGrid cols={4} className="mb-4">
-        <KpiTile label="Total SKUs" value={String(summary.skus)} hint={`${counts.stocked} stocked · ${counts.order} on-order`} />
-        <KpiTile label="Units on hand" value={fmt(summary.onHand)} hint="Across all stocked items" />
-        <KpiTile label="Inventory value" value={inr(summary.valueCost)} hint={`Sale value ${inr(summary.valueSale)}`} />
-        <KpiTile label="Low stock" value={String(summary.low)} tone={summary.low > 0 ? "bad" : "good"} hint={summary.low > 0 ? "Action needed" : "All above reorder"} />
-      </KpiGrid>
-
-      {/* Kind selector — shared segmented pill, same as Money page */}
-      <div className="mb-3">
+      {/* Type segmented control */}
+      <div className="mb-4">
         <SegmentedTabs
           value={tab}
           onValueChange={(v) => setTab(v as any)}
           items={[
-            { value: "stocked", label: <span>Stocked <span className="ml-1 text-muted-foreground">{counts.stocked}</span></span>, icon: <Boxes className="h-3.5 w-3.5" /> },
-            { value: "order", label: <span>On-order <span className="ml-1 text-muted-foreground">{counts.order}</span></span>, icon: <ClipboardList className="h-3.5 w-3.5" /> },
+            { value: "stocked", label: <span>Stocked <span className="ml-1 text-muted-foreground tabular-nums">{counts.stocked}</span></span>, icon: <Boxes className="h-3.5 w-3.5" /> },
+            { value: "order", label: <span>On-order <span className="ml-1 text-muted-foreground tabular-nums">{counts.order}</span></span>, icon: <ClipboardList className="h-3.5 w-3.5" /> },
           ]}
         />
       </div>
 
-      <CollapseFilters
-        summary={`${filtered.length} shown`}
-        active={q ? 1 : 0}
-        onClear={() => setQ("")}
-      >
-        <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-          <Input placeholder="Search name, code, category or HSN…" className="pl-8" value={q} onChange={e => setQ(e.target.value)} />
-        </div>
-      </CollapseFilters>
+      {/* Floating search */}
+      <div className="relative mb-5">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search products"
+          className="pl-10 h-11 rounded-2xl border-border/60 bg-muted/40 focus-visible:bg-background"
+          value={q}
+          onChange={e => setQ(e.target.value)}
+        />
+      </div>
 
       {filtered.length === 0 ? (
-        <Empty>No products yet — add your first SKU.</Empty>
+        <Empty>No products yet — tap “New” to add one.</Empty>
       ) : (
-        <div className="rounded-2xl border bg-card overflow-hidden divide-y">
-          {filtered.map((r) => {
-            const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
-            const low = !isOrderBasis(r) && oh <= Number(r.reorder_level ?? 0);
-            const cost = oh * Number(r.purchase_rate ?? 0);
-            return (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => startEdit(r)}
-                className="w-full text-left px-4 sm:px-5 py-4 hover:bg-muted/40 transition-colors flex items-center gap-4 group"
-              >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <div className="font-medium text-[15px] leading-tight truncate">{r.name}</div>
-                    {low && (
-                      <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
-                        <AlertTriangle className="h-3 w-3" /> Low
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted-foreground truncate">
-                    {r.category || "Uncategorised"} · {r.unit || "unit"}
-                    {r.hsn ? ` · HSN ${r.hsn}` : ""}
-                    {r.code ? ` · ${r.code}` : ""}
-                  </div>
-                </div>
-                <div className="hidden sm:flex items-center gap-6 text-right shrink-0">
-                  <div className="min-w-[72px]">
-                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Sell</div>
-                    <div className="tabular-nums text-sm">{inr(r.sale_rate ?? 0)}</div>
-                  </div>
-                  {!isOrderBasis(r) && (
-                    <div className="min-w-[80px]">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">On hand</div>
-                      <div className="tabular-nums text-sm font-medium">{fmt(oh)}</div>
+        <div className="rounded-3xl border border-border/60 bg-card overflow-hidden">
+          <ul className="divide-y divide-border/50">
+            {filtered.map((r) => {
+              const oh = Number(stock[r.id]?.on_hand ?? r.opening_stock ?? 0);
+              const low = !isOrderBasis(r) && oh <= Number(r.reorder_level ?? 0);
+              return (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    onClick={() => startEdit(r)}
+                    className="w-full text-left px-5 sm:px-6 py-5 hover:bg-muted/30 active:bg-muted/40 transition-colors flex items-center gap-4 group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium text-[15px] leading-tight truncate">{r.name}</div>
+                        {low && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-medium text-destructive shrink-0">
+                            <AlertTriangle className="h-3 w-3" /> Low
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 text-[12.5px] text-muted-foreground truncate">
+                        {r.category || "Uncategorised"} · {r.unit || "unit"}
+                        {!isOrderBasis(r) && <> · {fmt(oh)} on hand</>}
+                      </div>
                     </div>
-                  )}
-                  {!isOrderBasis(r) && (
-                    <div className="min-w-[88px]">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Value</div>
-                      <div className="tabular-nums text-sm">{inr(cost)}</div>
+                    <div className="text-right shrink-0">
+                      <div className="tabular-nums text-[15px] font-medium leading-tight">{inr(r.sale_rate ?? 0)}</div>
+                      <div className="text-[11px] text-muted-foreground mt-0.5">per {r.unit || "unit"}</div>
                     </div>
-                  )}
-                </div>
-                <div className="sm:hidden text-right shrink-0">
-                  <div className="tabular-nums text-sm">{inr(r.sale_rate ?? 0)}</div>
-                  {!isOrderBasis(r) && (
-                    <div className="text-[11px] text-muted-foreground tabular-nums">{fmt(oh)} on hand</div>
-                  )}
-                </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/60 group-hover:text-muted-foreground shrink-0" />
-              </button>
-            );
-          })}
+                    <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground shrink-0" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
+
+      {/* Secondary actions — kept out of the hero to keep it clean */}
+      <div className="mt-6 flex flex-wrap items-center gap-2 justify-end">
+        <ExcelBar onExport={onExport} onImport={onImport} />
+        <Button size="sm" variant="ghost" className="rounded-full text-muted-foreground" onClick={() => { setBulkKind(tab === "order" ? "order_basis" : "stocked"); setBulkOpen(true); }}>
+          <ListPlus className="h-4 w-4" /> Bulk add
+        </Button>
+      </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0">

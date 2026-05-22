@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/empty";
+import { cn } from "@/lib/utils";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { inr, fmtDate, todayISO } from "@/lib/format";
@@ -474,11 +475,31 @@ function BillsPage() {
         }
       />
 
-      <KpiGrid cols={3} className="mb-4 grid-cols-1 sm:grid-cols-3">
-        <KpiTile label="Collect" value={inr(kpis.recv)} tone="good" hint={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "All on time"} active={tab === "receivable"} onClick={() => setTab("receivable")} />
-        <KpiTile label="Pay" value={inr(kpis.pay)} tone="bad" hint={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "All on time"} active={tab === "payable"} onClick={() => setTab("payable")} />
-        <KpiTile label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} hint={kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"} />
+      <KpiGrid cols={2} className="mb-4">
+        <KpiTile
+          label="Collect"
+          value={inr(kpis.recv)}
+          tone="good"
+          hint={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "All on time"}
+          active={tab === "receivable"}
+          onClick={() => setTab("receivable")}
+        />
+        <KpiTile
+          label="Pay"
+          value={inr(kpis.pay)}
+          tone="bad"
+          hint={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "All on time"}
+          active={tab === "payable"}
+          onClick={() => setTab("payable")}
+        />
       </KpiGrid>
+      <div className="mb-4 -mt-1 px-1 text-xs text-muted-foreground">
+        Net position{" "}
+        <span className={cn("font-medium tabular-nums", kpis.net >= 0 ? "text-primary" : "text-destructive")}>
+          {inr(kpis.net)}
+        </span>{" "}
+        · {kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"}
+      </div>
 
       <div className="mb-4 min-w-0 overflow-hidden rounded-2xl border bg-card p-2.5 shadow-sm sm:p-3">
         <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
