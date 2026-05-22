@@ -269,8 +269,8 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
   // or >60px with downward velocity, with rubber-band visual response.
   const [drag, setDrag] = useState(0);
   const dragRef = { current: 0 };
-  const scrollRef = React.useRef<HTMLDivElement>(null);
-  const armedRef = React.useRef(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const armedRef = useRef(false);
   const onTouchStart = (e: React.TouchEvent) => {
     const t = e.touches[0];
     (onTouchStart as any)._s = { y: t.clientY, t: Date.now() };
