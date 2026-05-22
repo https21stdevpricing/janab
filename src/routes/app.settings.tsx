@@ -184,7 +184,7 @@ function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">Record people who should have access. They sign up with the same email on the login page, and every action is captured in the audit log with their name and timestamp.</p>
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_140px_auto] gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
             <Input type="email" placeholder="teammate@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
             <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as any)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
