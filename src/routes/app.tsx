@@ -1,13 +1,14 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   Package, Users, ShoppingCart, Truck, Repeat,
   Wallet, Receipt, FileText, Boxes, BookOpen, BarChart3, Search, Settings, LogOut, Printer, Percent, UserCheck, UserCog, LineChart, Tags, Building2,
-  Home, ChevronDown, MoreHorizontal,
+  Home, ChevronDown, MoreHorizontal, X, ArrowRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { History, PackageCheck, FileSpreadsheet, Keyboard } from "lucide-react";
@@ -88,6 +89,7 @@ function AppLayout() {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [moreOpen, setMoreOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   useEffect(() => { setMoreOpen(false); }, [path]);
 
@@ -126,13 +128,13 @@ function AppLayout() {
         <header className="md:hidden sticky top-0 z-30 flex items-center gap-2 border-b border-border/60 bg-background/85 backdrop-blur-xl px-4 py-3">
           <div className="text-[15px] font-semibold tracking-tight">StoneWorld</div>
           <div className="ml-auto flex items-center gap-1">
-            <Link to="/app/lookup" className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted"><Search className="h-[18px] w-[18px]" /></Link>
+            <button type="button" onClick={() => setSearchOpen(true)} className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted" aria-label="Search this page"><Search className="h-[18px] w-[18px]" /></button>
             <NotificationsBell />
           </div>
         </header>
         {/* Desktop top bar */}
         <div className="hidden md:flex sticky top-0 z-20 items-center gap-2 px-6 py-2.5 border-b border-border/60 bg-background/80 backdrop-blur-xl">
-          <GlobalSearch />
+          <GlobalSearchTrigger onOpen={() => setSearchOpen(true)} pageLabel={pageLabel(path)} />
           <div className="ml-auto flex items-center gap-1"><HelpButton /><NotificationsBell /></div>
         </div>
         <div className="max-w-[1400px] mx-auto p-4 md:p-8 pb-safe-tabs md:pb-8">
@@ -141,6 +143,7 @@ function AppLayout() {
       </main>
       <MobileTabBar path={path} onMore={() => setMoreOpen(true)} />
       <MoreSheet open={moreOpen} onOpenChange={setMoreOpen} email={user.email ?? ""} onSignOut={async () => { await signOut(); navigate({ to: "/login" }); }} />
+      <GlobalSearchOverlay open={searchOpen} onOpenChange={setSearchOpen} pageLabel={pageLabel(path)} />
     </div>
     </ShortcutsProvider>
   );
