@@ -113,6 +113,10 @@ export function savePrintDesign(design: PrintDesign) {
   window.localStorage.setItem(KEY, JSON.stringify({ ...design, footerLogos: design.footerLogos.slice(0, 20) }));
 }
 
+export function applyPrintPreset(design: PrintDesign, preset: PrintPreset): PrintDesign {
+  return { ...design, ...PRINT_PRESETS[preset], preset };
+}
+
 export function fileToDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
