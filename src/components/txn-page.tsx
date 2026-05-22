@@ -435,7 +435,14 @@ function PreviewBlock({ cfg, header, items }: { cfg: TxnConfig; header: any; ite
         <div className="text-right space-y-0.5">
           <div>Subtotal: <span className="tabular-nums font-medium">₹{fmt(totals.base)}</span></div>
           <div>GST: <span className="tabular-nums font-medium">₹{fmt(totals.gst)}</span></div>
-          <div className="text-base font-semibold">Total: <span className="tabular-nums">₹{fmt(totals.total)}</span></div>
+          {Number(header.round_off ?? 0) !== 0 && (
+            <div className="text-muted-foreground">
+              Round off: <span className="tabular-nums font-medium">{Number(header.round_off) >= 0 ? "+" : "−"}₹{fmt(Math.abs(Number(header.round_off)))}</span>
+            </div>
+          )}
+          <div className="text-base font-semibold">
+            Total: <span className="tabular-nums">₹{fmt(totals.total + Number(header.round_off ?? 0))}</span>
+          </div>
           {cfg.partyRole === "tp" && <div className="text-emerald-600">Margin: <span className="tabular-nums">₹{fmt(totals.base - totals.cost)}</span></div>}
         </div>
       </div>
