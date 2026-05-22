@@ -697,11 +697,11 @@ function Kpi({ label, value, hint, tone }: { label: string; value: string; hint:
   return (
     <Card>
       <CardContent className="p-3">
-        <div className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+        <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground flex items-center gap-1 truncate">
           {label}
           <HintTip text={hint} small />
         </div>
-        <div className={`text-xl font-semibold tabular-nums mt-1 ${toneCls}`}>{value}</div>
+        <div className={`text-base sm:text-xl font-semibold tabular-nums mt-1 truncate ${toneCls}`}>{value}</div>
       </CardContent>
     </Card>
   );
