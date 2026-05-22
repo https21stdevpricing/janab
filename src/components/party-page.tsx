@@ -160,7 +160,7 @@ export function PartyPage({ role }: { role: PartyRole }) {
                 const bal = role === "buyer" ? (summary[c.id]?.receivable ?? 0) : (summary[c.id]?.payable ?? 0);
                 const txn = role === "buyer" ? (summary[c.id]?.total_sales ?? 0) : (summary[c.id]?.total_purchases ?? 0);
                 const dir = role === "buyer" ? "in" : "out";
-                const goPay = () => navigate({ to: "/app/payments", search: { party: c.id, dir } as any });
+                const goPay = () => navigate({ to: "/app/bills", search: { party: c.id, dir } as any });
                 const goNew = () => navigate({ to: role === "buyer" ? "/app/sales" : "/app/purchases" });
                 return (
                   <tr key={c.id} className="border-t hover:bg-muted/30 cursor-pointer" onClick={() => setPicked(c)}>
@@ -280,7 +280,7 @@ function PartyDrawer({ contact, role, summary, aging }: { contact: Contact; role
         </div>
       )}
       <div className="flex flex-wrap gap-2 mt-3">
-        <Button size="sm" onClick={() => navigate({ to: "/app/payments", search: { party: contact.id, dir } as any })}><Wallet className="h-3 w-3" /> {role === "buyer" ? "Receive" : "Pay"}</Button>
+        <Button size="sm" onClick={() => navigate({ to: "/app/bills", search: { party: contact.id, dir } as any })}><Wallet className="h-3 w-3" /> {role === "buyer" ? "Receive" : "Pay"}</Button>
         <Button size="sm" variant="outline" onClick={() => navigate({ to: role === "buyer" ? "/app/sales" : "/app/purchases" })}>{role === "buyer" ? <ShoppingCart className="h-3 w-3" /> : <Truck className="h-3 w-3" />} New {role === "buyer" ? "Sale" : "Purchase"}</Button>
         {role === "buyer" && <Button size="sm" variant="outline" onClick={() => navigate({ to: "/app/deliveries" })}><Truck className="h-3 w-3" /> Deliveries</Button>}
         <Button size="sm" variant="outline" onClick={exportStmt}><FileSpreadsheet className="h-3 w-3" /> Statement</Button>
