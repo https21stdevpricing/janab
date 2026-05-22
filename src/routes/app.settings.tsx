@@ -11,7 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { seedDemoData, clearAllData } from "@/lib/seed-demo";
 import { downloadFullBackup, getLastBackupAt } from "@/lib/backup";
-import { Download, ShieldCheck, AlertTriangle, Users, Hash, LogOut, Trash2, Plus, Building2, Wand2 } from "lucide-react";
+import { Download, ShieldCheck, AlertTriangle, Users, Hash, LogOut, Trash2, Plus, Wand2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/app/settings")({ component: SettingsPage });
