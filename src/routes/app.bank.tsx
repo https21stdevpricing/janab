@@ -11,7 +11,7 @@ import { Empty } from "@/components/empty";
 import { Badge } from "@/components/ui/badge";
 import { inr, fmtDate, todayISO } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpFromLine, Banknote, Trash2, Landmark } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Banknote, Trash2, Landmark, CheckCircle2, Clock, XCircle } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { CollapseFilters } from "@/components/collapse-filters";
 import { useDraft } from "@/hooks/use-draft";
@@ -19,10 +19,12 @@ import { useDraft } from "@/hooks/use-draft";
 export const Route = createFileRoute("/app/bank")({ component: BankPage });
 
 type Kind = "cash_deposit" | "cash_withdrawal" | "cheque_deposit";
+type Status = "pending" | "cleared" | "bounced";
 type Row = {
   id: string; transfer_no: string; date: string; kind: Kind; amount: number;
   bank_name: string | null; cheque_no: string | null; cheque_date: string | null;
   txn_id: string | null; notes: string | null; cleared: boolean; cleared_at: string | null;
+  status: Status;
 };
 
 const KIND_LABEL: Record<Kind, string> = {
@@ -120,9 +122,11 @@ function BankPage() {
     if (error) toast.error(error.message); else { toast.success("Deleted"); load(); }
   };
 
-  const markCleared = async (r: Row) => {
-    const { error } = await supabase.from("bank_transfers" as never).update({ cleared: true, cleared_at: todayISO() } as never).eq("id" as never, r.id);
-    if (error) toast.error(error.message); else { toast.success("Marked cleared"); load(); }
+  const changeStatus = async (r: Row, status: Status) => {
+    const { error } = await supabase.from("bank_transfers" as never)
+      .update({ status } as never).eq("id" as never, r.id);
+    if (error) toast.error(error.message);
+    else { toast.success(status === "cleared" ? "Marked cleared" : status === "bounced" ? "Marked bounced" : "Set to pending"); load(); }
   };
 
   return (
@@ -171,33 +175,41 @@ function BankPage() {
         <Empty>No bank entries yet. Record a cash deposit or cheque deposit to begin.</Empty>
       ) : (
         <div className="space-y-2">
-          {filtered.map(r => (
-            <div key={r.id} className="rounded-md border bg-card p-3 flex items-center gap-3">
-              <Badge variant={r.kind === "cash_withdrawal" ? "secondary" : "default"}>
-                {r.kind === "cash_deposit" ? "DEP" : r.kind === "cheque_deposit" ? "CHQ" : "WD"}
-              </Badge>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-sm">{r.transfer_no}</span>
-                  <span className="text-xs text-muted-foreground">{fmtDate(r.date)}</span>
-                  {!r.cleared && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700">Pending</Badge>}
+          {filtered.map(r => {
+            const st = (r.status ?? (r.cleared ? "cleared" : "pending")) as Status;
+            return (
+              <div key={r.id} className={`rounded-xl border bg-card p-3 flex items-center gap-3 ${st === "bounced" ? "border-destructive/40" : st === "pending" ? "border-amber-500/40" : ""}`}>
+                <Badge variant={r.kind === "cash_withdrawal" ? "secondary" : "default"}>
+                  {r.kind === "cash_deposit" ? "DEP" : r.kind === "cheque_deposit" ? "CHQ" : "WD"}
+                </Badge>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-sm">{r.transfer_no}</span>
+                    <span className="text-xs text-muted-foreground">{fmtDate(r.date)}</span>
+                    <StatusPill status={st} />
+                  </div>
+                  <div className="text-sm truncate">
+                    {KIND_LABEL[r.kind]}{r.bank_name ? ` · ${r.bank_name}` : ""}
+                  </div>
+                  <div className="text-[11px] text-muted-foreground truncate">
+                    {r.cheque_no && <>Cheque #{r.cheque_no}{r.cheque_date ? ` (${fmtDate(r.cheque_date)})` : ""}</>}
+                    {r.txn_id && <> · Txn {r.txn_id}</>}
+                    {r.notes && <> · {r.notes}</>}
+                  </div>
                 </div>
-                <div className="text-sm truncate">
-                  {KIND_LABEL[r.kind]}{r.bank_name ? ` · ${r.bank_name}` : ""}
-                </div>
-                <div className="text-[11px] text-muted-foreground truncate">
-                  {r.cheque_no && <>Cheque #{r.cheque_no}{r.cheque_date ? ` (${fmtDate(r.cheque_date)})` : ""}</>}
-                  {r.txn_id && <> · Txn {r.txn_id}</>}
-                  {r.notes && <> · {r.notes}</>}
-                </div>
+                <div className="text-base font-semibold tabular-nums">{inr(r.amount)}</div>
+                <Select value={st} onValueChange={(v) => changeStatus(r, v as Status)}>
+                  <SelectTrigger className="h-8 w-[110px] text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">⏳ Pending</SelectItem>
+                    <SelectItem value="cleared">✓ Cleared</SelectItem>
+                    <SelectItem value="bounced">✗ Bounced</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button variant="ghost" size="icon" onClick={() => del(r.id)}><Trash2 className="h-4 w-4" /></Button>
               </div>
-              <div className="text-base font-semibold tabular-nums">{inr(r.amount)}</div>
-              {!r.cleared && (
-                <Button variant="ghost" size="sm" onClick={() => markCleared(r)}>Clear</Button>
-              )}
-              <Button variant="ghost" size="icon" onClick={() => del(r.id)}><Trash2 className="h-4 w-4" /></Button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
