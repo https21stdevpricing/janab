@@ -264,102 +264,112 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
-  // Native-feel swipe-down-to-close. Uses Pointer Events with a non-passive
-  // touchmove listener so we can preventDefault and lock the page scroll
-  // while the sheet is being dragged. Highly sensitive: closes at >70px or
-  // any velocity > 0.35 px/ms after 24px of travel.
+  // Physics-based swipe-to-close. Uses direct DOM transform writes (no React
+  // re-render during drag) + non-passive touchmove to lock page scroll.
+  // Closes on: 90px drag, 30px drag + downward velocity > 0.3 px/ms, or
+  // a flick > 0.7 px/ms regardless of distance.
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef<{
-    active: boolean; startY: number; lastY: number; startT: number;
-    lastT: number; lastV: number; fromBody: boolean;
-  }>({ active: false, startY: 0, lastY: 0, startT: 0, lastT: 0, lastV: 0, fromBody: false });
-  const [drag, setDrag] = useState(0);
+  const stateRef = useRef({
+    active: false, startY: 0, lastY: 0, lastT: 0, lastV: 0,
+    fromBody: false, height: 0,
+  });
 
-  // Rubber-band easing: less travel as the user drags further.
-  const eased = drag > 0 ? drag * (1 - Math.min(drag, 800) / 1600) : 0;
+  const setTransform = (y: number) => {
+    const el = sheetRef.current;
+    if (!el) return;
+    if (y <= 0) {
+      el.style.transform = "";
+      el.style.transition = "transform 280ms cubic-bezier(.22,1,.36,1)";
+      return;
+    }
+    // Rubber-band: ease past ~half-screen
+    const max = stateRef.current.height || 600;
+    const eased = y < max ? y : max + (y - max) * 0.3;
+    el.style.transition = "none";
+    el.style.transform = `translate3d(0, ${eased}px, 0)`;
+  };
 
-  // Attach non-passive listeners on the sheet so we can preventDefault during drag.
+  const animateClose = () => {
+    const el = sheetRef.current;
+    if (!el) return;
+    const h = stateRef.current.height || el.getBoundingClientRect().height || 600;
+    el.style.transition = "transform 220ms cubic-bezier(.4,0,.2,1)";
+    el.style.transform = `translate3d(0, ${h}px, 0)`;
+    window.setTimeout(() => onOpenChange(false), 180);
+  };
+
   useEffect(() => {
     if (!open) return;
     const el = sheetRef.current;
     if (!el) return;
     const scroller = scrollRef.current;
+    // Reset transform when opening
+    el.style.transform = "";
+    el.style.transition = "";
 
     const begin = (y: number, target: EventTarget | null) => {
       const fromBody = !!(scroller && target instanceof Node && scroller.contains(target));
-      // If touch starts inside the body but it's not scrolled to top,
-      // don't arm — let native scroll happen.
       if (fromBody && scroller && scroller.scrollTop > 0) return;
       stateRef.current = {
-        active: true, startY: y, lastY: y, startT: performance.now(),
-        lastT: performance.now(), lastV: 0, fromBody,
+        active: true, startY: y, lastY: y, lastT: performance.now(),
+        lastV: 0, fromBody, height: el.getBoundingClientRect().height,
       };
     };
     const move = (y: number, ev: Event) => {
       const s = stateRef.current;
       if (!s.active) return;
       const dy = y - s.startY;
-      // If user drags up, cancel.
-      if (dy < -4) { s.active = false; setDrag(0); return; }
-      // From body: if user starts scrolling up content, cancel arm.
+      if (dy < -6) { s.active = false; setTransform(0); return; }
       if (s.fromBody && scroller && scroller.scrollTop > 0) {
-        s.active = false; setDrag(0); return;
+        s.active = false; setTransform(0); return;
       }
       if (dy > 0) {
-        // Lock page/scroll while we own the gesture.
         if (ev.cancelable) ev.preventDefault();
         const now = performance.now();
         const dt = now - s.lastT;
-        if (dt > 0) s.lastV = (y - s.lastY) / dt;
+        if (dt > 0) {
+          // EMA velocity for stability
+          const inst = (y - s.lastY) / dt;
+          s.lastV = s.lastV * 0.6 + inst * 0.4;
+        }
         s.lastY = y; s.lastT = now;
-        setDrag(dy);
+        setTransform(dy);
       }
     };
     const end = () => {
       const s = stateRef.current;
-      if (!s.active) { setDrag(0); return; }
-      const dy = s.lastY - s.startY;
-      const v = s.lastV; // px/ms (positive = downward)
+      if (!s.active) return;
       s.active = false;
-      const shouldClose = dy > 70 || (dy > 24 && v > 0.35) || v > 0.9;
-      if (shouldClose) onOpenChange(false);
-      setDrag(0);
+      const dy = s.lastY - s.startY;
+      const v = s.lastV;
+      const shouldClose = dy > 90 || (dy > 30 && v > 0.3) || v > 0.7;
+      if (shouldClose) animateClose();
+      else setTransform(0);
     };
 
     const onTouchStart = (e: TouchEvent) => begin(e.touches[0].clientY, e.target);
     const onTouchMove = (e: TouchEvent) => move(e.touches[0].clientY, e);
     const onTouchEnd = () => end();
-    const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return; // handled above
-      begin(e.clientY, e.target);
-    };
-    const onPointerMove = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return;
-      move(e.clientY, e);
-    };
-    const onPointerUp = (e: PointerEvent) => {
-      if (e.pointerType === "touch") return;
-      end();
-    };
+    const onMouseDown = (e: MouseEvent) => begin(e.clientY, e.target);
+    const onMouseMove = (e: MouseEvent) => { if (stateRef.current.active) move(e.clientY, e); };
+    const onMouseUp = () => end();
 
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
     el.addEventListener("touchcancel", onTouchEnd, { passive: true });
-    el.addEventListener("pointerdown", onPointerDown);
-    window.addEventListener("pointermove", onPointerMove);
-    window.addEventListener("pointerup", onPointerUp);
-    window.addEventListener("pointercancel", onPointerUp);
+    el.addEventListener("mousedown", onMouseDown);
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
       el.removeEventListener("touchcancel", onTouchEnd);
-      el.removeEventListener("pointerdown", onPointerDown);
-      window.removeEventListener("pointermove", onPointerMove);
-      window.removeEventListener("pointerup", onPointerUp);
-      window.removeEventListener("pointercancel", onPointerUp);
+      el.removeEventListener("mousedown", onMouseDown);
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
     };
   }, [open, onOpenChange]);
 
@@ -370,8 +380,6 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
         side="bottom"
         className="p-0 h-[88vh] rounded-t-2xl flex flex-col [&>button]:hidden"
         style={{
-          transform: eased > 0 ? `translateY(${eased}px)` : undefined,
-          transition: drag > 0 ? "none" : "transform 260ms cubic-bezier(.22,1,.36,1)",
           willChange: "transform",
           touchAction: "pan-y",
         }}
