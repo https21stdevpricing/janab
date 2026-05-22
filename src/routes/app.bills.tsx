@@ -458,12 +458,14 @@ function BillsPage() {
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
           <div className="grid gap-2 lg:grid-cols-2">
             {filteredPays.map(p => (
-              <div key={p.id} className="rounded-2xl border bg-card p-3 flex items-center gap-3 cursor-pointer transition-colors hover:bg-muted/40" onClick={() => openPayView(p)}>
-                <Badge variant={p.direction === "in" ? "default" : "secondary"} className="shrink-0">{p.direction === "in" ? "IN" : "OUT"}</Badge>
+              <div key={p.id} className="surface p-3 cursor-pointer transition-colors hover:bg-muted/35" onClick={() => openPayView(p)}>
+                <div className="flex items-start gap-3">
+                <Badge variant={p.direction === "in" ? "default" : "secondary"} className="shrink-0 mt-0.5">{p.direction === "in" ? "IN" : "OUT"}</Badge>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm">{p.payment_no}</span>
                     <span className="text-xs text-muted-foreground">{fmtDate(p.date)}</span>
+                    <ClearancePill cleared={p.cleared !== false} mode={p.mode} />
                     {p.ref_doc && (
                       <span className="text-xs text-muted-foreground flex flex-wrap gap-1">
                         {p.ref_doc.split(",").map(s => s.trim()).filter(Boolean).map((ref, idx) => (
@@ -473,9 +475,12 @@ function BillsPage() {
                     )}
                   </div>
                   <div className="text-sm truncate">{p.contact_name ?? "—"} <span className="text-muted-foreground">via {p.mode}</span></div>
-                  {p.notes && <div className="text-xs text-muted-foreground truncate">{p.notes}</div>}
+                  <div className="text-xs text-muted-foreground truncate">
+                    {p.cheque_no ? `Cheque ${p.cheque_no}` : p.txn_id ? `Txn ${p.txn_id}` : p.notes || "Tap to view details"}
+                  </div>
                 </div>
                 <div className={`text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(p.amount)}</div>
+                </div>
               </div>
             ))}
           </div>
