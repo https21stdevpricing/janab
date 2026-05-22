@@ -374,24 +374,11 @@ function BillsPage() {
         }
       />
 
-      <div className="mb-4 rounded-[1.5rem] border border-border/70 bg-card p-3 shadow-sm sm:p-4">
-        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <div className="text-[11px] uppercase tracking-[0.12em] text-muted-foreground">Balance control</div>
-            <div className="text-sm text-muted-foreground">Tap any bill to settle it with party, balance and allocation pre-filled.</div>
-          </div>
-          <div className="text-right text-xs text-muted-foreground">Net position <span className={`ml-1 font-semibold tabular-nums ${kpis.net >= 0 ? "text-primary" : "text-destructive"}`}>{inr(kpis.net)}</span></div>
-        </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <KpiTile label="Receivable" sub={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "On track"}
-          value={inr(kpis.recv)} tone="good" onClick={() => setTab("receivable")} active={tab === "receivable"} />
-        <KpiTile label="Payable" sub={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "On track"}
-          value={inr(kpis.pay)} tone="bad" onClick={() => setTab("payable")} active={tab === "payable"} />
-        <KpiTile label="Net position" sub={kpis.net >= 0 ? "In your favour" : "You owe more"}
-          value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
-        <KpiTile label="Overdue > 30d" sub={`${inr(kpis.overdue)} stuck`}
-          value={inr(kpis.overdue)} tone={kpis.overdue > 0 ? "bad" : "muted"} />
-      </div>
+      {/* Minimal 3-tile hero — only what matters at a glance */}
+      <div className="mb-4 grid grid-cols-3 gap-2">
+        <KpiTile label="Receivable" value={inr(kpis.recv)} tone="good" onClick={() => setTab("receivable")} active={tab === "receivable"} />
+        <KpiTile label="Payable" value={inr(kpis.pay)} tone="bad" onClick={() => setTab("payable")} active={tab === "payable"} />
+        <KpiTile label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} sub={kpis.overdue > 0 ? `${inr(kpis.overdue)} overdue` : undefined} />
       </div>
 
       <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
@@ -402,14 +389,7 @@ function BillsPage() {
         </TabsList>
       </Tabs>
 
-      {tab !== "history" && (
-      <div className="grid grid-cols-4 gap-2 mb-3">
-        <MiniBucket label="0–30 d" value={totals.b1} />
-        <MiniBucket label="31–60 d" value={totals.b2} tone="warn" />
-        <MiniBucket label="61–90 d" value={totals.b3} tone="warn" />
-        <MiniBucket label="90+ d" value={totals.b4} tone="bad" />
-      </div>
-      )}
+      {/* aging buckets folded into filter chips below — surfaced only when needed */}
 
       <CollapseFilters
         summary={tab === "history" ? `${filteredPays.length} of ${pays.length} entries` : `${filtered.length} of ${sideRows.length} ${tab}`}
