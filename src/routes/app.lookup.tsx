@@ -383,8 +383,8 @@ export function DocDetail({ doc }: { doc: DocLookupResult }) {
   const navigate = useNavigate();
   const payable = doc.kind === "sale" || doc.kind === "purchase" || doc.kind === "tp";
   const payDir = doc.kind === "purchase" ? "out" : "in";
-  const goPay = () => navigate({ to: "/app/payments", search: { ref: no, dir: payDir } as any });
-  const goPaySupplier = () => navigate({ to: "/app/payments", search: { ref: no, dir: "out" } as any });
+  const goPay = () => navigate({ to: "/app/bills", search: { ref: no, dir: payDir } as any });
+  const goPaySupplier = () => navigate({ to: "/app/bills", search: { ref: no, dir: "out" } as any });
   const goDelivery = () => navigate({ to: "/app/deliveries" });
   const [journal, setJournal] = useState<any[]>([]);
   const [payments, setPayments] = useState<any[]>([]);
