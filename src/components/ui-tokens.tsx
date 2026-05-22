@@ -44,7 +44,9 @@ export function SectionTitle({
       <div className="min-w-0">
         <h2 className="text-[15px] sm:text-base font-semibold tracking-tight">{title}</h2>
         {description && (
-          <p className="text-xs sm:text-[13px] text-muted-foreground mt-0.5 leading-snug">{description}</p>
+          <p className="text-xs sm:text-[13px] text-muted-foreground mt-0.5 leading-snug">
+            {description}
+          </p>
         )}
       </div>
       {action && <div className="shrink-0">{action}</div>}
@@ -67,15 +69,17 @@ export function Stat({
     tone === "good"
       ? "text-primary"
       : tone === "warn"
-      ? "text-amber-600 dark:text-amber-400"
-      : tone === "bad"
-      ? "text-destructive"
-      : "text-foreground";
+        ? "text-amber-600 dark:text-amber-400"
+        : tone === "bad"
+          ? "text-destructive"
+          : "text-foreground";
   return (
     <div className="min-w-0">
       <div className="eyebrow">{label}</div>
       <div className={cn("stat-num mt-1.5 text-xl sm:text-2xl", toneCls)}>{value}</div>
-      {hint && <div className="text-[11px] sm:text-xs text-muted-foreground mt-1 leading-snug">{hint}</div>}
+      {hint && (
+        <div className="text-[11px] sm:text-xs text-muted-foreground mt-1 leading-snug">{hint}</div>
+      )}
     </div>
   );
 }
@@ -93,12 +97,12 @@ export function Pill({
     tone === "good"
       ? "bg-primary/10 text-primary border-primary/20"
       : tone === "warn"
-      ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
-      : tone === "bad"
-      ? "bg-destructive/10 text-destructive border-destructive/20"
-      : tone === "info"
-      ? "bg-accent text-accent-foreground border-accent/40"
-      : "bg-muted text-muted-foreground border-border/60";
+        ? "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20"
+        : tone === "bad"
+          ? "bg-destructive/10 text-destructive border-destructive/20"
+          : tone === "info"
+            ? "bg-accent text-accent-foreground border-accent/40"
+            : "bg-muted text-muted-foreground border-border/60";
   return (
     <span
       className={cn(
@@ -136,10 +140,13 @@ export function KpiTile({
   active?: boolean;
 }) {
   const valueCls =
-    tone === "good" ? "text-primary"
-    : tone === "warn" ? "text-amber-600 dark:text-amber-400"
-    : tone === "bad" ? "text-destructive"
-    : "text-foreground";
+    tone === "good"
+      ? "text-primary"
+      : tone === "warn"
+        ? "text-amber-600 dark:text-amber-400"
+        : tone === "bad"
+          ? "text-destructive"
+          : "text-foreground";
   const interactive = !!onClick;
   const Comp: ElementType = interactive ? "button" : "div";
   return (
@@ -153,25 +160,33 @@ export function KpiTile({
     >
       <div className="eyebrow truncate">{label}</div>
       <div
-        className={cn(
-          "stat-num mt-1.5 text-[15px] sm:text-xl truncate tracking-tight",
-          valueCls,
-        )}
+        className={cn("stat-num mt-1.5 text-[15px] sm:text-xl truncate tracking-tight", valueCls)}
         title={typeof value === "string" ? value : undefined}
       >
         {value}
       </div>
-      {hint && <div className="text-[11px] text-muted-foreground mt-1 leading-snug truncate">{hint}</div>}
+      {hint && (
+        <div className="text-[11px] text-muted-foreground mt-1 leading-snug truncate">{hint}</div>
+      )}
     </Comp>
   );
 }
 
-export function KpiGrid({ children, cols = 2, className }: { children: ReactNode; cols?: 2 | 3 | 4; className?: string }) {
-  const grid = cols === 4
-    ? "grid-cols-2 md:grid-cols-4"
-    : cols === 3
-    ? "grid-cols-[repeat(3,minmax(136px,1fr))] overflow-x-auto no-scrollbar snap-x"
-    : "grid-cols-2";
+export function KpiGrid({
+  children,
+  cols = 2,
+  className,
+}: {
+  children: ReactNode;
+  cols?: 2 | 3 | 4;
+  className?: string;
+}) {
+  const grid =
+    cols === 4
+      ? "grid-cols-2 md:grid-cols-4"
+      : cols === 3
+        ? "grid-cols-[repeat(3,minmax(136px,1fr))] overflow-x-auto no-scrollbar snap-x"
+        : "grid-cols-2";
   return <div className={cn("grid gap-2.5 max-w-full min-w-0", grid, className)}>{children}</div>;
 }
 
@@ -210,7 +225,14 @@ export function ActionStack({
               it.disabled && "opacity-50 cursor-not-allowed",
             )}
           >
-            <span className={cn("inline-flex h-4 w-4 items-center justify-center", it.primary ? "text-primary-foreground" : "text-muted-foreground")}>{it.icon}</span>
+            <span
+              className={cn(
+                "inline-flex h-4 w-4 items-center justify-center",
+                it.primary ? "text-primary-foreground" : "text-muted-foreground",
+              )}
+            >
+              {it.icon}
+            </span>
             <span className="truncate">{it.label}</span>
           </button>
         ))}
@@ -265,7 +287,11 @@ export function SegmentedTabs({
                 : "text-muted-foreground hover:text-foreground",
             )}
           >
-            {it.icon && <span className="h-3.5 w-3.5 inline-flex items-center justify-center shrink-0">{it.icon}</span>}
+            {it.icon && (
+              <span className="h-3.5 w-3.5 inline-flex items-center justify-center shrink-0">
+                {it.icon}
+              </span>
+            )}
             <span>{it.label}</span>
           </button>
         );

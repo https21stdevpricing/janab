@@ -130,7 +130,12 @@ function AuditPage() {
   }, []);
 
   const counts = useMemo(() => {
-    const c: Record<ActionFilter | string, number> = { all: rows.length, insert: 0, update: 0, delete: 0 };
+    const c: Record<ActionFilter | string, number> = {
+      all: rows.length,
+      insert: 0,
+      update: 0,
+      delete: 0,
+    };
     rows.forEach((r) => {
       c[r.action] = (c[r.action] ?? 0) + 1;
     });
@@ -146,22 +151,38 @@ function AuditPage() {
   }, [rows]);
 
   const entities = useMemo(
-    () => Array.from(new Set(rows.map((r) => r.entity))).sort((a, b) => labelForEntity(a).localeCompare(labelForEntity(b))),
+    () =>
+      Array.from(new Set(rows.map((r) => r.entity))).sort((a, b) =>
+        labelForEntity(a).localeCompare(labelForEntity(b)),
+      ),
     [rows],
   );
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return rows.filter((r) => {
-      const haystack = [r.summary, r.ref_no, r.entity, actionLabel[r.action], ...Object.keys(r.diff ?? {})]
+      const haystack = [
+        r.summary,
+        r.ref_no,
+        r.entity,
+        actionLabel[r.action],
+        ...Object.keys(r.diff ?? {}),
+      ]
         .filter(Boolean)
         .join(" ")
         .toLowerCase();
-      return (entity === "all" || r.entity === entity) && (action === "all" || r.action === action) && (!needle || haystack.includes(needle));
+      return (
+        (entity === "all" || r.entity === entity) &&
+        (action === "all" || r.action === action) &&
+        (!needle || haystack.includes(needle))
+      );
     });
   }, [rows, q, entity, action]);
 
-  const selected = useMemo(() => filtered.find((r) => r.id === selectedId) ?? filtered[0] ?? null, [filtered, selectedId]);
+  const selected = useMemo(
+    () => filtered.find((r) => r.id === selectedId) ?? filtered[0] ?? null,
+    [filtered, selectedId],
+  );
   const lastSync = rows[0]?.at ? new Date(rows[0].at) : null;
   const changedFields = filtered.reduce((sum, r) => sum + Object.keys(r.diff ?? {}).length, 0);
 
@@ -176,7 +197,14 @@ function AuditPage() {
 
     filtered.forEach((r) => {
       const d = new Date(r.at);
-      const key = d >= today ? "Today" : d >= yest ? "Yesterday" : d >= week ? "Earlier this week" : d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+      const key =
+        d >= today
+          ? "Today"
+          : d >= yest
+            ? "Yesterday"
+            : d >= week
+              ? "Earlier this week"
+              : d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
       (out[key] ??= []).push(r);
     });
     return out;
@@ -199,7 +227,10 @@ function AuditPage() {
   const restore = async (id: string) => {
     if (!confirm("Restore this deleted record? It will be re-inserted exactly as it was.")) return;
     setRestoring((r) => ({ ...r, [id]: true }));
-    const { data, error } = (await supabase.rpc("restore_audit_entry" as never, { _audit_id: id } as never)) as any;
+    const { data, error } = (await supabase.rpc(
+      "restore_audit_entry" as never,
+      { _audit_id: id } as never,
+    )) as any;
     setRestoring((r) => ({ ...r, [id]: false }));
     if (error) {
       toast.error(error.message);
@@ -225,8 +256,18 @@ function AuditPage() {
       <KpiGrid cols={4} className="mb-4">
         <KpiTile label="Events" value={String(filtered.length)} hint={`${rows.length} total`} />
         <KpiTile label="Fields changed" value={String(changedFields)} hint="Visible records" />
-        <KpiTile label="Deleted" value={String(counts.delete ?? 0)} tone={(counts.delete ?? 0) > 0 ? "bad" : undefined} hint="Restorable snapshots" />
-        <KpiTile label="Live sync" value={lastSync ? relTime(lastSync) : "Ready"} tone="good" hint={lastSync ? "Latest activity" : "Waiting"} />
+        <KpiTile
+          label="Deleted"
+          value={String(counts.delete ?? 0)}
+          tone={(counts.delete ?? 0) > 0 ? "bad" : undefined}
+          hint="Restorable snapshots"
+        />
+        <KpiTile
+          label="Live sync"
+          value={lastSync ? relTime(lastSync) : "Ready"}
+          tone="good"
+          hint={lastSync ? "Latest activity" : "Waiting"}
+        />
       </KpiGrid>
 
       <Surface className="mb-4 p-3 sm:p-4" elevated>
@@ -245,18 +286,41 @@ function AuditPage() {
             value={action}
             onValueChange={(v) => setAction(v as ActionFilter)}
             items={[
-              { value: "all", label: `All ${counts.all ?? 0}`, icon: <Activity className="h-3.5 w-3.5" /> },
-              { value: "insert", label: `Created ${counts.insert ?? 0}`, icon: <Plus className="h-3.5 w-3.5" /> },
-              { value: "update", label: `Updated ${counts.update ?? 0}`, icon: <Pencil className="h-3.5 w-3.5" /> },
-              { value: "delete", label: `Deleted ${counts.delete ?? 0}`, icon: <Trash2 className="h-3.5 w-3.5" /> },
+              {
+                value: "all",
+                label: `All ${counts.all ?? 0}`,
+                icon: <Activity className="h-3.5 w-3.5" />,
+              },
+              {
+                value: "insert",
+                label: `Created ${counts.insert ?? 0}`,
+                icon: <Plus className="h-3.5 w-3.5" />,
+              },
+              {
+                value: "update",
+                label: `Updated ${counts.update ?? 0}`,
+                icon: <Pencil className="h-3.5 w-3.5" />,
+              },
+              {
+                value: "delete",
+                label: `Deleted ${counts.delete ?? 0}`,
+                icon: <Trash2 className="h-3.5 w-3.5" />,
+              },
             ]}
           />
           <SegmentedTabs
             value={entity}
             onValueChange={setEntity}
             items={[
-              { value: "all", label: `All modules ${entityCounts.all ?? 0}`, icon: <Database className="h-3.5 w-3.5" /> },
-              ...entities.map((e) => ({ value: e, label: `${labelForEntity(e)} ${entityCounts[e] ?? 0}` })),
+              {
+                value: "all",
+                label: `All modules ${entityCounts.all ?? 0}`,
+                icon: <Database className="h-3.5 w-3.5" />,
+              },
+              ...entities.map((e) => ({
+                value: e,
+                label: `${labelForEntity(e)} ${entityCounts[e] ?? 0}`,
+              })),
             ]}
           />
         </div>
@@ -272,8 +336,12 @@ function AuditPage() {
             {Object.entries(groups).map(([label, items]) => (
               <section key={label} className="min-w-0">
                 <div className="flex items-center gap-2 mb-2 px-1">
-                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">{label}</h2>
-                  <span className="text-[11px] text-muted-foreground/70 tabular-nums">{items.length}</span>
+                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                    {label}
+                  </h2>
+                  <span className="text-[11px] text-muted-foreground/70 tabular-nums">
+                    {items.length}
+                  </span>
                 </div>
                 <Surface padded={false} className="overflow-hidden">
                   {items.map((row, index) => {
@@ -293,13 +361,23 @@ function AuditPage() {
                         <ActionMark action={row.action} />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-sm font-semibold tracking-tight truncate">{labelForEntity(row.entity)}</span>
-                            {row.ref_no && <span className="shrink-0 max-w-[120px] truncate rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-mono text-muted-foreground">{row.ref_no}</span>}
+                            <span className="text-sm font-semibold tracking-tight truncate">
+                              {labelForEntity(row.entity)}
+                            </span>
+                            {row.ref_no && (
+                              <span className="shrink-0 max-w-[120px] truncate rounded-full bg-muted px-2 py-0.5 text-[10.5px] font-mono text-muted-foreground">
+                                {row.ref_no}
+                              </span>
+                            )}
                           </div>
-                          <p className="mt-0.5 text-[12px] text-muted-foreground truncate">{cleanSummary(row)}</p>
+                          <p className="mt-0.5 text-[12px] text-muted-foreground truncate">
+                            {cleanSummary(row)}
+                          </p>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="text-[11px] tabular-nums text-muted-foreground">{timeOnly(row.at)}</div>
+                          <div className="text-[11px] tabular-nums text-muted-foreground">
+                            {timeOnly(row.at)}
+                          </div>
                           <div className="mt-1 inline-flex items-center gap-1 text-[10.5px] text-muted-foreground">
                             <ListChecks className="h-3 w-3" /> {fields}
                           </div>
@@ -321,13 +399,21 @@ function AuditPage() {
       )}
 
       <Sheet open={mobileDetailOpen && !!selected} onOpenChange={setMobileDetailOpen}>
-        <SheetContent side="bottom" className="lg:hidden p-0 max-h-[90vh] rounded-t-3xl overflow-hidden">
+        <SheetContent
+          side="bottom"
+          className="lg:hidden p-0 max-h-[90vh] rounded-t-3xl overflow-hidden"
+        >
           {selected && (
             <div className="max-h-[90vh] overflow-y-auto bg-background">
               <div className="flex justify-center pt-2 pb-1 sticky top-0 bg-background z-10">
                 <div className="h-1 w-10 rounded-full bg-border" />
               </div>
-              <AuditDetailPanel selected={selected} restoring={restoring} onRestore={restore} flush />
+              <AuditDetailPanel
+                selected={selected}
+                restoring={restoring}
+                onRestore={restore}
+                flush
+              />
             </div>
           )}
         </SheetContent>
@@ -352,27 +438,60 @@ function AuditDetailPanel({
   const actLabel = actionLabel[selected.action] ?? selected.action;
 
   return (
-    <aside className={cn(flush ? "bg-background" : "lg:sticky lg:top-4 surface overflow-hidden", "min-w-0")}>
+    <aside
+      className={cn(
+        flush ? "bg-background" : "lg:sticky lg:top-4 surface overflow-hidden",
+        "min-w-0",
+      )}
+    >
       <div className="px-5 sm:px-6 pt-5 pb-4 border-b border-border/50">
         <div className="flex items-start gap-3.5 min-w-0">
           <ActionMark action={selected.action} large />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">{actLabel}</span>
+              <span className="text-[10px] uppercase tracking-[0.08em] font-semibold text-muted-foreground">
+                {actLabel}
+              </span>
               <span className="inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
               <span className="text-[10px] text-muted-foreground">{relTime(at)}</span>
             </div>
-            <h3 className="mt-1 text-lg font-semibold tracking-tight leading-tight truncate">{labelForEntity(selected.entity)}</h3>
-            <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">{cleanSummary(selected)}</p>
+            <h3 className="mt-1 text-lg font-semibold tracking-tight leading-tight truncate">
+              {labelForEntity(selected.entity)}
+            </h3>
+            <p className="mt-1 text-[12.5px] leading-relaxed text-muted-foreground">
+              {cleanSummary(selected)}
+            </p>
           </div>
         </div>
       </div>
 
       <div className="px-5 sm:px-6 py-4 grid grid-cols-2 gap-3 border-b border-border/50">
-        {selected.ref_no && <MetaRow icon={<Hash className="h-3.5 w-3.5" />} label="Reference" value={<span className="font-mono">{selected.ref_no}</span>} />}
-        <MetaRow icon={<FileText className="h-3.5 w-3.5" />} label="Module" value={labelForEntity(selected.entity)} />
-        <MetaRow icon={<CalendarClock className="h-3.5 w-3.5" />} label="Date" value={at.toLocaleDateString()} />
-        <MetaRow icon={<Clock className="h-3.5 w-3.5" />} label="Time" value={at.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })} />
+        {selected.ref_no && (
+          <MetaRow
+            icon={<Hash className="h-3.5 w-3.5" />}
+            label="Reference"
+            value={<span className="font-mono">{selected.ref_no}</span>}
+          />
+        )}
+        <MetaRow
+          icon={<FileText className="h-3.5 w-3.5" />}
+          label="Module"
+          value={labelForEntity(selected.entity)}
+        />
+        <MetaRow
+          icon={<CalendarClock className="h-3.5 w-3.5" />}
+          label="Date"
+          value={at.toLocaleDateString()}
+        />
+        <MetaRow
+          icon={<Clock className="h-3.5 w-3.5" />}
+          label="Time"
+          value={at.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          })}
+        />
         <MetaRow icon={<UserIcon className="h-3.5 w-3.5" />} label="Action" value={actLabel} />
         <MetaRow icon={<ShieldCheck className="h-3.5 w-3.5" />} label="Sync" value="Recorded" />
       </div>
@@ -380,18 +499,32 @@ function AuditDetailPanel({
       <div className="px-5 sm:px-6 py-4 border-b border-border/50">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-semibold">Changed fields</div>
-            <div className="text-[12px] text-muted-foreground mt-0.5">Tap any event to inspect exact before and after values.</div>
+            <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground font-semibold">
+              Changed fields
+            </div>
+            <div className="text-[12px] text-muted-foreground mt-0.5">
+              Tap any event to inspect exact before and after values.
+            </div>
           </div>
-          <span className="text-[11px] tabular-nums text-muted-foreground">{diffEntries.length}</span>
+          <span className="text-[11px] tabular-nums text-muted-foreground">
+            {diffEntries.length}
+          </span>
         </div>
 
         {diffEntries.length === 0 ? (
-          <div className="rounded-xl border border-border/60 bg-muted/30 px-3.5 py-4 text-sm text-muted-foreground">No field-level values were captured for this event.</div>
+          <div className="rounded-xl border border-border/60 bg-muted/30 px-3.5 py-4 text-sm text-muted-foreground">
+            No field-level values were captured for this event.
+          </div>
         ) : (
           <div className="space-y-2.5 max-h-[420px] overflow-y-auto pr-1 no-scrollbar">
             {diffEntries.map(([field, change]) => (
-              <ChangeRow key={field} field={field} oldValue={change?.old} newValue={change?.new} action={selected.action} />
+              <ChangeRow
+                key={field}
+                field={field}
+                oldValue={change?.old}
+                newValue={change?.new}
+                action={selected.action}
+              />
             ))}
           </div>
         )}
@@ -406,8 +539,14 @@ function AuditDetailPanel({
           </Button>
         )}
         {selected.action === "delete" && (
-          <Button size="sm" className="flex-1 rounded-full" onClick={() => onRestore(selected.id)} disabled={!!restoring[selected.id]}>
-            <RotateCcw className="h-3.5 w-3.5" /> {restoring[selected.id] ? "Restoring…" : "Restore record"}
+          <Button
+            size="sm"
+            className="flex-1 rounded-full"
+            onClick={() => onRestore(selected.id)}
+            disabled={!!restoring[selected.id]}
+          >
+            <RotateCcw className="h-3.5 w-3.5" />{" "}
+            {restoring[selected.id] ? "Restoring…" : "Restore record"}
           </Button>
         )}
       </div>
@@ -416,7 +555,14 @@ function AuditDetailPanel({
 }
 
 function ActionMark({ action, large = false }: { action: string; large?: boolean }) {
-  const Icon = action === "insert" ? Plus : action === "update" ? Pencil : action === "delete" ? Trash2 : Activity;
+  const Icon =
+    action === "insert"
+      ? Plus
+      : action === "update"
+        ? Pencil
+        : action === "delete"
+          ? Trash2
+          : Activity;
   return (
     <span
       className={cn(
@@ -432,24 +578,69 @@ function ActionMark({ action, large = false }: { action: string; large?: boolean
   );
 }
 
-function ChangeRow({ field, oldValue, newValue, action }: { field: string; oldValue: unknown; newValue: unknown; action: string }) {
+function ChangeRow({
+  field,
+  oldValue,
+  newValue,
+  action,
+}: {
+  field: string;
+  oldValue: unknown;
+  newValue: unknown;
+  action: string;
+}) {
   return (
     <div className="rounded-xl border border-border/60 bg-background p-3 min-w-0">
-      <div className="text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground font-semibold mb-2">{formatField(field)}</div>
+      <div className="text-[10.5px] uppercase tracking-[0.08em] text-muted-foreground font-semibold mb-2">
+        {formatField(field)}
+      </div>
       <div className="grid grid-cols-1 gap-2">
-        <ValueBlock label={action === "insert" ? "Before" : "Old"} value={oldValue} muted={action !== "insert"} />
+        <ValueBlock
+          label={action === "insert" ? "Before" : "Old"}
+          value={oldValue}
+          muted={action !== "insert"}
+        />
         <div className="flex justify-center text-muted-foreground/60 text-xs">↓</div>
-        <ValueBlock label={action === "delete" ? "After" : "New"} value={newValue} strong={action !== "delete"} />
+        <ValueBlock
+          label={action === "delete" ? "After" : "New"}
+          value={newValue}
+          strong={action !== "delete"}
+        />
       </div>
     </div>
   );
 }
 
-function ValueBlock({ label, value, muted, strong }: { label: string; value: unknown; muted?: boolean; strong?: boolean }) {
+function ValueBlock({
+  label,
+  value,
+  muted,
+  strong,
+}: {
+  label: string;
+  value: unknown;
+  muted?: boolean;
+  strong?: boolean;
+}) {
   return (
-    <div className={cn("rounded-lg px-3 py-2 min-w-0", strong ? "bg-foreground text-background" : "bg-muted/60", muted && "opacity-70")}>
-      <div className={cn("text-[10px] uppercase tracking-[0.08em]", strong ? "text-background/70" : "text-muted-foreground")}>{label}</div>
-      <div className="mt-1 text-[12px] font-mono leading-relaxed break-words tabular-nums">{formatValue(value)}</div>
+    <div
+      className={cn(
+        "rounded-lg px-3 py-2 min-w-0",
+        strong ? "bg-foreground text-background" : "bg-muted/60",
+        muted && "opacity-70",
+      )}
+    >
+      <div
+        className={cn(
+          "text-[10px] uppercase tracking-[0.08em]",
+          strong ? "text-background/70" : "text-muted-foreground",
+        )}
+      >
+        {label}
+      </div>
+      <div className="mt-1 text-[12px] font-mono leading-relaxed break-words tabular-nums">
+        {formatValue(value)}
+      </div>
     </div>
   );
 }
@@ -472,7 +663,8 @@ function labelForEntity(entity: string) {
 
 function cleanSummary(row: Row) {
   const label = labelForEntity(row.entity).toLowerCase();
-  const summary = row.summary || `${labelForEntity(row.entity)} ${actionLabel[row.action] ?? row.action}`;
+  const summary =
+    row.summary || `${labelForEntity(row.entity)} ${actionLabel[row.action] ?? row.action}`;
   return summary.replace(row.entity, label).replace(/_/g, " ");
 }
 
