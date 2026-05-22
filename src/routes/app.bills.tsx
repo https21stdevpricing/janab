@@ -657,7 +657,7 @@ function BillsPage() {
             <div className="space-y-1.5"><Label className="text-xs">No.</Label>
               <Input className="font-mono" placeholder="Auto" disabled value="(auto)" /></div>
             <div className="space-y-1.5"><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="col-span-2 space-y-1.5"><Label className="text-xs">{direction === "in" ? "From buyer" : "To supplier"}</Label>
+            <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">{direction === "in" ? "From buyer" : "To supplier"}</Label>
               <ContactPicker filter={direction === "in" ? "buyer" : "supplier"} value={contactId} onChange={(id, n) => { setContactId(id); setContactName(n); setAllocs([]); }} />
             </div>
             <div className="space-y-1.5">
@@ -675,15 +675,15 @@ function BillsPage() {
                   <SelectItem value="Card">Card</SelectItem>
                 </SelectContent>
               </Select></div>
-            <div className="col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+            <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
 
             {(mode === "Bank" || mode === "UPI" || mode === "Card") && (
               <>
-                <div className="col-span-2 sm:col-span-1 space-y-1.5">
+                <div className="sm:col-span-1 space-y-1.5">
                   <Label className="text-xs">Bank / app name</Label>
                   <Input placeholder={mode === "UPI" ? "GPay, PhonePe…" : "HDFC ****1234"} value={bankName} onChange={(e) => setBankName(e.target.value)} />
                 </div>
-                <div className="col-span-2 sm:col-span-1 space-y-1.5">
+                <div className="sm:col-span-1 space-y-1.5">
                   <Label className="text-xs">Transaction ID / UTR</Label>
                   <Input placeholder="UTR / UPI ref no." value={txnId} onChange={(e) => setTxnId(e.target.value)} />
                 </div>
@@ -700,11 +700,11 @@ function BillsPage() {
                   <Label className="text-xs">Cheque date</Label>
                   <Input type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} />
                 </div>
-                <div className="col-span-2 space-y-1.5">
+                <div className="sm:col-span-2 space-y-1.5">
                   <Label className="text-xs">Drawee bank</Label>
                   <Input placeholder="Bank on the cheque" value={bankName} onChange={(e) => setBankName(e.target.value)} />
                 </div>
-                <label className="col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
+                <label className="sm:col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
                   <Checkbox checked={cleared} onCheckedChange={(v) => setCleared(!!v)} className="mt-0.5" />
                   <span>
                     <span className="block font-medium">Cheque is cleared</span>
