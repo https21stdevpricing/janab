@@ -90,6 +90,17 @@ function OnboardingPage() {
   const liveRecv = useMemo(() => contacts.filter(c => c.type === "buyer").reduce((a, c) => a + Number(c.opening_balance || 0), 0), [contacts]);
   const livePay  = useMemo(() => contacts.filter(c => c.type === "supplier").reduce((a, c) => a + Number(c.opening_balance || 0), 0), [contacts]);
 
+  const addBulkStock = () => {
+    const rows = bulkStockText.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map((line) => {
+      const [name, unit, qty, rate] = line.split(/[\t|,]/).map(x => x.trim());
+      return name ? { name, unit: unit || "sqft", opening_stock: Number(qty) || 0, purchase_rate: Number(rate) || 0, _dirty: true } : null;
+    }).filter(Boolean) as ProdRow[];
+    if (!rows.length) { toast.error("Paste at least one valid product row"); return; }
+    setProds([...prods, ...rows]);
+    setBulkStockText("");
+    toast.success(`Added ${rows.length} product rows`);
+  };
+
   const saveProducts = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
