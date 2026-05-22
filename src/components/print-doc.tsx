@@ -509,38 +509,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
         )}
 
         <section className={`${design.bodyLayout === "dense" ? "px-8 pb-4" : design.bodyLayout === "spacious" ? "px-10 pb-7" : "px-9 pb-6"} relative`}>
-          <table className="w-full border-collapse text-[11.5px] leading-4">
-            <thead>
-              <tr className="text-[#6e7886] uppercase text-[9.5px] tracking-[0.08em]">
-                <th className="text-center py-2 px-2 w-7 border-b-2 border-[#111621] border-t border-slate-200 font-bold">#</th>
-                <th className="text-left py-2 px-2 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Description</th>
-                <th className="text-center py-2 px-2 w-16 border-b-2 border-[#111621] border-t border-slate-200 font-bold">HSN</th>
-                <th className="text-right py-2 px-2 w-12 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Qty</th>
-                <th className="text-center py-2 px-2 w-12 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Unit</th>
-                <th className="text-right py-2 px-2 w-20 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Rate</th>
-                <th className="text-right py-2 px-2 w-12 border-b-2 border-[#111621] border-t border-slate-200 font-bold">GST</th>
-                <th className="text-right py-2 px-2 w-24 border-b-2 border-[#111621] border-t border-slate-200 font-bold">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((it, i) => {
-                const base = Number(it.qty || 0) * Number(it.rate || 0);
-                const padY = design.bodyLayout === "dense" ? "py-2" : "py-3";
-                return (
-                  <tr key={i} className="border-b border-slate-100 break-inside-avoid align-top">
-                    <td className={`${padY} px-2 text-center text-[#6e7886] tabular-nums`}>{i + 1}</td>
-                    <td className={`${padY} px-2 font-semibold text-[#111621]`}>{it.product_name ?? "—"}</td>
-                    <td className={`${padY} px-2 text-center text-[#6e7886] font-mono text-[10.5px]`}>{(it as any).hsn ?? (it as any).hsn_code ?? "—"}</td>
-                    <td className={`${padY} px-2 text-right tabular-nums`}>{fmt(it.qty)}</td>
-                    <td className={`${padY} px-2 text-center text-[#6e7886]`}>{it.unit ?? "—"}</td>
-                    <td className={`${padY} px-2 text-right tabular-nums`}>{fmt(it.rate)}</td>
-                    <td className={`${padY} px-2 text-right tabular-nums text-[#6e7886]`}>{fmt(it.gst_pct, Number(it.gst_pct ?? 0) % 1 === 0 ? 0 : 2)}%</td>
-                    <td className={`${padY} px-2 text-right tabular-nums font-bold text-[#111621]`}>{fmt(base)}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <ProductPrintTable items={items} layout={design.productLayout} density={design.bodyLayout} />
 
           <div className="mt-8 grid grid-cols-[1fr_260px] gap-10 items-start break-inside-avoid">
             <div className="text-[11px] leading-5 text-[#374050]">
