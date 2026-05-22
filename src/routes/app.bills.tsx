@@ -87,15 +87,18 @@ function StatusBadge({ s }: { s: { label: string; tone: "warn" | "info" | "bad" 
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${cls}`}>{s.label}</span>;
 }
 
-function ClearancePill({ cleared, mode }: { cleared: boolean; mode?: string | null }) {
+function ClearancePill({ cleared, mode, status }: { cleared: boolean; mode?: string | null; status?: string | null }) {
   const isCheque = mode === "Cheque";
-  const cls = cleared
+  const isBounced = status === "bounced";
+  const cls = isBounced
+    ? "border-destructive/40 bg-destructive/5 text-destructive"
+    : cleared
     ? "border-primary/30 bg-primary/5 text-primary"
     : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400";
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${cls}`}>
       {cleared ? <CheckCircle2 className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
-      {cleared ? "Cleared" : isCheque ? "Cheque pending" : "Pending"}
+      {isBounced ? "Bounced" : cleared ? "Cleared" : isCheque ? "Cheque pending" : "Pending"}
     </span>
   );
 }
