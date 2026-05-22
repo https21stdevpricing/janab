@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SegmentedTabs } from "@/components/ui-tokens";
 import { inr, fmt } from "@/lib/format";
@@ -343,7 +344,12 @@ function ReportsPage() {
 
   return (
     <>
-      <PageHeader title="Reports" description="Clean financial summaries with detailed schedules below." />
+      <PageHeader
+        title="Reports"
+        description={`Clean financial summaries · ${isLive ? "live" : "syncing"}${lastSyncedAt ? ` · updated ${lastSyncedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : ""}`}
+        actions={<Button variant="outline" size="sm" onClick={refresh} disabled={isRefreshing}>{isRefreshing ? "Syncing…" : "Refresh"}</Button>}
+      />
+      {lastError && <div className="mb-3 rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">Reports sync failed: {lastError.message}</div>}
 
       <div className="mb-4 surface overflow-hidden">
         <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-border/60">
