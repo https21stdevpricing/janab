@@ -542,8 +542,17 @@ function Header({ n, title, hint, icon: Icon }: { n: number; title: string; hint
     </div>
   );
 }
+
+function SetupMark() {
+  return (
+    <span className="grid h-8 w-8 place-items-center rounded-xl border border-primary/30 bg-primary/5 text-primary">
+      <Building2 className="h-4 w-4" />
+    </span>
+  );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="space-y-1.5"><Label className="text-xs">{label}</Label>{children}</div>;
+  return <div className="space-y-1.5"><Label className="text-xs font-medium text-muted-foreground">{label}</Label>{children}</div>;
 }
 function RowField({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-1.5 sm:space-y-0"><Label className="text-[10px] text-muted-foreground sm:hidden">{label}</Label>{children}</div>;
