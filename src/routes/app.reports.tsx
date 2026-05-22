@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,8 +10,28 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Info, TrendingDown, AlertTriangle, CheckCircle2, Minus, Wallet, ShieldCheck, ShieldAlert, Layers, Calculator, Check, Wrench } from "lucide-react";
 import { toast } from "sonner";
 import { ReconcileGuide, buildReconcileSignals } from "@/components/reconcile-guide";
+import { useLiveSync } from "@/hooks/use-live-sync";
 
 export const Route = createFileRoute("/app/reports")({ component: ReportsPage });
+
+const REPORTS_LIVE_TABLES = [
+  "journal_lines",
+  "journal_entries",
+  "sales",
+  "sale_items",
+  "purchases",
+  "purchase_items",
+  "third_party",
+  "tp_items",
+  "payments",
+  "payment_allocations",
+  "products",
+  "expenses",
+  "bank_transfers",
+  "fixed_assets",
+  "stock_adjustments",
+  "settings",
+];
 
 function ReportsPage() {
   const [rows, setRows] = useState<any[]>([]);
