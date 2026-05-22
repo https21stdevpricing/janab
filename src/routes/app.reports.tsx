@@ -710,10 +710,10 @@ function Kpi({ label, value, hint, tone }: { label: string; value: string; hint:
 function Headline({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "warn" | "bad" }) {
   const toneCls = tone === "good" ? "text-primary" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : tone === "bad" ? "text-destructive" : "";
   return (
-    <div>
-      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`text-2xl font-semibold tabular-nums mt-1 ${toneCls}`}>{value}</div>
-      {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground truncate">{label}</div>
+      <div className={`text-lg sm:text-2xl font-semibold tabular-nums mt-1 truncate ${toneCls}`}>{value}</div>
+      {sub && <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
     </div>
   );
 }
