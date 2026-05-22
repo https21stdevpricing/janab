@@ -495,4 +495,3 @@ function Field({ label, children, wide }: { label: string; children: React.React
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-2">{children}</div>;
 }
-}
