@@ -264,68 +264,121 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
-  // Swipe-down-to-close. Works from the header handle OR anywhere on the
-  // scrollable body when it's already scrolled to top. Closes at >110px drag
-  // or >60px with downward velocity, with rubber-band visual response.
-  const [drag, setDrag] = useState(0);
-  const dragRef = { current: 0 };
+  // Native-feel swipe-down-to-close. Uses Pointer Events with a non-passive
+  // touchmove listener so we can preventDefault and lock the page scroll
+  // while the sheet is being dragged. Highly sensitive: closes at >70px or
+  // any velocity > 0.35 px/ms after 24px of travel.
+  const sheetRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const armedRef = useRef(false);
-  const onTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    (onTouchStart as any)._s = { y: t.clientY, t: Date.now() };
-    dragRef.current = 0;
-    armedRef.current = true;
-    setDrag(0);
-  };
-  const onTouchMove = (e: React.TouchEvent) => {
-    const s = (onTouchStart as any)._s as { y: number; t: number } | undefined;
-    if (!s || !armedRef.current) return;
-    const dy = e.touches[0].clientY - s.y;
-    if (dy > 0) {
-      dragRef.current = dy;
-      setDrag(dy);
-    }
-  };
-  const onTouchEnd = () => {
-    const s = (onTouchStart as any)._s as { y: number; t: number } | undefined;
-    (onTouchStart as any)._s = undefined;
-    const dy = dragRef.current;
-    const elapsed = s ? Date.now() - s.t : 0;
-    const velocity = elapsed > 0 ? dy / elapsed : 0;
-    if (dy > 110 || (dy > 60 && velocity > 0.5)) onOpenChange(false);
-    setDrag(0);
-    armedRef.current = false;
-  };
-  // Body gesture: only arms when the scroll container is already at the top.
-  const onBodyTouchStart = (e: React.TouchEvent) => {
-    const el = scrollRef.current;
-    if (!el || el.scrollTop > 0) { armedRef.current = false; return; }
-    onTouchStart(e);
-  };
-  const onBodyTouchMove = (e: React.TouchEvent) => {
-    const el = scrollRef.current;
-    if (el && el.scrollTop > 0) { armedRef.current = false; setDrag(0); return; }
-    onTouchMove(e);
-  };
+  const stateRef = useRef<{
+    active: boolean; startY: number; lastY: number; startT: number;
+    lastT: number; lastV: number; fromBody: boolean;
+  }>({ active: false, startY: 0, lastY: 0, startT: 0, lastT: 0, lastV: 0, fromBody: false });
+  const [drag, setDrag] = useState(0);
+
   // Rubber-band easing: less travel as the user drags further.
-  const eased = drag > 0 ? Math.round(drag * (1 - Math.min(drag, 600) / 1200)) : 0;
+  const eased = drag > 0 ? drag * (1 - Math.min(drag, 800) / 1600) : 0;
+
+  // Attach non-passive listeners on the sheet so we can preventDefault during drag.
+  useEffect(() => {
+    if (!open) return;
+    const el = sheetRef.current;
+    if (!el) return;
+    const scroller = scrollRef.current;
+
+    const begin = (y: number, target: EventTarget | null) => {
+      const fromBody = !!(scroller && target instanceof Node && scroller.contains(target));
+      // If touch starts inside the body but it's not scrolled to top,
+      // don't arm — let native scroll happen.
+      if (fromBody && scroller && scroller.scrollTop > 0) return;
+      stateRef.current = {
+        active: true, startY: y, lastY: y, startT: performance.now(),
+        lastT: performance.now(), lastV: 0, fromBody,
+      };
+    };
+    const move = (y: number, ev: Event) => {
+      const s = stateRef.current;
+      if (!s.active) return;
+      const dy = y - s.startY;
+      // If user drags up, cancel.
+      if (dy < -4) { s.active = false; setDrag(0); return; }
+      // From body: if user starts scrolling up content, cancel arm.
+      if (s.fromBody && scroller && scroller.scrollTop > 0) {
+        s.active = false; setDrag(0); return;
+      }
+      if (dy > 0) {
+        // Lock page/scroll while we own the gesture.
+        if (ev.cancelable) ev.preventDefault();
+        const now = performance.now();
+        const dt = now - s.lastT;
+        if (dt > 0) s.lastV = (y - s.lastY) / dt;
+        s.lastY = y; s.lastT = now;
+        setDrag(dy);
+      }
+    };
+    const end = () => {
+      const s = stateRef.current;
+      if (!s.active) { setDrag(0); return; }
+      const dy = s.lastY - s.startY;
+      const v = s.lastV; // px/ms (positive = downward)
+      s.active = false;
+      const shouldClose = dy > 70 || (dy > 24 && v > 0.35) || v > 0.9;
+      if (shouldClose) onOpenChange(false);
+      setDrag(0);
+    };
+
+    const onTouchStart = (e: TouchEvent) => begin(e.touches[0].clientY, e.target);
+    const onTouchMove = (e: TouchEvent) => move(e.touches[0].clientY, e);
+    const onTouchEnd = () => end();
+    const onPointerDown = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return; // handled above
+      begin(e.clientY, e.target);
+    };
+    const onPointerMove = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
+      move(e.clientY, e);
+    };
+    const onPointerUp = (e: PointerEvent) => {
+      if (e.pointerType === "touch") return;
+      end();
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
+    el.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
+      el.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
+    };
+  }, [open, onOpenChange]);
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
+        ref={sheetRef as any}
         side="bottom"
         className="p-0 h-[88vh] rounded-t-2xl flex flex-col [&>button]:hidden"
         style={{
           transform: eased > 0 ? `translateY(${eased}px)` : undefined,
-          transition: drag > 0 ? "none" : "transform 220ms cubic-bezier(.2,.8,.2,1)",
+          transition: drag > 0 ? "none" : "transform 260ms cubic-bezier(.22,1,.36,1)",
+          willChange: "transform",
+          touchAction: "pan-y",
         }}
       >
         {/* Drag handle + aligned header */}
         <div
-          className="px-5 pt-2 pb-3 border-b touch-pan-y"
-          onTouchStart={onTouchStart}
-          onTouchMove={onTouchMove}
-          onTouchEnd={onTouchEnd}
+          className="px-5 pt-2 pb-3 border-b select-none"
         >
           <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted-foreground/30" />
           <div className="flex items-center justify-between gap-3">
@@ -346,9 +399,6 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
         <div
           ref={scrollRef}
           className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain"
-          onTouchStart={onBodyTouchStart}
-          onTouchMove={onBodyTouchMove}
-          onTouchEnd={onTouchEnd}
         >
           {[{ label: "Daily", items: [...pinned].slice(1).map((p) => ({ ...p })) }, ...moreGroups].map((g) => (
             <div key={g.label}>
