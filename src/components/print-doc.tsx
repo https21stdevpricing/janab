@@ -56,6 +56,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   const updateDesign = (next: PrintDesign) => { setDesign(next); savePrintDesign(next); };
   const uploadLogo = async (file?: File) => { if (file) updateDesign({ ...design, logoDataUrl: await fileToDataUrl(file) }); };
   const uploadWatermarkLogo = async (file?: File) => { if (file) updateDesign({ ...design, watermarkLogoDataUrl: await fileToDataUrl(file) }); };
+  const uploadQr = async (file?: File) => { if (file) updateDesign({ ...design, qrCodeDataUrl: await fileToDataUrl(file) }); };
+  const uploadBarcode = async (file?: File) => { if (file) updateDesign({ ...design, barcodeDataUrl: await fileToDataUrl(file) }); };
   const uploadFooterLogos = async (files?: FileList | null) => {
     if (!files) return;
     const add = await Promise.all(Array.from(files).slice(0, 20 - design.footerLogos.length).map(fileToDataUrl));
