@@ -491,7 +491,7 @@ export function DocDetail({ doc }: { doc: DocLookupResult }) {
             {doc.kind === "tp" && doc.supplierOutstanding && doc.supplierOutstanding.balance > 0 && (
               <Button size="sm" variant="secondary" onClick={goPaySupplier}><Wallet className="h-3 w-3" /> Pay supplier {inr(doc.supplierOutstanding.balance)}</Button>
             )}
-            {doc.kind !== "payment" && doc.kind !== "deposit" && (
+            {!printable && doc.kind !== "payment" && doc.kind !== "deposit" && (
               <Button size="sm" variant="ghost" className="h-8 w-8 p-0" title="Download PDF" onClick={() => exportStoneWorldDocument(doc, company)}>
                 <Printer className="h-3.5 w-3.5" />
               </Button>
