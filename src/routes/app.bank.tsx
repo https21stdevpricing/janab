@@ -317,6 +317,46 @@ function BankPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)}>
+        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+          {viewRow && (
+            <>
+              <div className="border-b px-4 py-4 sm:px-6">
+                <DialogTitle className="flex items-center gap-2 text-base">
+                  {viewRow.kind === "cheque_deposit" ? <Banknote className="h-4 w-4" /> : viewRow.kind === "cash_withdrawal" ? <ArrowUpFromLine className="h-4 w-4" /> : <ArrowDownToLine className="h-4 w-4" />}
+                  {viewRow.transfer_no}
+                </DialogTitle>
+                <p className="mt-1 text-xs text-muted-foreground">{KIND_LABEL[viewRow.kind]} · {fmtDate(viewRow.date)}</p>
+              </div>
+              <div className="space-y-4 p-4 sm:p-6 text-sm">
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="eyebrow">Amount</div>
+                  <div className={`mt-1 text-2xl font-semibold tabular-nums ${viewRow.kind === "cash_withdrawal" ? "text-destructive" : "text-primary"}`}>{viewRow.kind === "cash_withdrawal" ? "−" : "+"}{inr(viewRow.amount)}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Detail label="Status"><StatusPill status={(viewRow.status ?? (viewRow.cleared ? "cleared" : "pending")) as Status} /></Detail>
+                  <Detail label="Bank">{viewRow.bank_name ?? "—"}</Detail>
+                  {viewRow.cheque_no && <Detail label="Cheque no.">{viewRow.cheque_no}</Detail>}
+                  {viewRow.cheque_date && <Detail label="Cheque date">{fmtDate(viewRow.cheque_date)}</Detail>}
+                  {viewRow.txn_id && <Detail label="Txn / UTR">{viewRow.txn_id}</Detail>}
+                  {viewRow.cleared_at && <Detail label="Cleared on">{fmtDate(viewRow.cleared_at)}</Detail>}
+                </div>
+                {viewRow.notes && <Detail label="Notes">{viewRow.notes}</Detail>}
+              </div>
+              <div className="border-t p-3 grid grid-cols-3 gap-2">
+                <Button variant="outline" size="sm" onClick={() => changeStatus(viewRow, "pending")}>Pending</Button>
+                <Button variant="outline" size="sm" onClick={() => changeStatus(viewRow, "bounced")}>Bounced</Button>
+                <Button size="sm" onClick={() => changeStatus(viewRow, "cleared")}>Cleared</Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{label}</div><div className="font-medium break-words">{children}</div></div>;
 }
