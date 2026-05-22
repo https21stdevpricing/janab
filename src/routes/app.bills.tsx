@@ -532,7 +532,7 @@ function BillsPage() {
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
           <div className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm divide-y">
             {filteredPays.map(p => (
-              <button key={p.id} type="button" className="grid w-full min-w-0 grid-cols-1 gap-2 px-3 py-3 text-left transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_auto] sm:gap-3 sm:px-4" onClick={() => openPayView(p)}>
+              <button key={p.id} type="button" className="grid w-full min-w-0 grid-cols-[1fr_auto] items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/30 sm:px-4" onClick={() => openPayView(p)}>
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <span className="min-w-0 max-w-full truncate font-mono text-sm font-medium">{p.payment_no}</span>
@@ -546,7 +546,7 @@ function BillsPage() {
                     {p.ref_doc || p.cheque_no || p.txn_id || p.notes ? [p.ref_doc, p.cheque_no ? `Cheque ${p.cheque_no}` : null, p.txn_id ? `Txn ${p.txn_id}` : null, p.notes].filter(Boolean).join(" · ") : "Open details"}
                   </div>
                 </div>
-                <div className="min-w-0 text-left sm:text-right">
+                <div className="min-w-0 text-right">
                   <div className={`truncate text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{p.direction === "in" ? "+" : "−"}{inr(p.amount)}</div>
                   <div className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">{p.direction === "in" ? "Receipt" : "Payment"}</div>
                 </div>
