@@ -435,7 +435,7 @@ function ProductsPage() {
       <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Rows3 className="h-4 w-4" /> Bulk add products</DialogTitle>
+            <DialogTitle className="flex items-center gap-2"><ListPlus className="h-4 w-4" /> Bulk add products</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-1">
