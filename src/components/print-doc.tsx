@@ -159,6 +159,10 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 </select>
               </label>
             </div>
+            <label className="flex items-center gap-2 text-[11px]">
+              <input type="checkbox" checked={design.footerOnEveryPage} onChange={(e) => updateDesign({ ...design, footerOnEveryPage: e.target.checked })} />
+              <span>Print footer logos on every page (strict)</span>
+            </label>
             {design.footerLogos.length > 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
                 {design.footerLogos.map((src, i) => (
@@ -169,6 +173,40 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 ))}
               </div>
             )}
+          </div>
+
+          <div className="rounded-md border border-border/60 p-2 space-y-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Document extras (pre-filled blocks)</div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showBankDetails} onChange={(e) => updateDesign({ ...design, showBankDetails: e.target.checked })} />
+                <span>Show bank details (invoice)</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showGstSummary} onChange={(e) => updateDesign({ ...design, showGstSummary: e.target.checked })} />
+                <span>Show GST breakdown (CGST/SGST/IGST)</span>
+              </label>
+              <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                <span className="truncate">{design.qrCodeDataUrl ? "QR uploaded" : "Payment / verification QR"}</span>
+                <span className="text-primary">{design.qrCodeDataUrl ? "Replace" : "Upload"}</span>
+                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadQr(e.target.files?.[0])} />
+              </label>
+              <label className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
+                <span className="truncate">{design.barcodeDataUrl ? "Barcode uploaded" : "Document barcode"}</span>
+                <span className="text-primary">{design.barcodeDataUrl ? "Replace" : "Upload"}</span>
+                <input type="file" accept="image/png,image/jpeg" className="hidden" onChange={(e) => uploadBarcode(e.target.files?.[0])} />
+              </label>
+              <label className="sm:col-span-2 flex items-center gap-2 text-[11px]">
+                <span className="w-28 text-muted-foreground">Signatory name</span>
+                <input className="h-8 flex-1 rounded-md border bg-background px-2 text-xs" placeholder="Authorised Signatory" value={design.signatoryName ?? ""} onChange={(e) => updateDesign({ ...design, signatoryName: e.target.value })} />
+              </label>
+              {(design.qrCodeDataUrl || design.barcodeDataUrl) && (
+                <div className="sm:col-span-2 flex gap-2">
+                  {design.qrCodeDataUrl && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => updateDesign({ ...design, qrCodeDataUrl: null })}>Remove QR</Button>}
+                  {design.barcodeDataUrl && <Button variant="ghost" size="sm" className="h-7 px-2" onClick={() => updateDesign({ ...design, barcodeDataUrl: null })}>Remove barcode</Button>}
+                </div>
+              )}
+            </div>
           </div>
         </div>
         <div className="flex justify-end gap-2">
