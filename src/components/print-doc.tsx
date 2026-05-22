@@ -649,6 +649,37 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   );
 }
 
+function ProductPrintTable({ items, layout, density }: { items: any[]; layout: PrintProductLayout; density: PrintDesign["bodyLayout"] }) {
+  const padY = density === "dense" ? "py-2" : density === "spacious" ? "py-3.5" : "py-3";
+  const th = "py-2 px-2 border-b-2 border-[#111621] border-t border-slate-200 font-bold";
+  const td = `${padY} px-2`;
+
+  if (layout === "compact") {
+    return (
+      <table className="w-full border-collapse text-[11.5px] leading-4">
+        <thead><tr className="text-[#6e7886] uppercase text-[9.5px] tracking-[0.08em]"><th className={`text-center w-7 ${th}`}>#</th><th className={`text-left ${th}`}>Description</th><th className={`text-right w-16 ${th}`}>Qty</th><th className={`text-right w-20 ${th}`}>Rate</th><th className={`text-right w-24 ${th}`}>Amount</th></tr></thead>
+        <tbody>{items.map((it, i) => { const base = Number(it.qty || 0) * Number(it.rate || 0); return <tr key={i} className="border-b border-slate-100 break-inside-avoid align-top"><td className={`${td} text-center text-[#6e7886] tabular-nums`}>{i + 1}</td><td className={`${td} font-semibold text-[#111621]`}>{it.product_name ?? "—"}<div className="mt-0.5 text-[10px] font-normal text-[#6e7886]">{[(it as any).hsn && `HSN ${(it as any).hsn}`, it.unit].filter(Boolean).join(" · ")}</div></td><td className={`${td} text-right tabular-nums`}>{fmt(it.qty)} {it.unit ?? ""}</td><td className={`${td} text-right tabular-nums`}>{fmt(it.rate)}</td><td className={`${td} text-right tabular-nums font-bold text-[#111621]`}>{fmt(base)}</td></tr>; })}</tbody>
+      </table>
+    );
+  }
+
+  if (layout === "tax-detail") {
+    return (
+      <table className="w-full border-collapse text-[11px] leading-4">
+        <thead><tr className="text-[#6e7886] uppercase text-[9px] tracking-[0.08em]"><th className={`text-center w-7 ${th}`}>#</th><th className={`text-left ${th}`}>Description</th><th className={`text-center w-14 ${th}`}>HSN</th><th className={`text-right w-14 ${th}`}>Qty</th><th className={`text-right w-18 ${th}`}>Taxable</th><th className={`text-right w-12 ${th}`}>GST</th><th className={`text-right w-18 ${th}`}>Tax</th><th className={`text-right w-22 ${th}`}>Total</th></tr></thead>
+        <tbody>{items.map((it, i) => { const base = Number(it.qty || 0) * Number(it.rate || 0); const tax = base * Number(it.gst_pct ?? 0) / 100; return <tr key={i} className="border-b border-slate-100 break-inside-avoid align-top"><td className={`${td} text-center text-[#6e7886] tabular-nums`}>{i + 1}</td><td className={`${td} font-semibold text-[#111621]`}>{it.product_name ?? "—"}<div className="mt-0.5 text-[10px] font-normal text-[#6e7886]">{fmt(it.qty)} {it.unit ?? ""} × {fmt(it.rate)}</div></td><td className={`${td} text-center text-[#6e7886] font-mono text-[10px]`}>{(it as any).hsn ?? (it as any).hsn_code ?? "—"}</td><td className={`${td} text-right tabular-nums`}>{fmt(it.qty)}</td><td className={`${td} text-right tabular-nums`}>{fmt(base)}</td><td className={`${td} text-right tabular-nums text-[#6e7886]`}>{fmt(it.gst_pct, Number(it.gst_pct ?? 0) % 1 === 0 ? 0 : 2)}%</td><td className={`${td} text-right tabular-nums`}>{fmt(tax)}</td><td className={`${td} text-right tabular-nums font-bold text-[#111621]`}>{fmt(base + tax)}</td></tr>; })}</tbody>
+      </table>
+    );
+  }
+
+  return (
+    <table className="w-full border-collapse text-[11.5px] leading-4">
+      <thead><tr className="text-[#6e7886] uppercase text-[9.5px] tracking-[0.08em]"><th className={`text-center w-7 ${th}`}>#</th><th className={`text-left ${th}`}>Description</th><th className={`text-center w-16 ${th}`}>HSN</th><th className={`text-right w-12 ${th}`}>Qty</th><th className={`text-center w-12 ${th}`}>Unit</th><th className={`text-right w-20 ${th}`}>Rate</th><th className={`text-right w-12 ${th}`}>GST</th><th className={`text-right w-24 ${th}`}>Amount</th></tr></thead>
+      <tbody>{items.map((it, i) => { const base = Number(it.qty || 0) * Number(it.rate || 0); return <tr key={i} className="border-b border-slate-100 break-inside-avoid align-top"><td className={`${td} text-center text-[#6e7886] tabular-nums`}>{i + 1}</td><td className={`${td} font-semibold text-[#111621]`}>{it.product_name ?? "—"}</td><td className={`${td} text-center text-[#6e7886] font-mono text-[10.5px]`}>{(it as any).hsn ?? (it as any).hsn_code ?? "—"}</td><td className={`${td} text-right tabular-nums`}>{fmt(it.qty)}</td><td className={`${td} text-center text-[#6e7886]`}>{it.unit ?? "—"}</td><td className={`${td} text-right tabular-nums`}>{fmt(it.rate)}</td><td className={`${td} text-right tabular-nums text-[#6e7886]`}>{fmt(it.gst_pct, Number(it.gst_pct ?? 0) % 1 === 0 ? 0 : 2)}%</td><td className={`${td} text-right tabular-nums font-bold text-[#111621]`}>{fmt(layout === "description-first" ? base * (1 + Number(it.gst_pct ?? 0) / 100) : base)}</td></tr>; })}</tbody>
+    </table>
+  );
+}
+
 function InfoPanel({ title, rows }: { title: string; rows: Array<[string, any]> }) {
   return (
     <div className="border-t border-slate-300 pt-3">
