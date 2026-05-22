@@ -447,7 +447,7 @@ function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="wc" className="space-y-4">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
             <Kpi label="Working Capital" value={inr(workingCapital)} tone={workingCapital >= 0 ? "good" : "bad"} hint="Current Assets − Current Liabilities." />
             <Kpi label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} tone={currentRatio >= 1.5 ? "good" : currentRatio >= 1 ? "warn" : "bad"} hint="CA ÷ CL." />
             <Kpi label="Quick (Acid Test)" value={isFinite(quickRatio) ? fmt(quickRatio, 2) : "∞"} tone={quickRatio >= 1 ? "good" : quickRatio >= 0.7 ? "warn" : "bad"} hint="(Cash+Bank+AR) ÷ CL." />
