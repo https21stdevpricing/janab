@@ -193,3 +193,45 @@ function SettingsPage() {
 function F({ label, children, wide }: { label: string; children: React.ReactNode; wide?: boolean }) {
   return <div className={`space-y-1.5 ${wide ? "md:col-span-2" : ""}`}><Label className="text-xs">{label}</Label>{children}</div>;
 }
+
+function SettingsSection({
+  title,
+  description,
+  icon,
+  action,
+  children,
+}: {
+  title: string;
+  description?: string;
+  icon?: React.ReactNode;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <section className="surface overflow-hidden">
+      <div className="grid gap-3 border-b px-4 py-4 sm:grid-cols-[1fr_auto] sm:items-start sm:px-5">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 text-base font-semibold tracking-tight">
+            {icon}
+            <h2>{title}</h2>
+          </div>
+          {description && <p className="mt-1 text-xs text-muted-foreground leading-snug">{description}</p>}
+        </div>
+        {action && <div className="flex sm:justify-end">{action}</div>}
+      </div>
+      <div className="space-y-4 p-4 sm:p-5">{children}</div>
+    </section>
+  );
+}
+
+function SettingRow({ title, description, danger, children }: { title: string; description: string; danger?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-3 border-b border-border/60 pb-4 last:border-b-0 last:pb-0 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div className="min-w-0">
+        <div className={danger ? "font-medium text-destructive" : "font-medium"}>{title}</div>
+        <div className="mt-1 text-xs text-muted-foreground leading-snug">{description}</div>
+      </div>
+      <div className="flex sm:justify-end">{children}</div>
+    </div>
+  );
+}
