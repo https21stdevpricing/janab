@@ -37,6 +37,10 @@ const LEDGER_LIVE_TABLES = [
   "stock_adjustments",
 ];
 
+const SIDE_VALUES = ["all", "debit", "credit"] as const;
+const SORT_BY_VALUES = ["date", "amount", "account"] as const;
+const SORT_DIR_VALUES = ["desc", "asc"] as const;
+
 type LedgerRow = {
   user_id: string | null;
   date: string | null;
@@ -86,14 +90,17 @@ function LedgerPage() {
     load: loadRows,
   });
 
-  const accounts = useMemo(() => Array.from(new Set(rows.map((r) => r.account))).sort(), [rows]);
+  const accounts = useMemo(
+    () => Array.from(new Set(rows.map((r) => r.account).filter(Boolean) as string[])).sort(),
+    [rows],
+  );
   const filtered = useMemo(() => {
     let out = rows.filter((r) => {
       if (account !== "__all__" && r.account !== account) return false;
       if (party && !(r.party ?? "").toLowerCase().includes(party.toLowerCase())) return false;
       if (refQ && !(r.ref_no ?? "").toLowerCase().includes(refQ.toLowerCase())) return false;
-      if (from && r.date < from) return false;
-      if (to && r.date > to) return false;
+      if (from && (r.date ?? "") < from) return false;
+      if (to && (r.date ?? "") > to) return false;
       if (side === "debit" && !Number(r.debit)) return false;
       if (side === "credit" && !Number(r.credit)) return false;
       return true;
@@ -141,7 +148,7 @@ function LedgerPage() {
 
   // Export always start→end (chronological asc) regardless of on-screen sort
   const exportRows = useMemo(
-    () => [...filtered].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+    () => [...filtered].sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? -1 : (a.date ?? "") > (b.date ?? "") ? 1 : 0)),
     [filtered],
   );
   let running = 0;
