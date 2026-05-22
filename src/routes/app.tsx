@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -264,149 +264,11 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 }
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
-  const sheetRef = useRef<HTMLDivElement | null>(null);
-  const scrollRef = useRef<HTMLDivElement | null>(null);
-  const blockClickUntilRef = useRef(0);
-  const stateRef = useRef({
-    tracking: false, dragging: false, startY: 0, lastY: 0, lastT: 0, lastV: 0, height: 0, closing: false,
-  });
-
-  const setTransform = (y: number) => {
-    const el = sheetRef.current;
-    if (!el) return;
-    if (y <= 0) {
-      el.style.transform = "";
-      el.style.transition = "transform 260ms cubic-bezier(.18,1.15,.24,1)";
-      return;
-    }
-    const max = Math.max(420, stateRef.current.height || 640);
-    const eased = y < max * 0.72 ? y : max * 0.72 + (y - max * 0.72) * 0.24;
-    el.style.transition = "none";
-    el.style.transform = `translate3d(0, ${eased}px, 0)`;
-  };
-
-  const animateClose = () => {
-    const el = sheetRef.current;
-    if (!el) return;
-    stateRef.current.closing = true;
-    const h = stateRef.current.height || el.getBoundingClientRect().height || 600;
-    el.style.transition = "transform 170ms cubic-bezier(.32,.72,.18,1)";
-    el.style.transform = `translate3d(0, ${h}px, 0)`;
-    blockClickUntilRef.current = Date.now() + 700;
-    window.setTimeout(() => onOpenChange(false), 135);
-  };
-
-  useEffect(() => {
-    if (!open) return;
-    const el = sheetRef.current;
-    if (!el) return;
-    el.style.transform = "";
-    el.style.transition = "";
-    stateRef.current.closing = false;
-    stateRef.current.tracking = false;
-    stateRef.current.dragging = false;
-    if (scrollRef.current) scrollRef.current.scrollTop = 0;
-
-    const isEditableTarget = (target: EventTarget | null) =>
-      target instanceof HTMLElement && !!target.closest("input, textarea, select, [contenteditable='true']");
-    const begin = (y: number, target: EventTarget | null) => {
-      if (stateRef.current.closing || isEditableTarget(target)) return;
-      const scrollEl = scrollRef.current;
-      if (scrollEl && scrollEl.scrollTop > 1) return;
-      stateRef.current = {
-        tracking: true, dragging: false, startY: y, lastY: y, lastT: performance.now(),
-        lastV: 0, height: el.getBoundingClientRect().height, closing: false,
-      };
-    };
-    const move = (y: number, ev: Event) => {
-      const s = stateRef.current;
-      if (!s.tracking) return;
-      const dy = y - s.startY;
-      if (!s.dragging) {
-        if (dy < -10) { s.tracking = false; return; }
-        if (dy < 1) return;
-        if (scrollRef.current && scrollRef.current.scrollTop > 1) { s.tracking = false; return; }
-        s.dragging = true;
-        s.startY = y - 0.25;
-        s.lastY = y;
-        s.lastT = performance.now();
-        s.lastV = 0;
-      }
-      const drag = Math.max(0, y - s.startY);
-      if (ev.cancelable) ev.preventDefault();
-      const now = performance.now();
-      const dt = Math.max(1, now - s.lastT);
-      const inst = Math.max(-2.5, Math.min(3.8, (y - s.lastY) / dt));
-      s.lastV = s.lastV * 0.48 + inst * 0.52;
-      s.lastY = y; s.lastT = now;
-      setTransform(drag);
-      if (drag > 1) blockClickUntilRef.current = Date.now() + 650;
-    };
-    const end = () => {
-      const s = stateRef.current;
-      if (!s.tracking) return;
-      s.tracking = false;
-      if (!s.dragging) return;
-      s.dragging = false;
-      const dy = s.lastY - s.startY;
-      const v = s.lastV;
-      const shouldClose = dy > 24 || (dy > 8 && v > 0.08) || v > 0.22;
-      if (shouldClose) animateClose();
-      else setTransform(0);
-    };
-
-    const onPointerDown = (e: PointerEvent) => {
-      if (e.pointerType === "mouse" && e.button !== 0) return;
-      begin(e.clientY, e.target);
-    };
-    const onPointerMove = (e: PointerEvent) => { if (stateRef.current.tracking) move(e.clientY, e); };
-    const onPointerEnd = () => end();
-    const onTouchStart = (e: TouchEvent) => { const touch = e.touches[0]; if (touch) begin(touch.clientY, e.target); };
-    const onTouchMove = (e: TouchEvent) => { const touch = e.touches[0]; if (touch) move(touch.clientY, e); };
-    const onTouchEnd = () => end();
-
-    const usePointer = "PointerEvent" in window;
-    if (usePointer) {
-      document.addEventListener("pointerdown", onPointerDown, { passive: true, capture: true });
-      document.addEventListener("pointermove", onPointerMove, { passive: false, capture: true });
-      document.addEventListener("pointerup", onPointerEnd, { passive: true, capture: true });
-      document.addEventListener("pointercancel", onPointerEnd, { passive: true, capture: true });
-    } else {
-      document.addEventListener("touchstart", onTouchStart, { passive: true, capture: true });
-      document.addEventListener("touchmove", onTouchMove, { passive: false, capture: true });
-      document.addEventListener("touchend", onTouchEnd, { passive: true, capture: true });
-      document.addEventListener("touchcancel", onTouchEnd, { passive: true, capture: true });
-    }
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown, true);
-      document.removeEventListener("pointermove", onPointerMove, true);
-      document.removeEventListener("pointerup", onPointerEnd, true);
-      document.removeEventListener("pointercancel", onPointerEnd, true);
-      document.removeEventListener("touchstart", onTouchStart, true);
-      document.removeEventListener("touchmove", onTouchMove, true);
-      document.removeEventListener("touchend", onTouchEnd, true);
-      document.removeEventListener("touchcancel", onTouchEnd, true);
-    };
-  }, [open, onOpenChange]);
-
-  const suppressClickAfterDrag = (event: React.MouseEvent) => {
-    if (Date.now() <= blockClickUntilRef.current) {
-      event.preventDefault();
-      event.stopPropagation();
-    }
-  };
-
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
-        ref={sheetRef as any}
         side="bottom"
         className="p-0 h-[88vh] rounded-t-2xl flex flex-col [&>button]:hidden"
-        style={{
-          willChange: "transform",
-          touchAction: "pan-y",
-        }}
-        onClickCapture={suppressClickAfterDrag}
       >
         <div className="px-5 pt-2 pb-3 border-b select-none">
           <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted-foreground/25" />
@@ -415,7 +277,7 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
             <div className="text-xs text-muted-foreground truncate">{email}</div>
           </div>
         </div>
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain">
+        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain">
           {[{ label: "Daily", items: [...pinned].slice(1).map((p) => ({ ...p })) }, ...moreGroups].map((g) => (
             <div key={g.label}>
               <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/80 mb-2 px-1">{g.label}</div>
