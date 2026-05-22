@@ -432,6 +432,37 @@ function ProductsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Bulk add */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Rows3 className="h-4 w-4" /> Bulk add products</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-1">
+              <button type="button" className={`text-xs px-2 py-1.5 rounded ${bulkKind === "stocked" ? "bg-background shadow font-medium" : "text-muted-foreground"}`} onClick={() => setBulkKind("stocked")}>Inventory</button>
+              <button type="button" className={`text-xs px-2 py-1.5 rounded ${bulkKind === "order_basis" ? "bg-background shadow font-medium" : "text-muted-foreground"}`} onClick={() => setBulkKind("order_basis")}>On-order</button>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              One product per line. Separate fields with <span className="font-mono">tab</span>, <span className="font-mono">,</span> or <span className="font-mono">|</span>.<br />
+              <span className="font-mono">Name | Unit | Qty | PurchaseRate | SaleRate | HSN</span>
+            </div>
+            <Textarea
+              rows={10}
+              className="font-mono text-xs"
+              placeholder={"Italian Marble 24x24 | sqft | 1200 | 95 | 145 | 6802\nGreen Granite | sqft | 800 | 75 | 110 | 6802\nKota Stone | sqft | 0 | 40 | 65 | 6802"}
+              value={bulkText}
+              onChange={(e) => setBulkText(e.target.value)}
+            />
+            <div className="text-[11px] text-muted-foreground">{bulkText.split(/\r?\n/).filter(l => l.trim()).length} row(s) ready</div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
+            <Button onClick={saveBulk}>Add products</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
