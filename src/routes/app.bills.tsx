@@ -284,6 +284,7 @@ function BillsPage() {
     setDirection(dir); setDate(todayISO()); setContactId(null); setContactName(null);
     setAmount(0); setMode("Bank"); setNotes(""); setOpenDocs([]); setAllocs([]);
     setChequeNo(""); setChequeDate(""); setTxnId(""); setBankName(""); setCleared(true);
+    setKind("against_invoice");
     setPayOpen(true);
   };
 
@@ -302,6 +303,7 @@ function BillsPage() {
     setContactId(r.party_id); setContactName(r.party_name);
     setAmount(Number(Number(r.balance).toFixed(2)));
     setAllocs([{ doc_kind: r.doc_kind, doc_id: r.doc_id, doc_no: r.doc_no, amount: Number(r.balance), balance: Number(r.balance), total: Number(r.total) }]);
+    setKind("against_invoice");
     setPayOpen(true);
   };
 
