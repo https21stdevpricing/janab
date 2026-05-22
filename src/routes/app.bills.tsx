@@ -397,7 +397,7 @@ function BillsPage() {
     <div>
       <PageHeader
         title="Money"
-        description="Receivables, payables and every settlement."
+        description="Bills to collect, bills to pay, and payment history in one place."
         actions={
           <>
             <ExcelBar onExport={onExport} />
@@ -407,54 +407,52 @@ function BillsPage() {
         }
       />
 
-      {/* Minimal hero — one calm summary card with three balances */}
-      <div className="mb-4 rounded-2xl border border-border/70 bg-card overflow-hidden">
-        <div className="grid grid-cols-3 divide-x divide-border/60">
-          <HeroCell label="Receivable" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
-          <HeroCell label="Payable" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
-          <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
-        </div>
-        {kpis.overdue > 0 && (
-          <div className="px-4 py-2 border-t border-border/60 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-500/5">
-            {inr(kpis.overdue)} overdue · {">"} 30 days
+      <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_280px]">
+        <div className="surface overflow-hidden">
+          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+            <HeroCell label="To collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
+            <HeroCell label="To pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
+            <HeroCell label="Net position" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
           </div>
-        )}
-      </div>
-
-      <Tabs value={tab} onValueChange={v => setTab(v as any)} className="mb-3">
-        <TabsList className="w-full rounded-full bg-muted p-1 sm:w-auto">
-          <TabsTrigger value="receivable" className="flex-1 sm:flex-none gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
-          <TabsTrigger value="payable" className="flex-1 sm:flex-none gap-1"><ArrowUpRight className="h-3.5 w-3.5" /> Payable</TabsTrigger>
-          <TabsTrigger value="history" className="flex-1 sm:flex-none gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
-        </TabsList>
-      </Tabs>
-
-      {/* aging buckets folded into filter chips below — surfaced only when needed */}
-
-      <CollapseFilters
-        summary={tab === "history" ? `${filteredPays.length} of ${pays.length} entries` : `${filtered.length} of ${sideRows.length} ${tab}`}
-        active={(q ? 1 : 0) + (bucketFilter !== "all" ? 1 : 0)}
-        onClear={() => { setQ(""); setBucketFilter("all"); }}
-      >
-        <div className="space-y-3">
-          <Input placeholder={tab === "history" ? "Search receipt / payment no / party…" : "Search document or party…"} value={q} onChange={e => setQ(e.target.value)} />
-          {tab !== "history" && (
-            <div>
-              <div className="text-[10px] uppercase text-muted-foreground mb-1">Aging bucket</div>
-              <div className="flex flex-wrap gap-1">
-                {(["all", "0–30", "31–60", "61–90", "90+"] as const).map(b => (
-                  <Button key={b} size="sm" variant={bucketFilter === b ? "default" : "outline"} onClick={() => setBucketFilter(b)}>{b}</Button>
-                ))}
-              </div>
+          {kpis.overdue > 0 && (
+            <div className="border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground">
+              Overdue over 30 days: <span className="font-medium text-foreground">{inr(kpis.overdue)}</span>
             </div>
           )}
-          <p className="text-xs text-muted-foreground">
-            {tab === "receivable" && "Money buyers owe you. Tap a row to record what you've received — we pre-fill amount, party and the bill it settles."}
-            {tab === "payable" && "Money you owe suppliers. Tap a row to record a payment — fully pre-filled and allocated."}
-            {tab === "history" && "Every receipt and payment ever recorded. Click an entry to see what it settled."}
-          </p>
         </div>
-      </CollapseFilters>
+        <div className="surface p-3">
+          <div className="eyebrow">Quick actions</div>
+          <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
+            <Button variant="outline" className="justify-start" onClick={() => startNew("in")}><ArrowDownLeft className="h-4 w-4" /> New receipt</Button>
+            <Button variant="outline" className="justify-start" onClick={() => startNew("out")}><ArrowUpRight className="h-4 w-4" /> New payment</Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <Tabs value={tab} onValueChange={v => setTab(v as any)}>
+          <TabsList className="scroll-tabs w-full justify-start rounded-full bg-muted p-1 sm:w-auto">
+            <TabsTrigger value="receivable" className="gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
+            <TabsTrigger value="payable" className="gap-1"><ArrowUpRight className="h-3.5 w-3.5" /> Payable</TabsTrigger>
+            <TabsTrigger value="history" className="gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <Input className="h-9 sm:w-72" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
+          {tab !== "history" && (
+            <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
+              <SelectTrigger className="h-9 sm:w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All ages</SelectItem>
+                <SelectItem value="0–30">0–30 days</SelectItem>
+                <SelectItem value="31–60">31–60 days</SelectItem>
+                <SelectItem value="61–90">61–90 days</SelectItem>
+                <SelectItem value="90+">90+ days</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+      </div>
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
