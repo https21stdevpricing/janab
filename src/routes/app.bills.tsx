@@ -705,6 +705,25 @@ function BillsPage() {
             </button>
           </div>
 
+          {/* Transaction kind: against invoice / advance / on-account */}
+          <div>
+            <Label className="text-xs">Apply as</Label>
+            <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {([
+                { v: "against_invoice", t: "Against invoice", d: "Knock off specific pending bill(s)." },
+                { v: "advance", t: "Advance payment", d: direction === "in" ? "Park as Advance from Customers." : "Park as Advances to Suppliers." },
+                { v: "on_account", t: "On account", d: "Sits open on the party ledger until allocated." },
+              ] as const).map((k) => (
+                <button key={k.v} type="button"
+                  onClick={() => { setKind(k.v); if (k.v !== "against_invoice") setAllocs([]); }}
+                  className={`rounded-md border p-2.5 text-left transition-colors ${kind === k.v ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:bg-muted/40"}`}>
+                  <div className="text-xs font-medium">{k.t}</div>
+                  <div className="mt-0.5 text-[10px] text-muted-foreground">{k.d}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="space-y-1.5"><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
             <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">{direction === "in" ? "From buyer" : "To supplier"}</Label>
