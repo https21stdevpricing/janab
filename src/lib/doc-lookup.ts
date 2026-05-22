@@ -5,12 +5,19 @@ export type DocKind = "sale" | "purchase" | "tp" | "quote" | "payment";
 export type PrintableDocKind = Exclude<DocKind, "payment">;
 
 const MAP: Record<string, { kind: DocKind; table: string; items?: string; fk?: string; noCol: string }> = {
-  INV: { kind: "sale",     table: "sales",       items: "sale_items",       fk: "sale_id",      noCol: "invoice_no" },
-  PO:  { kind: "purchase", table: "purchases",   items: "purchase_items",   fk: "purchase_id",  noCol: "po_no" },
-  TP:  { kind: "tp",       table: "third_party", items: "tp_items",         fk: "tp_id",        noCol: "tp_no" },
-  QUO: { kind: "quote",    table: "quotations",  items: "quotation_items",  fk: "quotation_id", noCol: "quote_no" },
-  RI:  { kind: "payment",  table: "payments",                                                    noCol: "payment_no" },
-  PY:  { kind: "payment",  table: "payments",                                                    noCol: "payment_no" },
+  INV: { kind: "sale",     table: "sales",          items: "sale_items",       fk: "sale_id",      noCol: "invoice_no" },
+  PO:  { kind: "purchase", table: "purchases",      items: "purchase_items",   fk: "purchase_id",  noCol: "po_no" },
+  TP:  { kind: "tp",       table: "third_party",    items: "tp_items",         fk: "tp_id",        noCol: "tp_no" },
+  QUO: { kind: "quote",    table: "quotations",     items: "quotation_items",  fk: "quotation_id", noCol: "quote_no" },
+  QT:  { kind: "quote",    table: "quotations",     items: "quotation_items",  fk: "quotation_id", noCol: "quote_no" },
+  RI:  { kind: "payment",  table: "payments",                                                       noCol: "payment_no" },
+  PY:  { kind: "payment",  table: "payments",                                                       noCol: "payment_no" },
+  PAY: { kind: "payment",  table: "payments",                                                       noCol: "payment_no" },
+  // Bank & cash transfers — deposit / withdrawal / cheque
+  BT:  { kind: "payment",  table: "bank_transfers",                                                 noCol: "transfer_no" },
+  DEP: { kind: "payment",  table: "bank_transfers",                                                 noCol: "transfer_no" },
+  WD:  { kind: "payment",  table: "bank_transfers",                                                 noCol: "transfer_no" },
+  CHQ: { kind: "payment",  table: "bank_transfers",                                                 noCol: "transfer_no" },
 };
 
 export function prefixOf(id: string): string | null {
