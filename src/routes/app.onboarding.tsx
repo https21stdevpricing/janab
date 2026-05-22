@@ -320,20 +320,20 @@ function OnboardingPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-2">
+    <div className="mx-auto max-w-5xl py-2 sm:py-4">
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><Building2 className="h-4 w-4 text-primary" /> First-time setup</span>}
-        description="Five quick steps so your books start clean. Nothing posts until the final confirm."
+        title={<span className="inline-flex items-center gap-2"><ClipboardCheck className="h-5 w-5 text-primary" /> Business setup</span>}
+        description="One guided flow for profile, bank, stock and opening balances — no page switching."
       />
 
       {/* Progress */}
-      <div className="flex items-center gap-1 mb-6">
+      <div className="mb-4 grid grid-cols-5 gap-1.5 rounded-full bg-muted p-1">
         {[1, 2, 3, 4, 5].map(n => (
-          <div key={n} className={`h-1 flex-1 rounded-full transition-all ${n <= step ? "bg-primary" : "bg-border"}`} />
+          <button key={n} type="button" onClick={() => setStep(n as Step)} className={`h-2 rounded-full transition-all ${n <= step ? "bg-primary" : "bg-background"}`} aria-label={`Step ${n}`} />
         ))}
       </div>
 
-      <div className="rounded-2xl border bg-card p-6 sm:p-8 space-y-5">
+      <div className="rounded-[1.5rem] border border-border/70 bg-card p-4 shadow-sm sm:p-6 lg:p-8 space-y-5 overflow-hidden">
         {step === 1 && (
           <>
             <Header n={1} title="Your business" hint="Legal identity for invoices, GST returns and reports." icon={Building2} />
