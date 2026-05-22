@@ -276,6 +276,22 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <input type="checkbox" checked={design.showGstSummary} onChange={(e) => updateDesign({ ...design, showGstSummary: e.target.checked })} />
                 <span>Show GST breakdown (CGST/SGST/IGST)</span>
               </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showHsnSummary} onChange={(e) => updateDesign({ ...design, showHsnSummary: e.target.checked })} />
+                <span>Show HSN/SAC tax summary table</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showTaxInWords} onChange={(e) => updateDesign({ ...design, showTaxInWords: e.target.checked })} />
+                <span>Show tax amount in words</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showShipTo} onChange={(e) => updateDesign({ ...design, showShipTo: e.target.checked })} />
+                <span>Show Ship-To (Consignee) panel</span>
+              </label>
+              <label className="flex items-center gap-2 text-[11px]">
+                <input type="checkbox" checked={design.showTransport} onChange={(e) => updateDesign({ ...design, showTransport: e.target.checked })} />
+                <span>Show transport / dispatch panel</span>
+              </label>
               <label className="flex flex-col gap-1">
                 <span className="text-[10px] uppercase tracking-wide text-muted-foreground">QR code</span>
                 <select className="h-8 rounded-md border bg-background px-2 text-xs" value={design.qrMode} onChange={(e) => updateDesign({ ...design, qrMode: e.target.value as any })}>
@@ -312,6 +328,37 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <input className="h-8 flex-1 rounded-md border bg-background px-2 text-xs" placeholder="Authorised Signatory" value={design.signatoryName ?? ""} onChange={(e) => updateDesign({ ...design, signatoryName: e.target.value })} />
               </label>
             </div>
+
+            {(design.showShipTo || design.showTransport) && (
+              <div className="grid gap-2 sm:grid-cols-2 pt-1 border-t border-border/40 mt-1">
+                {design.showShipTo && (
+                  <label className="sm:col-span-2 flex flex-col gap-1">
+                    <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ship-To address (leave blank to mirror Bill-To)</span>
+                    <textarea rows={2} className="rounded-md border bg-background px-2 py-1.5 text-xs" placeholder="Consignee name, address, GSTIN…" value={design.shipToOverride ?? ""} onChange={(e) => updateDesign({ ...design, shipToOverride: e.target.value })} />
+                  </label>
+                )}
+                {design.showTransport && (
+                  <>
+                    <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Dispatch doc no.</span>
+                      <input className="h-8 rounded-md border bg-background px-2 text-xs" value={design.dispatchDocNo ?? ""} onChange={(e) => updateDesign({ ...design, dispatchDocNo: e.target.value })} />
+                    </label>
+                    <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Dispatched through</span>
+                      <input className="h-8 rounded-md border bg-background px-2 text-xs" placeholder="Transporter / courier" value={design.transporter ?? ""} onChange={(e) => updateDesign({ ...design, transporter: e.target.value })} />
+                    </label>
+                    <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Vehicle no.</span>
+                      <input className="h-8 rounded-md border bg-background px-2 text-xs" value={design.vehicleNo ?? ""} onChange={(e) => updateDesign({ ...design, vehicleNo: e.target.value })} />
+                    </label>
+                    <label className="flex flex-col gap-1"><span className="text-[10px] uppercase tracking-wide text-muted-foreground">Destination</span>
+                      <input className="h-8 rounded-md border bg-background px-2 text-xs" value={design.destination ?? ""} onChange={(e) => updateDesign({ ...design, destination: e.target.value })} />
+                    </label>
+                  </>
+                )}
+                <label className="sm:col-span-2 flex flex-col gap-1">
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Declaration / Terms (override)</span>
+                  <textarea rows={2} className="rounded-md border bg-background px-2 py-1.5 text-xs" placeholder="Leave blank to use default T&C…" value={design.declaration ?? ""} onChange={(e) => updateDesign({ ...design, declaration: e.target.value })} />
+                </label>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex justify-end gap-2">
