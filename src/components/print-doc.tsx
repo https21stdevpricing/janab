@@ -57,10 +57,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
     return { subtotal, gst, roundOff, total: +(raw + roundOff).toFixed(2) };
   }, [items, doc, design]);
 
-  if (!doc) return <div className="text-sm text-muted-foreground p-4">Loading…</div>;
-
-  const sameState = company?.state && buyer?.state && company.state.toLowerCase() === buyer.state.toLowerCase();
-  const documentNo = doc.invoice_no ?? doc.quote_no;
+  const sameState = !!(company?.state && buyer?.state && company.state.toLowerCase() === buyer.state.toLowerCase());
+  const documentNo = doc?.invoice_no ?? doc?.quote_no ?? "";
   const title = kind === "invoice" ? "Tax Invoice" : "Quotation";
   const address = [company?.address, company?.state].filter(Boolean).join(", ");
   const partyAddress = [buyer?.address, buyer?.state].filter(Boolean).join(", ");
@@ -137,6 +135,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
       : design.barcodeMode === "manual"
         ? design.barcodeDataUrl ?? null
         : autoBarcode;
+
+  if (!doc) return <div className="text-sm text-muted-foreground p-4">Loading…</div>;
 
   const downloadPdf = async () => {
     const result = await lookupDocById(kind === "invoice" ? "sale" : "quote", id);
