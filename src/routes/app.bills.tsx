@@ -457,55 +457,54 @@ function BillsPage() {
   useShortcut("p", () => { if (!payOpen) startNew("out"); }, !payOpen);
 
   return (
-    <div>
+    <div className="min-w-0 max-w-full overflow-hidden">
       <PageHeader
         title="Money"
         description="Collect, pay and review only cleared settlements in one place."
         actions={
-          <>
+          <div className="grid w-full grid-cols-[auto_1fr_1fr] gap-2 sm:flex sm:w-auto sm:items-center sm:justify-end">
             <ExcelBar onExport={onExport} />
-            <Button size="sm" variant="outline" onClick={() => startNew("in")}>
+            <Button size="sm" variant="outline" className="rounded-full" onClick={() => startNew("in")}>
               <ArrowDownLeft className="h-4 w-4" /> Receive
             </Button>
-            <Button size="sm" onClick={() => startNew("out")}>
+            <Button size="sm" className="rounded-full" onClick={() => startNew("out")}>
               <Plus className="h-4 w-4" /> Pay
             </Button>
-          </>
+          </div>
         }
       />
 
-      <KpiGrid cols={3} className="mb-4">
+      <KpiGrid cols={3} className="mb-4 grid-cols-1 sm:grid-cols-3">
         <KpiTile label="Collect" value={inr(kpis.recv)} tone="good" hint={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "All on time"} active={tab === "receivable"} onClick={() => setTab("receivable")} />
         <KpiTile label="Pay" value={inr(kpis.pay)} tone="bad" hint={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "All on time"} active={tab === "payable"} onClick={() => setTab("payable")} />
         <KpiTile label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} hint={kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"} />
       </KpiGrid>
 
-      <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <SegmentedTabs
-          value={tab}
-          onValueChange={(v) => setTab(v as any)}
-          items={[
-            { value: "receivable", label: "Receivable", icon: <ArrowDownLeft className="h-3.5 w-3.5" /> },
-            { value: "payable", label: "Payable", icon: <ArrowUpRight className="h-3.5 w-3.5" /> },
-            { value: "history", label: "History", icon: <History className="h-3.5 w-3.5" /> },
-          ]}
-        />
-        {tab !== "history" && (
-          <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
-            <SelectTrigger className="h-9 sm:w-40"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All ages</SelectItem>
-              <SelectItem value="0–30">0–30 days</SelectItem>
-              <SelectItem value="31–60">31–60 days</SelectItem>
-              <SelectItem value="61–90">61–90 days</SelectItem>
-              <SelectItem value="90+">90+ days</SelectItem>
-            </SelectContent>
-          </Select>
-        )}
-      </div>
-
-      <div className="mb-3">
-        <Input className="h-10" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
+      <div className="mb-4 min-w-0 overflow-hidden rounded-2xl border bg-card p-2.5 shadow-sm sm:p-3">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <SegmentedTabs
+            value={tab}
+            onValueChange={(v) => setTab(v as any)}
+            items={[
+              { value: "receivable", label: "Receivable", icon: <ArrowDownLeft className="h-3.5 w-3.5" /> },
+              { value: "payable", label: "Payable", icon: <ArrowUpRight className="h-3.5 w-3.5" /> },
+              { value: "history", label: "History", icon: <History className="h-3.5 w-3.5" /> },
+            ]}
+          />
+          {tab !== "history" && (
+            <Select value={bucketFilter} onValueChange={(v) => setBucketFilter(v as any)}>
+              <SelectTrigger className="h-9 w-full rounded-full sm:w-40"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All ages</SelectItem>
+                <SelectItem value="0–30">0–30 days</SelectItem>
+                <SelectItem value="31–60">31–60 days</SelectItem>
+                <SelectItem value="61–90">61–90 days</SelectItem>
+                <SelectItem value="90+">90+ days</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        <Input className="mt-2 h-10 rounded-xl" placeholder={tab === "history" ? "Search payment, party, reference…" : "Search bill or party…"} value={q} onChange={e => setQ(e.target.value)} />
       </div>
 
       {tab === "history" ? (
