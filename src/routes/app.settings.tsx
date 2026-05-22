@@ -109,8 +109,8 @@ function SettingsPage() {
     <div>
       <PageHeader title="Settings" description="Company profile and tools" />
       {/* Section quick nav — minimal sticky strip */}
-      <nav className="sticky top-14 md:top-12 z-10 -mx-3 sm:-mx-4 lg:-mx-6 mb-4 px-3 sm:px-4 lg:px-6 py-2 border-b border-border/60 bg-background/85 backdrop-blur-xl">
-        <div className="flex gap-1 overflow-x-auto no-scrollbar text-xs">
+      <nav className="sticky top-12 md:top-12 z-20 -mx-3 sm:-mx-4 lg:-mx-6 mb-4 px-3 sm:px-4 lg:px-6 py-2 border-b border-border/60 frosted">
+        <div className="flex gap-1.5 overflow-x-auto no-scrollbar text-xs">
           {[
             { id: "profile", label: "Profile" },
             { id: "opening", label: "Opening balances" },
@@ -184,7 +184,7 @@ function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-xs text-muted-foreground">Record people who should have access. They sign up with the same email on the login page, and every action is captured in the audit log with their name and timestamp.</p>
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_140px_auto] gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
             <Input type="email" placeholder="teammate@example.com" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} />
             <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as any)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
@@ -199,7 +199,7 @@ function SettingsPage() {
           {invites.length > 0 && (
             <div className="rounded-md border divide-y">
               {invites.map(it => (
-                <div key={it.id} className="p-2.5 flex items-center gap-2 text-sm">
+                <div key={it.id} className="p-2.5 flex items-center gap-2 text-sm flex-wrap sm:flex-nowrap">
                   <div className="min-w-0 flex-1">
                     <div className="font-medium truncate">{it.email}</div>
                     <div className="text-[11px] text-muted-foreground">{it.role} · invited {new Date(it.invited_at).toLocaleDateString()}</div>

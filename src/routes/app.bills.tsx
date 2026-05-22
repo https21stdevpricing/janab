@@ -375,7 +375,7 @@ function BillsPage() {
       />
 
       {/* Top KPIs — always visible across all tabs */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 mb-3">
         <KpiTile label="Receivable" sub={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "On track"}
           value={inr(kpis.recv)} tone="good" onClick={() => setTab("receivable")} active={tab === "receivable"} />
         <KpiTile label="Payable" sub={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "On track"}
@@ -395,7 +395,7 @@ function BillsPage() {
       </Tabs>
 
       {tab !== "history" && (
-      <div className="grid grid-cols-4 gap-2 mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
         <MiniBucket label="0–30 d" value={totals.b1} />
         <MiniBucket label="31–60 d" value={totals.b2} tone="warn" />
         <MiniBucket label="61–90 d" value={totals.b3} tone="warn" />
@@ -758,9 +758,9 @@ function KpiTile({ label, value, sub, tone, onClick, active }: { label: string; 
 function MiniBucket({ label, value, tone }: { label: string; value: number; tone?: "warn" | "bad" }) {
   const clr = tone === "bad" ? "text-destructive" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : "text-foreground";
   return (
-    <div className="rounded-md border bg-muted/30 px-2 py-1.5">
-      <div className="text-[9px] uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className={`text-xs sm:text-sm font-semibold tabular-nums truncate ${clr}`}>{inr(value)}</div>
+    <div className="rounded-lg border border-border/60 bg-muted/30 px-2.5 py-2">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className={`text-sm font-semibold tabular-nums truncate ${clr}`}>{inr(value)}</div>
     </div>
   );
 }
