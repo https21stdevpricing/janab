@@ -392,14 +392,13 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
         className="p-0 h-[88vh] rounded-t-2xl flex flex-col [&>button]:hidden"
         style={{
           willChange: "transform",
-          touchAction: "pan-y",
+          touchAction: "none",
         }}
         onClickCapture={suppressClickAfterDrag}
       >
-        {/* Drag handle + aligned header */}
         <div className="px-5 pt-2 pb-3 border-b select-none">
-          <div className="mx-auto mb-3 h-1.5 w-10 rounded-full bg-muted-foreground/30" />
-          <div className="min-w-0 text-center">
+          <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-muted-foreground/25" />
+          <div className="min-w-0 text-left">
             <div className="text-base font-semibold tracking-tight">StoneWorld</div>
             <div className="text-xs text-muted-foreground truncate">{email}</div>
           </div>
@@ -436,10 +435,10 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="h-11 w-11 grid place-items-center rounded-full border bg-background shadow-sm active:scale-95 transition-transform"
+            className="h-10 w-10 grid place-items-center rounded-full text-muted-foreground hover:bg-muted active:scale-95 transition-all"
             aria-label="Close menu"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
       </SheetContent>
