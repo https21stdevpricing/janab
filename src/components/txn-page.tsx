@@ -146,6 +146,25 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
     if (cfg.partyRole === "tp") { header.buyer_id = buyerId; header.buyer_name = buyerName; header.supplier_id = supplierId; header.supplier_name = supplierName; }
     if (cfg.table === "quotations") header.valid_until = validUntil || null;
 
+    // Auto round-off — keeps invoice totals on whole rupees and posts a
+    // matching "Rounding Off Account" line via the SQL journal poster.
+    if (cfg.table === "sales" || cfg.table === "purchases" || cfg.table === "third_party") {
+      const { data: st } = await supabase.from("settings").select("auto_round_off").maybeSingle();
+      const auto = st?.auto_round_off !== false; // default true
+      if (auto) {
+        let raw = 0;
+        for (const it of items) {
+          const r = cfg.partyRole === "tp" ? Number(it.sale_rate ?? 0) : Number(it.rate ?? 0);
+          const base = Number(it.qty ?? 0) * r;
+          raw += base + base * Number(it.gst_pct ?? 0) / 100;
+        }
+        const ro = +(Math.round(raw) - raw).toFixed(2);
+        header.round_off = ro;
+      } else {
+        header.round_off = 0;
+      }
+    }
+
     let id: string;
     if (editing) {
       const { error } = await supabase.from(cfg.table).update(header).eq("id", editing.id);
