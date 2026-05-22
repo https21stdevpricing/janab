@@ -153,7 +153,7 @@ export function drawFooterBrandLogos(
   doc: jsPDF,
   logos: string[] | undefined,
   margin = 34,
-  opts: { rows?: 1 | 2 | 3; logoHeightPx?: number; position?: "above-signature" | "page-bottom"; signatureY?: number } = {},
+  opts: { rows?: 1 | 2 | 3; logoHeightPx?: number; position?: "above-signature" | "page-bottom"; signatureY?: number; everyPage?: boolean } = {},
 ) {
   if (!logos?.length) return;
   const W = doc.internal.pageSize.getWidth();
@@ -166,18 +166,27 @@ export function drawFooterBrandLogos(
   const cellH = Math.max(10, Math.round((opts.logoHeightPx ?? 36) * 0.6));
   const totalH = rows * (cellH + 6);
   const position = opts.position ?? "above-signature";
-  const startY = position === "page-bottom"
-    ? H - 56 - totalH
-    : Math.max(margin + 80, (opts.signatureY ?? H - 100) - totalH - 8);
-  logos.slice(0, count).forEach((logo, i) => {
-    const c = i % cols;
-    const r = Math.floor(i / cols);
-    // Center each logo in its cell at uniform height; width auto-derived to a square-ish box.
-    const wPt = Math.min(cellW - 6, cellH * 2.4);
-    const x = margin + c * cellW + cellW / 2 - wPt / 2;
-    const y = startY + r * (cellH + 6);
-    try { doc.addImage(logo, imageFormat(logo) as any, x, y, wPt, cellH); } catch {}
-  });
+  const everyPage = opts.everyPage ?? false;
+  const startYOnPage = (pageIndex: number, pageCount: number) => {
+    const isLast = pageIndex === pageCount;
+    if (everyPage || position === "page-bottom") return H - 56 - totalH;
+    return isLast ? Math.max(margin + 80, (opts.signatureY ?? H - 100) - totalH - 8) : -9999;
+  };
+  const pageCount = doc.getNumberOfPages();
+  const pagesToRun = everyPage ? Array.from({ length: pageCount }, (_, i) => i + 1) : [pageCount];
+  for (const page of pagesToRun) {
+    doc.setPage(page);
+    const startY = startYOnPage(page, pageCount);
+    if (startY < 0) continue;
+    logos.slice(0, count).forEach((logo, i) => {
+      const c = i % cols;
+      const r = Math.floor(i / cols);
+      const wPt = Math.min(cellW - 6, cellH * 2.4);
+      const x = margin + c * cellW + cellW / 2 - wPt / 2;
+      const y = startY + r * (cellH + 6);
+      try { doc.addImage(logo, imageFormat(logo) as any, x, y, wPt, cellH); } catch {}
+    });
+  }
 }
 
 export function ensurePdfSpace(doc: jsPDF, y: number, needed: number, margin = 34, footer = 58) {
