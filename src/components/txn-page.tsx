@@ -18,6 +18,7 @@ import { Plus, Pencil, Trash2, Printer, CheckCircle2 } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel } from "@/lib/excel";
 import { DocDetail } from "@/routes/app.lookup";
+import { KpiGrid, KpiTile } from "@/components/ui-tokens";
 import { lookupDoc, type DocLookupResult } from "@/lib/doc-lookup";
 
 export type TxnConfig = {
@@ -243,14 +244,14 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
       } />
 
       {rows.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-          <TotalTile label={`${cfg.title} count`} value={String(totals.count)} />
-          <TotalTile label="Total value (incl. GST)" value={inr(totals.value)} tone={cfg.partyRole === "supplier" ? "bad" : "good"} />
-          <TotalTile label="GST component" value={inr(totals.gst)} />
+        <KpiGrid cols={4} className="mb-3">
+          <KpiTile label={`${cfg.title} count`} value={String(totals.count)} />
+          <KpiTile label="Total value (incl. GST)" value={inr(totals.value)} tone={cfg.partyRole === "supplier" ? "bad" : "good"} />
+          <KpiTile label="GST component" value={inr(totals.gst)} />
           {cfg.partyRole === "tp"
-            ? <TotalTile label="Total margin" value={inr(totals.margin)} tone="good" />
-            : <TotalTile label="Total qty" value={fmt(totals.qty)} />}
-        </div>
+            ? <KpiTile label="Total margin" value={inr(totals.margin)} tone="good" />
+            : <KpiTile label="Total qty" value={fmt(totals.qty)} />}
+        </KpiGrid>
       )}
 
       {rows.length === 0 ? <Empty>No entries yet.</Empty> : (

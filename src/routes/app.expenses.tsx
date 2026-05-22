@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { Plus, Trash2 } from "lucide-react";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num, parseDate } from "@/lib/excel";
+import { KpiGrid, KpiTile } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/expenses")({ component: ExpensesPage });
 const CATS = ["General", "Transport", "Labour", "Rent", "Utilities", "Office", "Travel", "Marketing", "Repair", "Tax"];
@@ -45,6 +46,13 @@ function ExpensesPage() {
   };
 
   const total = rows.reduce((a, r) => a + Number(r.amount ?? 0), 0);
+  const monthKey = new Date().toISOString().slice(0, 7);
+  const monthTotal = rows.filter((r) => String(r.date ?? "").startsWith(monthKey)).reduce((a, r) => a + Number(r.amount ?? 0), 0);
+  const topCat = (() => {
+    const m = new Map<string, number>();
+    rows.forEach((r) => m.set(r.category ?? "General", (m.get(r.category ?? "General") ?? 0) + Number(r.amount ?? 0)));
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1])[0];
+  })();
 
   const onExport = () => exportToExcel({
     filename: `expenses-${new Date().toISOString().slice(0, 10)}`,
@@ -81,7 +89,7 @@ function ExpensesPage() {
 
   return (
     <div>
-      <PageHeader title="Expenses" description={`Total: ${inr(total)}`} actions={
+      <PageHeader title="Expenses" description="Operating spend tracked by category" actions={
         <>
         <ExcelBar onExport={onExport} onImport={onImport} />
         <Dialog open={open} onOpenChange={setOpen}>
@@ -106,10 +114,18 @@ function ExpensesPage() {
         </Dialog>
         </>
       } />
+      {rows.length > 0 && (
+        <KpiGrid cols={4} className="mb-3">
+          <KpiTile label="Total spend" value={inr(total)} tone="bad" hint={`${rows.length} ${rows.length === 1 ? "entry" : "entries"}`} />
+          <KpiTile label="This month" value={inr(monthTotal)} hint={new Date().toLocaleString(undefined, { month: "long" })} />
+          <KpiTile label="Top category" value={topCat ? topCat[0] : "—"} hint={topCat ? inr(topCat[1]) : undefined} />
+          <KpiTile label="Entries" value={String(rows.length)} />
+        </KpiGrid>
+      )}
       {rows.length === 0 ? <Empty>No expenses yet.</Empty> : (
         <div className="space-y-2">
           {rows.map(r => (
-            <div key={r.id} className="rounded-md border bg-card p-3 flex items-center gap-3">
+            <div key={r.id} className="surface p-3 flex items-center gap-3 hover:bg-muted/40 transition-colors">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-sm font-medium">{r.category}</span>
