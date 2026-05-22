@@ -31,8 +31,7 @@ const pinned = [
   { to: "/app", label: "Home", icon: Home, exact: true },
   { to: "/app/sales", label: "Sales", icon: ShoppingCart },
   { to: "/app/purchases", label: "Purchases", icon: Truck },
-  { to: "/app/payments", label: "Payments", icon: Wallet },
-  { to: "/app/bills", label: "Bills", icon: FileSpreadsheet },
+  { to: "/app/bills", label: "Money", icon: Wallet },
   { to: "/app/stock", label: "Stock", icon: Boxes },
 ] as const;
 
@@ -218,7 +217,7 @@ const mobileTabs = [
   { to: "/app", label: "Home", icon: Home, exact: true },
   { to: "/app/sales", label: "Sell", icon: ShoppingCart },
   { to: "/app/purchases", label: "Buy", icon: Truck },
-  { to: "/app/payments", label: "Money", icon: Wallet },
+  { to: "/app/bills", label: "Money", icon: Wallet },
 ] as const;
 
 function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
