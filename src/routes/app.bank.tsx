@@ -19,9 +19,14 @@ import { useDraft } from "@/hooks/use-draft";
 export const Route = createFileRoute("/app/bank")({ component: BankPage });
 
 function StatusPill({ status }: { status: "pending" | "cleared" | "bounced" }) {
-  if (status === "cleared") return <Badge variant="outline" className="text-[10px] border-emerald-500/40 text-emerald-700 dark:text-emerald-400">✓ Cleared</Badge>;
-  if (status === "bounced") return <Badge variant="outline" className="text-[10px] border-destructive/50 text-destructive">✗ Bounced</Badge>;
-  return <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">⏳ Pending</Badge>;
+  const cls =
+    status === "cleared"
+      ? "border-emerald-500/40 text-emerald-700 dark:text-emerald-400 bg-emerald-500/5"
+      : status === "bounced"
+      ? "border-destructive/50 text-destructive bg-destructive/5"
+      : "border-amber-500/40 text-amber-700 dark:text-amber-400 bg-amber-500/5";
+  const label = status === "cleared" ? "Cleared" : status === "bounced" ? "Bounced" : "Pending";
+  return <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${cls}`}>{label}</span>;
 }
 
 type Kind = "cash_deposit" | "cash_withdrawal" | "cheque_deposit";
