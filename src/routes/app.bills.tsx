@@ -678,7 +678,7 @@ function BillsPage() {
               <p className="text-[10px] text-muted-foreground">Total of this single receipt/payment, not per invoice.</p>
             </div>
             <div className="space-y-1.5"><Label className="text-xs">Mode</Label>
-              <Select value={mode} onValueChange={(v) => { setMode(v); if (v !== "Cheque") setCleared(true); }}><SelectTrigger><SelectValue /></SelectTrigger>
+              <Select value={mode} onValueChange={(v) => { setMode(v); setCleared(v !== "Cheque"); }}><SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Bank">Bank transfer (NEFT/RTGS/IMPS)</SelectItem>
                   <SelectItem value="UPI">UPI</SelectItem>
