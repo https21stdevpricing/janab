@@ -6,6 +6,7 @@ import { Printer } from "lucide-react";
 import swLogo from "@/assets/sw-logo.png";
 import { exportStoneWorldDocument } from "@/lib/pdf-theme";
 import { lookupDocById } from "@/lib/doc-lookup";
+import { amountInWords } from "@/lib/amount-words";
 import { DEFAULT_PRINT_DESIGN, fileToDataUrl, loadPrintDesign, savePrintDesign, type PrintDesign } from "@/lib/print-customizer";
 
 export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }) {
