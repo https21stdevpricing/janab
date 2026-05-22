@@ -702,24 +702,22 @@ function BillsPage() {
           </DialogHeader>
 
           <div className="space-y-5 p-4 sm:p-6">
-          {/* Direction switch inside dialog */}
-          <div className="grid grid-cols-2 gap-2 rounded-lg bg-muted/30 p-1">
+          {/* Direction segmented switch */}
+          <div className="grid grid-cols-2 gap-1 rounded-full bg-muted/60 p-1 ring-1 ring-border/60">
             <button type="button" onClick={() => { setDirection("in"); setAllocs([]); }}
-              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "in" ? "border-primary bg-background shadow-sm" : "border-transparent hover:bg-background/70"}`}>
-              <div className="flex items-center gap-2 text-xs font-medium"><ArrowDownLeft className="h-3.5 w-3.5 text-primary" /> Money in (receipt)</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">From a buyer / customer</div>
+              className={`inline-flex items-center justify-center gap-1.5 h-8 rounded-full text-[13px] font-medium transition-colors ${direction === "in" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              <ArrowDownLeft className="h-3.5 w-3.5 text-primary" /> Money in
             </button>
             <button type="button" onClick={() => { setDirection("out"); setAllocs([]); }}
-              className={`rounded-md border p-2.5 text-left transition-colors ${direction === "out" ? "border-destructive bg-background shadow-sm" : "border-transparent hover:bg-background/70"}`}>
-              <div className="flex items-center gap-2 text-xs font-medium"><ArrowUpRight className="h-3.5 w-3.5 text-destructive" /> Money out (payment)</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">To a supplier / vendor</div>
+              className={`inline-flex items-center justify-center gap-1.5 h-8 rounded-full text-[13px] font-medium transition-colors ${direction === "out" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+              <ArrowUpRight className="h-3.5 w-3.5 text-destructive" /> Money out
             </button>
           </div>
 
           {/* Transaction kind: against invoice / advance / on-account */}
           <div>
-            <Label className="text-xs">Apply as</Label>
-            <div className="mt-1.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Apply as</Label>
+            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {([
                 { v: "against_invoice", t: "Against invoice", d: "Knock off specific pending bill(s)." },
                 { v: "advance", t: "Advance payment", d: direction === "in" ? "Park as Advance from Customers." : "Park as Advances to Suppliers." },
@@ -727,7 +725,7 @@ function BillsPage() {
               ] as const).map((k) => (
                 <button key={k.v} type="button"
                   onClick={() => { setKind(k.v); if (k.v !== "against_invoice") setAllocs([]); }}
-                  className={`rounded-md border p-2.5 text-left transition-colors ${kind === k.v ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:bg-muted/40"}`}>
+                  className={`rounded-xl border p-3 text-left transition-colors ${kind === k.v ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:bg-muted/40"}`}>
                   <div className="text-xs font-medium">{k.t}</div>
                   <div className="mt-0.5 text-[10px] text-muted-foreground">{k.d}</div>
                 </button>
