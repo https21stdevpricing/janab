@@ -265,6 +265,7 @@ function MobileTabBar({ path, onMore }: { path: string; onMore: () => void }) {
 
 function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; onOpenChange: (v: boolean) => void; email: string; onSignOut: () => void }) {
   const sheetRef = useRef<HTMLDivElement | null>(null);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
   const blockClickUntilRef = useRef(0);
   const stateRef = useRef({
     tracking: false, dragging: false, startY: 0, lastY: 0, lastT: 0, lastV: 0, height: 0, closing: false,
@@ -304,11 +305,14 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
     stateRef.current.closing = false;
     stateRef.current.tracking = false;
     stateRef.current.dragging = false;
+    if (scrollRef.current) scrollRef.current.scrollTop = 0;
 
     const isEditableTarget = (target: EventTarget | null) =>
       target instanceof HTMLElement && !!target.closest("input, textarea, select, [contenteditable='true']");
     const begin = (y: number, target: EventTarget | null) => {
       if (stateRef.current.closing || isEditableTarget(target)) return;
+      const scrollEl = scrollRef.current;
+      if (scrollEl && scrollEl.scrollTop > 1) return;
       stateRef.current = {
         tracking: true, dragging: false, startY: y, lastY: y, lastT: performance.now(),
         lastV: 0, height: el.getBoundingClientRect().height, closing: false,
@@ -321,6 +325,7 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
       if (!s.dragging) {
         if (dy < -10) { s.tracking = false; return; }
         if (dy < 1) return;
+        if (scrollRef.current && scrollRef.current.scrollTop > 1) { s.tracking = false; return; }
         s.dragging = true;
         s.startY = y - 0.25;
         s.lastY = y;
@@ -399,7 +404,7 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
         className="p-0 h-[88vh] rounded-t-2xl flex flex-col [&>button]:hidden"
         style={{
           willChange: "transform",
-          touchAction: "none",
+          touchAction: "pan-y",
         }}
         onClickCapture={suppressClickAfterDrag}
       >
@@ -410,7 +415,7 @@ function MoreSheet({ open, onOpenChange, email, onSignOut }: { open: boolean; on
             <div className="text-xs text-muted-foreground truncate">{email}</div>
           </div>
         </div>
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4 space-y-5 overscroll-contain">
           {[{ label: "Daily", items: [...pinned].slice(1).map((p) => ({ ...p })) }, ...moreGroups].map((g) => (
             <div key={g.label}>
               <div className="text-[10px] uppercase tracking-[0.1em] text-muted-foreground/80 mb-2 px-1">{g.label}</div>

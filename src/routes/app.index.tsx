@@ -315,14 +315,18 @@ function Dashboard() {
       .on("postgres_changes", { event: "*", schema: "public", table: "sales" }, () => loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "purchases" }, () => loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "payments" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "payment_allocations" }, () => loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "expenses" }, () => loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "bank_transfers" }, () => loadAll())
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "journal_lines" }, () => loadAll())
       .subscribe();
     // Refresh on tab focus too, in case realtime is throttled.
     const onFocus = () => loadAll();
+    const onVisible = () => { if (document.visibilityState === "visible") loadAll(); };
     window.addEventListener("focus", onFocus);
-    return () => { supabase.removeChannel(ch); window.removeEventListener("focus", onFocus); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { supabase.removeChannel(ch); window.removeEventListener("focus", onFocus); document.removeEventListener("visibilitychange", onVisible); };
   }, []);
 
   // Re-aggregate the raw lines into buckets matching the chosen range.
@@ -406,7 +410,7 @@ function Dashboard() {
   const actions = [
     { to: "/app/sales", label: "New sale", icon: ShoppingCart, primary: true },
     { to: "/app/purchases", label: "New purchase", icon: Truck },
-    { to: "/app/payments", label: "Record payment", icon: Wallet },
+    { to: "/app/bills", label: "Record payment", icon: Wallet },
     { to: "/app/bank", label: "Bank & cash", icon: Landmark },
   ];
 
@@ -453,7 +457,7 @@ function Dashboard() {
             hint="Cash + bank in"
             icon={ArrowDownLeft}
             tone="good"
-            to="/app/payments"
+            to="/app/bills"
           />
           <TodayTile
             label="Purchases"
@@ -467,7 +471,7 @@ function Dashboard() {
             value={today ? inr(today.paidOut) : "—"}
             hint="Cash + bank out"
             icon={ArrowUpLeft}
-            to="/app/payments"
+            to="/app/bills"
           />
           <TodayTile
             label="Expenses"

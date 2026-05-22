@@ -52,8 +52,10 @@ type PayRow = {
   contact_id: string | null; contact_name: string | null; amount: number;
   mode: string | null; ref_doc: string | null; notes: string | null;
   cleared: boolean; cleared_at: string | null; cheque_no: string | null; bank_name: string | null; txn_id: string | null;
+  status?: "pending" | "cleared" | "bounced" | null;
 };
 type Alloc = { doc_kind: "sale" | "purchase" | "tp" | "tp_purchase"; doc_id: string; doc_no: string; amount: number; balance?: number; total?: number };
+type PendingChequeLock = { doc_kind: string; doc_id: string; payment_id: string; payment_no: string; cheque_no: string | null; amount: number; date: string };
 
 const sideOf = (k: Row["doc_kind"]) => (k === "sale" || k === "tp" ? "receivable" : "payable");
 const docKindLabel = (k: Row["doc_kind"]) => k === "sale" ? "Invoice" : k === "purchase" ? "Purchase" : k === "tp" ? "TP sale" : "TP purchase";
@@ -85,15 +87,18 @@ function StatusBadge({ s }: { s: { label: string; tone: "warn" | "info" | "bad" 
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-medium ${cls}`}>{s.label}</span>;
 }
 
-function ClearancePill({ cleared, mode }: { cleared: boolean; mode?: string | null }) {
+function ClearancePill({ cleared, mode, status }: { cleared: boolean; mode?: string | null; status?: string | null }) {
   const isCheque = mode === "Cheque";
-  const cls = cleared
+  const isBounced = status === "bounced";
+  const cls = isBounced
+    ? "border-destructive/40 bg-destructive/5 text-destructive"
+    : cleared
     ? "border-primary/30 bg-primary/5 text-primary"
     : "border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400";
   return (
     <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium ${cls}`}>
       {cleared ? <CheckCircle2 className="h-3 w-3" /> : <Clock3 className="h-3 w-3" />}
-      {cleared ? "Cleared" : isCheque ? "Cheque pending" : "Pending"}
+      {isBounced ? "Bounced" : cleared ? "Cleared" : isCheque ? "Cheque pending" : "Pending"}
     </span>
   );
 }
@@ -110,6 +115,7 @@ function BillsPage() {
   const [viewPay, setViewPay] = useState<PayRow | null>(null);
   const [viewAllocs, setViewAllocs] = useState<Array<{ doc_kind: string; doc_no: string; amount: number }>>([]);
   const [company, setCompany] = useState<any>(null);
+  const [pendingChequeLocks, setPendingChequeLocks] = useState<PendingChequeLock[]>([]);
 
   /* ---------- payment dialog state ---------- */
   const [payOpen, setPayOpen] = useState(false);
@@ -134,12 +140,14 @@ function BillsPage() {
   };
 
   const load = async () => {
-    const [{ data: out }, { data: ph }] = await Promise.all([
+    const [{ data: out }, { data: ph }, { data: locks }] = await Promise.all([
       supabase.from("outstanding_view" as never).select("*").gt("balance", 0).order("date", { ascending: true }) as any,
       supabase.from("payments").select("*").order("date", { ascending: false }).order("created_at", { ascending: false }),
+      supabase.from("pending_cheque_allocations_view" as never).select("doc_kind,doc_id,payment_id,payment_no,cheque_no,amount,date") as any,
     ]);
     setRows((out ?? []) as Row[]);
     setPays((ph ?? []) as PayRow[]);
+    setPendingChequeLocks((locks ?? []) as PendingChequeLock[]);
   };
   useEffect(() => {
     load();
@@ -227,6 +235,11 @@ function BillsPage() {
   const filteredPays = useMemo(() => pays.filter(p =>
     q === "" || p.payment_no.toLowerCase().includes(q.toLowerCase()) || (p.contact_name ?? "").toLowerCase().includes(q.toLowerCase())
   ), [pays, q]);
+  const lockMap = useMemo(() => {
+    const m = new Map<string, PendingChequeLock>();
+    pendingChequeLocks.forEach((l) => m.set(`${l.doc_kind}:${l.doc_id}`, l));
+    return m;
+  }, [pendingChequeLocks]);
 
   const onExport = () => {
     if (tab === "history") {
@@ -275,6 +288,13 @@ function BillsPage() {
 
   /* Click an outstanding bill → open dialog pre-filled to settle exactly that bill */
   const settleBill = async (r: Row) => {
+    const lock = lockMap.get(`${r.doc_kind}:${r.doc_id}`);
+    if (lock) {
+      const pending = pays.find((p) => p.id === lock.payment_id);
+      if (pending) openPayView(pending);
+      else toast.error(`Pending cheque ${lock.payment_no} is already linked. Mark it cleared or bounced first.`);
+      return;
+    }
     const dir: "in" | "out" = sideOf(r.doc_kind) === "receivable" ? "in" : "out";
     setDirection(dir); setDate(todayISO()); setMode("Bank"); setNotes("");
     setChequeNo(""); setChequeDate(""); setTxnId(""); setBankName(""); setCleared(true);
@@ -329,6 +349,12 @@ function BillsPage() {
     if (!contactId) { toast.error("Pick a party"); return; }
     if (amount <= 0) { toast.error("Amount must be > 0"); return; }
     if (mode === "Cheque" && !chequeNo.trim()) { toast.error("Cheque number is required"); return; }
+    const lockedAlloc = allocs.find((a) => lockMap.has(`${a.doc_kind}:${a.doc_id}`));
+    if (lockedAlloc) {
+      const lock = lockMap.get(`${lockedAlloc.doc_kind}:${lockedAlloc.doc_id}`)!;
+      toast.error(`Pending cheque ${lock.payment_no} is already linked to ${lockedAlloc.doc_no}. Open it and change cheque status instead.`);
+      return;
+    }
     // Strict duplicate guard — block any identical party + amount + date + direction recorded already.
     // Allows intentional duplicates only on explicit confirmation.
     const { data: dup } = await supabase
@@ -340,6 +366,10 @@ function BillsPage() {
       .eq("amount", amount)
       .limit(1);
     if (dup && dup.length > 0) {
+      if (mode === "Cheque") {
+        toast.error(`Cheque/payment already recorded as ${dup[0].payment_no}. Open that entry and update its status.`);
+        return;
+      }
       const ok = confirm(`A ${direction === "in" ? "receipt" : "payment"} of ${inr(amount)} for this party on ${fmtDate(date)} already exists (${dup[0].payment_no}). Record another one anyway?`);
       if (!ok) return;
     }
@@ -348,13 +378,14 @@ function BillsPage() {
       return;
     }
     const finalCleared = mode === "Cheque" ? cleared : true;
+    const finalStatus = mode === "Cheque" ? (finalCleared ? "cleared" : "pending") : "cleared";
     const { data: pay, error } = await supabase.from("payments").insert({
       user_id: user.id, direction, date, amount, mode, notes: notes || null,
       contact_id: contactId, contact_name: contactName,
       ref_doc: allocs.map(a => a.doc_no).join(", ") || null,
       cheque_no: chequeNo || null, cheque_date: chequeDate || null,
       txn_id: txnId || null, bank_name: bankName || null,
-      cleared: finalCleared, cleared_at: finalCleared ? date : null,
+      cleared: finalCleared, cleared_at: finalCleared ? date : null, status: finalStatus,
     } as never).select().single() as { data: any; error: any };
     if (error) { toast.error(error.message); return; }
     if (allocs.length) {
@@ -380,10 +411,18 @@ function BillsPage() {
   };
 
   const markPayCleared = async (p: PayRow) => {
-    const { error } = await supabase.from("payments").update({ cleared: true, cleared_at: todayISO() } as never).eq("id", p.id);
+    const { error } = await supabase.from("payments").update({ status: "cleared", cleared: true, cleared_at: todayISO() } as never).eq("id", p.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Payment marked cleared");
-    setViewPay({ ...p, cleared: true, cleared_at: todayISO() });
+    setViewPay({ ...p, status: "cleared", cleared: true, cleared_at: todayISO() });
+    load();
+  };
+
+  const markPayBounced = async (p: PayRow) => {
+    const { error } = await supabase.from("payments").update({ status: "bounced", cleared: false, cleared_at: null } as never).eq("id", p.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Cheque marked bounced");
+    setViewPay({ ...p, status: "bounced", cleared: false, cleared_at: null });
     load();
   };
 
@@ -406,7 +445,7 @@ function BillsPage() {
 
       <div className="mb-5 grid gap-3 lg:grid-cols-[1fr_260px]">
         <div className="surface overflow-hidden">
-          <div className="grid grid-cols-3 divide-x divide-border/60">
+          <div className="grid grid-cols-1 divide-y divide-border/60 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
             <HeroCell label="Collect" value={inr(kpis.recv)} tone="good" active={tab === "receivable"} onClick={() => setTab("receivable")} />
             <HeroCell label="Pay" value={inr(kpis.pay)} tone="bad" active={tab === "payable"} onClick={() => setTab("payable")} />
             <HeroCell label="Net" value={inr(kpis.net)} tone={kpis.net >= 0 ? "good" : "bad"} />
@@ -426,7 +465,7 @@ function BillsPage() {
 
       <div className="mb-3 space-y-3">
         <Tabs value={tab} onValueChange={v => setTab(v as any)}>
-          <TabsList className="scroll-tabs w-full justify-start rounded-full bg-muted p-1 sm:w-auto">
+          <TabsList className="grid w-full grid-cols-3 rounded-full bg-muted p-1 sm:inline-flex sm:w-auto">
             <TabsTrigger value="receivable" className="gap-1"><ArrowDownLeft className="h-3.5 w-3.5" /> Receivable</TabsTrigger>
             <TabsTrigger value="payable" className="gap-1"><ArrowUpRight className="h-3.5 w-3.5" /> Payable</TabsTrigger>
             <TabsTrigger value="history" className="gap-1"><History className="h-3.5 w-3.5" /> History</TabsTrigger>
@@ -451,16 +490,16 @@ function BillsPage() {
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
-          <div className="grid gap-2 lg:grid-cols-2">
+          <div className="grid gap-2 lg:grid-cols-2 min-w-0">
             {filteredPays.map(p => (
-              <div key={p.id} className="surface p-3 cursor-pointer transition-colors hover:bg-muted/35" onClick={() => openPayView(p)}>
-                <div className="flex items-start gap-3">
+              <div key={p.id} className="surface p-3 cursor-pointer transition-colors hover:bg-muted/35 min-w-0" onClick={() => openPayView(p)}>
+                <div className="grid grid-cols-[auto_1fr] gap-3 sm:flex sm:items-start">
                 <Badge variant={p.direction === "in" ? "default" : "secondary"} className="shrink-0 mt-0.5">{p.direction === "in" ? "IN" : "OUT"}</Badge>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-sm">{p.payment_no}</span>
                     <span className="text-xs text-muted-foreground">{fmtDate(p.date)}</span>
-                    {(p.mode === "Cheque" || p.cleared === false) && <ClearancePill cleared={p.cleared !== false} mode={p.mode} />}
+                    {(p.mode === "Cheque" || p.cleared === false) && <ClearancePill cleared={p.cleared !== false} mode={p.mode} status={p.status} />}
                     {p.ref_doc && (
                       <span className="text-xs text-muted-foreground flex flex-wrap gap-1">
                         {p.ref_doc.split(",").map(s => s.trim()).filter(Boolean).map((ref, idx) => (
@@ -474,7 +513,7 @@ function BillsPage() {
                     {p.cheque_no ? `Cheque ${p.cheque_no}` : p.txn_id ? `Txn ${p.txn_id}` : p.notes || "Tap to view details"}
                   </div>
                 </div>
-                <div className={`text-base font-semibold tabular-nums ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(p.amount)}</div>
+                <div className={`col-span-2 text-right text-base font-semibold tabular-nums sm:col-span-1 ${p.direction === "in" ? "text-primary" : "text-destructive"}`}>{inr(p.amount)}</div>
                 </div>
               </div>
             ))}
@@ -499,6 +538,7 @@ function BillsPage() {
                 const d = ageDays(r.date); const b = bucket(d);
                 const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
                 const st = payStatus(Number(r.total), Number(r.paid), d);
+                const lock = lockMap.get(`${r.doc_kind}:${r.doc_id}`);
                 return (
                   <tr key={`${r.doc_kind}-${r.doc_id}`} className="border-t transition-colors hover:bg-muted/35">
                     <td className="p-3">
@@ -511,10 +551,10 @@ function BillsPage() {
                       <PayProgress pct={pct} tab={tab} />
                       <div className="text-[10px] text-muted-foreground mt-0.5 tabular-nums">{inr(r.paid)} of {inr(r.total)}</div>
                     </td>
-                    <td className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge></div></td>
+                    <td className="p-3"><div className="flex items-center gap-1.5 flex-wrap"><StatusBadge s={st} /><Badge variant={bucketTone(b) as any} className="text-[10px]">{b}d</Badge>{lock && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Cheque {lock.payment_no}</Badge>}</div></td>
                     <td className="p-3 text-right whitespace-nowrap">
-                      <Button size="sm" variant="outline" onClick={() => settleBill(r)}>
-                        {tab === "receivable" ? "Receive" : "Pay"}
+                      <Button size="sm" variant={lock ? "secondary" : "outline"} onClick={() => settleBill(r)}>
+                        {lock ? "View cheque" : tab === "receivable" ? "Receive" : "Pay"}
                       </Button>
                     </td>
                   </tr>
@@ -544,11 +584,14 @@ function BillsPage() {
                   </div>
                 </button>
                 <PayProgress pct={pct} tab={tab} />
-                <div className="text-[11px] text-muted-foreground tabular-nums">{inr(r.paid)} of {inr(r.total)} · {b}d</div>
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground tabular-nums">
+                  <span>{inr(r.paid)} of {inr(r.total)} · {b}d</span>
+                  {lockMap.get(`${r.doc_kind}:${r.doc_id}`) && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Pending cheque</Badge>}
+                </div>
                 <div>
-                  <Button size="sm" className="w-full" onClick={() => settleBill(r)}>
+                  <Button size="sm" className="w-full" variant={lockMap.get(`${r.doc_kind}:${r.doc_id}`) ? "secondary" : "default"} onClick={() => settleBill(r)}>
                     {tab === "receivable" ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
-                    {tab === "receivable" ? "Receive" : "Pay"}
+                    {lockMap.get(`${r.doc_kind}:${r.doc_id}`) ? "View pending cheque" : tab === "receivable" ? "Receive" : "Pay"}
                   </Button>
                 </div>
               </div>
@@ -577,7 +620,7 @@ function BillsPage() {
               <div className="grid grid-cols-2 gap-x-4 gap-y-3">
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Date</div><div>{fmtDate(viewPay.date)}</div></div>
                 <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Mode</div><div>{viewPay.mode ?? "—"}</div></div>
-                {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} /></div>}
+                {(viewPay.mode === "Cheque" || viewPay.cleared === false) && <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">Clearance</div><ClearancePill cleared={viewPay.cleared !== false} mode={viewPay.mode} status={viewPay.status} /></div>}
                 <div className="col-span-2"><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{viewPay.direction === "in" ? "From buyer" : "To supplier"}</div><div className="font-medium">{viewPay.contact_name ?? "—"}</div></div>
                 <div className="col-span-2 rounded-md border bg-muted/30 p-3">
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1">Amount</div>
@@ -607,6 +650,11 @@ function BillsPage() {
             {viewPay?.cleared === false && (
               <Button variant="outline" className="w-full" onClick={() => viewPay && markPayCleared(viewPay)}>
                 <CheckCircle2 className="h-4 w-4" /> Mark cleared and post accounts
+              </Button>
+            )}
+            {viewPay?.mode === "Cheque" && viewPay.status !== "bounced" && viewPay.cleared === false && (
+              <Button variant="outline" className="w-full text-destructive border-destructive/40 hover:bg-destructive/10 hover:text-destructive" onClick={() => viewPay && markPayBounced(viewPay)}>
+                <X className="h-4 w-4" /> Mark bounced and release bill
               </Button>
             )}
             <Button variant="outline" className="w-full" onClick={() => viewPay && exportStoneWorldPayment(viewPay, viewAllocs, company)}>
@@ -731,18 +779,20 @@ function BillsPage() {
                 <div className="border rounded-md divide-y max-h-64 overflow-y-auto">
                   {openDocs.map((d: any) => {
                     const picked = allocs.find(a => a.doc_id === d.doc_id);
+                    const lock = lockMap.get(`${d.doc_kind}:${d.doc_id}`);
                     return (
-                      <div key={`${d.doc_kind}-${d.doc_id}`} className={`p-2.5 cursor-pointer ${picked ? "bg-primary/5" : ""}`} onClick={() => toggleDoc(d)}>
+                      <div key={`${d.doc_kind}-${d.doc_id}`} className={`p-2.5 ${lock ? "bg-amber-500/5 cursor-default" : "cursor-pointer"} ${picked ? "bg-primary/5" : ""}`} onClick={() => lock ? toast.error(`Pending cheque ${lock.payment_no} is already linked. Open it from history to clear or bounce.`) : toggleDoc(d)}>
                         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline" className="text-[10px]">{docKindLabel(d.doc_kind)}</Badge>
                               <span className="font-mono text-xs">{d.doc_no}</span>
+                              {lock && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Locked by {lock.payment_no}</Badge>}
                             </div>
                             <div className="text-xs text-muted-foreground mt-1">{fmtDate(d.date)} · balance <span className="font-semibold text-foreground">{inr(d.balance)}</span> of {inr(d.total)}</div>
                           </div>
                           <div className="flex items-center gap-2 sm:justify-end">
-                            {picked ? (
+                            {lock ? <Button type="button" size="sm" variant="secondary" className="h-8" onClick={(e) => { e.stopPropagation(); const p = pays.find(x => x.id === lock.payment_id); if (p) openPayView(p); }}>Open cheque</Button> : picked ? (
                               <Input type="number" className="w-28 h-8 text-right" value={picked.amount}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => { const v = +e.target.value; setAllocs(allocs.map(a => a.doc_id === d.doc_id ? { ...a, amount: v } : a)); }} />

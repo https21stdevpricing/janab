@@ -82,9 +82,9 @@ export function ReconcileGuide({ signals }: { signals: ReconcileSignal[] }) {
           <WalkthroughCard
             icon={Wallet}
             title="A buyer's balance looks wrong"
-            body="A payment was likely received but not allocated to the right invoice. Open Payments, edit the entry, and allocate to the correct bill."
-            to="/app/payments"
-            cta="Open Payments"
+            body="A payment was likely received but not allocated to the right invoice. Open Money, edit the entry, and allocate to the correct bill."
+            to="/app/bills"
+            cta="Open Money"
           />
           <WalkthroughCard
             icon={Receipt}
@@ -306,11 +306,11 @@ export function buildReconcileSignals(args: {
       likelyCause:
         "Payment entered in a hurry without selecting which bill it settles.",
       steps: [
-        "Open Payments.",
+        "Open Money.",
         "Click each highlighted entry and choose the invoice it pays.",
         "Buyer / supplier outstanding refreshes immediately.",
       ],
-      fix: { label: "Open Payments", to: "/app/payments" },
+      fix: { label: "Open Money", to: "/app/bills" },
       icon: Wallet,
     });
   }

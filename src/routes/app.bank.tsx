@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Empty } from "@/components/empty";
 import { inr, fmtDate, todayISO } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpFromLine, Banknote, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Banknote, Eye, ShieldCheck, Trash2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDraft } from "@/hooks/use-draft";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -61,6 +61,7 @@ function BankPage() {
   const [form, setForm, draft] = useDraft<Form>("bank:new", EMPTY);
   const [cashBal, setCashBal] = useState(0);
   const [bankBal, setBankBal] = useState(0);
+  const [viewRow, setViewRow] = useState<Row | null>(null);
 
   const load = async () => {
     const [{ data }, { data: lv }] = await Promise.all([
@@ -107,6 +108,11 @@ function BankPage() {
     if (!user) return;
     if (form.amount <= 0) { toast.error("Amount must be > 0"); return; }
     if (form.kind === "cheque_deposit" && !form.cheque_no.trim()) { toast.error("Cheque number is required"); return; }
+    if (form.kind === "cheque_deposit") {
+      const { data: dup } = await supabase.from("bank_transfers" as never)
+        .select("transfer_no,status").eq("kind" as never, "cheque_deposit").eq("cheque_no" as never, form.cheque_no.trim()).limit(1) as any;
+      if (dup && dup.length) { toast.error(`Cheque already recorded as ${dup[0].transfer_no}. Open that entry and update its status.`); return; }
+    }
     const finalCleared = form.kind === "cheque_deposit" ? form.cleared : true;
     const payload: any = {
       user_id: user.id,
@@ -140,7 +146,7 @@ function BankPage() {
     const { error } = await supabase.from("bank_transfers" as never)
       .update({ status, cleared: nextCleared, cleared_at: nextCleared ? todayISO() : null } as never).eq("id" as never, r.id);
     if (error) toast.error(error.message);
-    else { toast.success(status === "cleared" ? "Marked cleared" : status === "bounced" ? "Marked bounced" : "Set to pending"); load(); }
+    else { toast.success(status === "cleared" ? "Marked cleared" : status === "bounced" ? "Marked bounced" : "Set to pending"); setViewRow(viewRow?.id === r.id ? { ...r, status, cleared: nextCleared, cleared_at: nextCleared ? todayISO() : null } : viewRow); load(); }
   };
 
   return (
@@ -198,7 +204,7 @@ function BankPage() {
             const st = (r.status ?? (r.cleared ? "cleared" : "pending")) as Status;
             const isOut = r.kind === "cash_withdrawal";
             return (
-              <div key={r.id} className="grid gap-3 border-b border-border/60 p-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center">
+              <div key={r.id} className="grid gap-3 border-b border-border/60 p-3 last:border-b-0 sm:grid-cols-[1fr_auto_auto] sm:items-center cursor-pointer transition-colors hover:bg-muted/30" onClick={() => setViewRow(r)}>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-mono text-sm font-medium">{r.transfer_no}</span>
@@ -212,7 +218,10 @@ function BankPage() {
                 <div className={`text-left text-base font-semibold tabular-nums sm:text-right ${isOut ? "text-destructive" : "text-primary"}`}>
                   {isOut ? "−" : "+"}{inr(r.amount)}
                 </div>
-                <div className="flex items-center gap-2 sm:w-44">
+                <div className="flex items-center gap-2 sm:w-48" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => setViewRow(r)} aria-label="View details">
+                    <Eye className="h-4 w-4" />
+                  </Button>
                   <Select value={st} onValueChange={(v) => changeStatus(r, v as Status)}>
                     <SelectTrigger className="h-9 flex-1 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -308,6 +317,46 @@ function BankPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!viewRow} onOpenChange={(o) => !o && setViewRow(null)}>
+        <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+          {viewRow && (
+            <>
+              <div className="border-b px-4 py-4 sm:px-6">
+                <DialogTitle className="flex items-center gap-2 text-base">
+                  {viewRow.kind === "cheque_deposit" ? <Banknote className="h-4 w-4" /> : viewRow.kind === "cash_withdrawal" ? <ArrowUpFromLine className="h-4 w-4" /> : <ArrowDownToLine className="h-4 w-4" />}
+                  {viewRow.transfer_no}
+                </DialogTitle>
+                <p className="mt-1 text-xs text-muted-foreground">{KIND_LABEL[viewRow.kind]} · {fmtDate(viewRow.date)}</p>
+              </div>
+              <div className="space-y-4 p-4 sm:p-6 text-sm">
+                <div className="rounded-lg border bg-muted/20 p-3">
+                  <div className="eyebrow">Amount</div>
+                  <div className={`mt-1 text-2xl font-semibold tabular-nums ${viewRow.kind === "cash_withdrawal" ? "text-destructive" : "text-primary"}`}>{viewRow.kind === "cash_withdrawal" ? "−" : "+"}{inr(viewRow.amount)}</div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Detail label="Status"><StatusPill status={(viewRow.status ?? (viewRow.cleared ? "cleared" : "pending")) as Status} /></Detail>
+                  <Detail label="Bank">{viewRow.bank_name ?? "—"}</Detail>
+                  {viewRow.cheque_no && <Detail label="Cheque no.">{viewRow.cheque_no}</Detail>}
+                  {viewRow.cheque_date && <Detail label="Cheque date">{fmtDate(viewRow.cheque_date)}</Detail>}
+                  {viewRow.txn_id && <Detail label="Txn / UTR">{viewRow.txn_id}</Detail>}
+                  {viewRow.cleared_at && <Detail label="Cleared on">{fmtDate(viewRow.cleared_at)}</Detail>}
+                </div>
+                {viewRow.notes && <Detail label="Notes">{viewRow.notes}</Detail>}
+              </div>
+              <div className="border-t p-3 grid grid-cols-3 gap-2">
+                <Button variant="outline" size="sm" onClick={() => changeStatus(viewRow, "pending")}>Pending</Button>
+                <Button variant="outline" size="sm" onClick={() => changeStatus(viewRow, "bounced")}>Bounced</Button>
+                <Button size="sm" onClick={() => changeStatus(viewRow, "cleared")}>Cleared</Button>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
+}
+
+function Detail({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div><div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-0.5">{label}</div><div className="font-medium break-words">{children}</div></div>;
 }

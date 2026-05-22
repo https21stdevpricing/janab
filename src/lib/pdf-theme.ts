@@ -3,6 +3,7 @@ import autoTable from "jspdf-autotable";
 import { fmt, fmtDate, todayISO } from "@/lib/format";
 import swLogo from "@/assets/sw-logo.png";
 import type { DocLookupResult } from "@/lib/doc-lookup";
+import { imageFormat, type PrintDesign } from "@/lib/print-customizer";
 
 export type PdfRgb = [number, number, number];
 
@@ -46,7 +47,7 @@ export function newStoneWorldPdf() {
   return doc;
 }
 
-export function drawStoneWorldHeader(doc: jsPDF, company: PdfCompany | null | undefined, meta: PdfDocMeta, top = 30) {
+export function drawStoneWorldHeader(doc: jsPDF, company: PdfCompany | null | undefined, meta: PdfDocMeta, top = 30, design?: Partial<PrintDesign>) {
   const W = doc.internal.pageSize.getWidth();
   const M = 34;
   const co = company ?? {};
@@ -57,7 +58,7 @@ export function drawStoneWorldHeader(doc: jsPDF, company: PdfCompany | null | un
   doc.setFillColor(...swPdf.teal);
   doc.rect(0, 0, W, 7, "F");
 
-  try { doc.addImage(swLogo, "PNG", M, top + 7, 54, 54); } catch {}
+  try { doc.addImage(design?.logoDataUrl || swLogo, imageFormat(design?.logoDataUrl) as any, M, top + 7, 54, 54); } catch {}
 
   doc.setFont("helvetica", "bold").setFontSize(20).setTextColor(...swPdf.ink);
   doc.text(name, M + 68, top + 29, { maxWidth: 255 });
@@ -100,6 +101,34 @@ export function drawStoneWorldFooter(doc: jsPDF, company: PdfCompany | null | un
     doc.text(name, margin, H - 21);
     doc.text(`Page ${page} of ${pageCount}`, W - margin, H - 21, { align: "right" });
   }
+}
+
+export function drawCustomWatermark(doc: jsPDF, text?: string | null) {
+  if (!text) return;
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const pageCount = doc.getNumberOfPages();
+  for (let page = 1; page <= pageCount; page++) {
+    doc.setPage(page);
+    doc.setFont("helvetica", "bold").setFontSize(54).setTextColor(230, 235, 240);
+    doc.text(String(text).toUpperCase().slice(0, 24), W / 2, H / 2, { align: "center", angle: -28 });
+  }
+}
+
+export function drawFooterBrandLogos(doc: jsPDF, logos: string[] | undefined, margin = 34) {
+  if (!logos?.length) return;
+  const W = doc.internal.pageSize.getWidth();
+  const H = doc.internal.pageSize.getHeight();
+  const count = Math.min(20, logos.length);
+  const cols = Math.min(5, Math.max(2, Math.ceil(Math.sqrt(count))));
+  const rows = Math.ceil(count / cols);
+  const cellW = (W - margin * 2) / cols;
+  const startY = H - 92 - (rows - 1) * 18;
+  logos.slice(0, count).forEach((logo, i) => {
+    const c = i % cols;
+    const r = Math.floor(i / cols);
+    try { doc.addImage(logo, imageFormat(logo) as any, margin + c * cellW + cellW / 2 - 18, startY + r * 20, 36, 14); } catch {}
+  });
 }
 
 export function ensurePdfSpace(doc: jsPDF, y: number, needed: number, margin = 34, footer = 58) {
@@ -188,7 +217,7 @@ export function issuedOn() {
   return fmtDate(todayISO());
 }
 
-export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCompany | null | undefined) {
+export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCompany | null | undefined, design?: Partial<PrintDesign>) {
   const doc = newStoneWorldPdf();
   const W = doc.internal.pageSize.getWidth();
   const { margin: M, y } = drawStoneWorldHeader(doc, company, {
@@ -197,7 +226,7 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
     reference: result.header.invoice_no ?? result.header.quote_no ?? result.header.po_no ?? result.header.tp_no,
     date: result.header.date,
     validUntil: result.header.valid_until,
-  });
+  }, 30, design);
   const no = result.header.invoice_no ?? result.header.quote_no ?? result.header.po_no ?? result.header.tp_no;
   const panelW = (W - M * 2 - 14) / 2;
   drawKeyValuePanel(doc, M, y, panelW, result.kind === "purchase" ? "Supplier" : "Customer", [
@@ -261,6 +290,8 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   doc.line(M, blockY + 18, M + 172, blockY + 18);
   doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
   doc.text(`For ${company?.company_name || "StoneWorld Traders"} - Authorised Signatory`, M, blockY + 33);
+  drawCustomWatermark(doc, design?.watermarkText);
+  drawFooterBrandLogos(doc, design?.footerLogos, M);
   drawStoneWorldFooter(doc, company, M);
   doc.save(`${String(no || result.kind).replace(/\s+/g, "_")}.pdf`);
 }

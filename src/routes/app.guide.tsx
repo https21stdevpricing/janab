@@ -593,7 +593,7 @@ const slides: Slide[] = [
     body: "Receive money against one or many bills. We FIFO-allocate to the oldest dues, update aging buckets, and post the receipt to the ledger.",
     bullets: ["One receipt can settle many invoices", "Advance payments park as 'on account'", "Bank vs cash receipts tracked separately"],
     why: "Cash on hand stops being a guess. You see exactly who paid, when and against what.",
-    visual: (t) => <MockPayment tick={t} />, steps: 4, cta: { label: "Open Payments", to: "/app/payments" },
+    visual: (t) => <MockPayment tick={t} />, steps: 4, cta: { label: "Open Money", to: "/app/bills" },
   },
   {
     title: "See who owes you",

@@ -525,6 +525,13 @@ export type Database = {
             referencedRelation: "payments"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payment_allocations_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "pending_cheque_allocations_view"
+            referencedColumns: ["payment_id"]
+          },
         ]
       }
       payments: {
@@ -545,6 +552,7 @@ export type Database = {
           notes: string | null
           payment_no: string
           ref_doc: string | null
+          status: string | null
           txn_id: string | null
           user_id: string
         }
@@ -565,6 +573,7 @@ export type Database = {
           notes?: string | null
           payment_no: string
           ref_doc?: string | null
+          status?: string | null
           txn_id?: string | null
           user_id: string
         }
@@ -585,6 +594,7 @@ export type Database = {
           notes?: string | null
           payment_no?: string
           ref_doc?: string | null
+          status?: string | null
           txn_id?: string | null
           user_id?: string
         }
@@ -1611,6 +1621,42 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      pending_cheque_allocations_view: {
+        Row: {
+          amount: number | null
+          bank_name: string | null
+          cheque_date: string | null
+          cheque_no: string | null
+          cleared: boolean | null
+          cleared_at: string | null
+          contact_id: string | null
+          contact_name: string | null
+          date: string | null
+          doc_id: string | null
+          doc_kind: string | null
+          doc_no: string | null
+          payment_id: string | null
+          payment_no: string | null
+          status: string | null
+          user_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "party_summary_view"
+            referencedColumns: ["contact_id"]
+          },
+        ]
       }
       stock_view: {
         Row: {
