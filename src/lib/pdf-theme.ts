@@ -266,22 +266,24 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   stoneWorldTable(doc, {
     startY: y + 122,
     margin: { left: M, right: M, top: 58, bottom: 66 },
-    head: [["#", "Product", "Unit", "Qty", "Rate", "GST", "Taxable", "Total"]],
+    head: [["#", "Product / HSN", "Qty", "Unit", "Rate", "GST%", "Amount"]],
     body: result.items.map((it, i) => {
       const rate = Number(it.sale_rate ?? it.rate ?? 0);
       const qty = Number(it.qty ?? 0);
       const taxable = qty * rate;
-      return [String(i + 1), it.product_name ?? "-", it.unit ?? "-", fmt(qty), pdfMoney(rate), pdfPct(it.gst_pct), pdfMoney(taxable), pdfMoney(taxable * (1 + Number(it.gst_pct ?? 0) / 100))];
+      const total = taxable * (1 + Number(it.gst_pct ?? 0) / 100);
+      const name = it.product_name ?? "-";
+      const hsn = it.hsn ?? it.hsn_code ?? null;
+      return [String(i + 1), hsn ? `${name}\nHSN: ${hsn}` : name, fmt(qty), it.unit ?? "-", pdfMoney(rate), pdfPct(it.gst_pct), pdfMoney(total)];
     }),
     columnStyles: {
       0: { halign: "center", cellWidth: 22, textColor: swPdf.muted },
-      1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 180 },
-      2: { halign: "center", cellWidth: 44, textColor: swPdf.muted },
-      3: { halign: "right", cellWidth: 50 },
-      4: { halign: "right", cellWidth: 68, fontStyle: "bold" },
+      1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 160 },
+      2: { halign: "right", cellWidth: 46 },
+      3: { halign: "center", cellWidth: 40, textColor: swPdf.muted },
+      4: { halign: "right", cellWidth: 64, fontStyle: "bold" },
       5: { halign: "right", cellWidth: 42, textColor: swPdf.muted },
-      6: { halign: "right", cellWidth: 74 },
-      7: { halign: "right", cellWidth: 78, fontStyle: "bold", textColor: swPdf.tealDark },
+      6: { halign: "right", cellWidth: 86, fontStyle: "bold", textColor: swPdf.tealDark },
     },
     didDrawPage: (data: any) => {
       if (data.pageNumber > 1) {
@@ -296,17 +298,25 @@ export function exportStoneWorldDocument(result: DocLookupResult, company: PdfCo
   let blockY = ensurePdfSpace(doc, finalY + 18, 132, M, 66);
   const totalsW = 232;
   doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...swPdf.tealDark);
-  doc.text("NOTES & TERMS", M, blockY + 14);
-  doc.setFont("helvetica", "normal").setFontSize(8.8).setTextColor(...swPdf.muted);
+  doc.text("AMOUNT IN WORDS", M, blockY + 14);
+  doc.setFont("helvetica", "bold").setFontSize(9).setTextColor(...swPdf.ink);
+  doc.text(doc.splitTextToSize(amountInWords(result.totals.total), W - M * 2 - totalsW - 18), M, blockY + 30);
+  doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...swPdf.tealDark);
+  doc.text("NOTES & TERMS", M, blockY + 58);
+  doc.setFont("helvetica", "normal").setFontSize(8.4).setTextColor(...swPdf.muted);
   const notes = result.header.notes ? `${result.header.notes}\n${defaultTerms(result.kind === "quote" ? "quotation" : "document")}` : defaultTerms(result.kind === "quote" ? "quotation" : "document");
-  doc.text(doc.splitTextToSize(notes, W - M * 2 - totalsW - 18).slice(0, 8), M, blockY + 32);
+  doc.text(doc.splitTextToSize(notes, W - M * 2 - totalsW - 18).slice(0, 6), M, blockY + 74);
+  const sameState = !!(company?.state && result.party?.state && String(company.state).toLowerCase() === String(result.party.state).toLowerCase());
+  const gstRows: Array<[string, string]> = sameState
+    ? [["CGST", pdfMoney(result.totals.gst / 2)], ["SGST", pdfMoney(result.totals.gst / 2)]]
+    : [["IGST", pdfMoney(result.totals.gst)]];
   drawTotalsBlock(doc, W - M - totalsW, blockY, totalsW, [
     ["Subtotal", pdfMoney(result.totals.subtotal)],
-    ["GST", pdfMoney(result.totals.gst)],
+    ...gstRows,
     ...(result.outstanding ? [["Paid", pdfMoney(result.outstanding.paid)] as [string, string]] : []),
-  ], result.outstanding?.balance && result.outstanding.balance > 0 ? "Balance" : "Total", result.outstanding?.balance && result.outstanding.balance > 0 ? pdfMoney(result.outstanding.balance) : pdfMoney(result.totals.total));
+  ], result.outstanding?.balance && result.outstanding.balance > 0 ? "Balance Due" : "Grand Total", result.outstanding?.balance && result.outstanding.balance > 0 ? pdfMoney(result.outstanding.balance) : pdfMoney(result.totals.total));
 
-  blockY = ensurePdfSpace(doc, blockY + 122, 46, M, 66);
+  blockY = ensurePdfSpace(doc, blockY + 148, 46, M, 66);
   doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
   doc.line(M, blockY + 18, M + 172, blockY + 18);
   doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...swPdf.muted);
