@@ -112,7 +112,6 @@ function MorphChart({
 }) {
   const max = Math.max(1, ...values.map((v) => Math.abs(v)));
   const [hover, setHover] = useState<number | null>(null);
-  const wrapRef = useState<HTMLDivElement | null>(null);
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
     const el = e.currentTarget;
     const rect = el.getBoundingClientRect();
