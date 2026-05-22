@@ -89,18 +89,16 @@ function OnboardingPage() {
         address: get(r, "Address") ?? null,
         opening_balance: num(get(r, "Opening Balance")),
       })).filter(r => r.name);
-      const tasks: Promise<any>[] = [];
-      if (prodRows.length) tasks.push(supabase.from("products").insert(prodRows as any));
-      if (cRows.length)    tasks.push(supabase.from("contacts").insert(cRows as any));
+      if (prodRows.length) { const { error } = await supabase.from("products").insert(prodRows as any); if (error) throw error; }
+      if (cRows.length)    { const { error } = await supabase.from("contacts").insert(cRows as any);  if (error) throw error; }
       const company = pick("Company");
       if (company.length) {
         const map: Record<string, any> = {};
         for (const r of company) map[String(r.Field).toLowerCase()] = r.Value;
         const upd: any = {};
         for (const k of ["company_name","gstin","state","phone","email","address","business_type","owner_name","pan","bank_name","bank_account_no","bank_ifsc"]) if (map[k]) upd[k] = map[k];
-        if (Object.keys(upd).length) tasks.push(supabase.from("settings").update(upd as never).eq("user_id" as never, user.id));
+        if (Object.keys(upd).length) { await supabase.from("settings").update(upd as never).eq("user_id" as never, user.id); }
       }
-      await Promise.all(tasks);
       toast.success(`Imported · ${prodRows.length} products · ${cRows.length} contacts`);
       // refresh form state from db
       const { data: st } = await supabase.from("settings").select("*").maybeSingle();
