@@ -308,6 +308,19 @@ function ProductsPage() {
         </Button>
       </div>
 
+      <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
+        <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-lg overflow-y-auto rounded-2xl p-0 sm:w-full">
+          {preview && (
+            <ProductPreview
+              row={preview}
+              stock={stock[preview.id]}
+              onEdit={() => startEdit(preview)}
+              onDelete={() => del(preview.id)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0">
           <DialogHeader className="px-6 pt-6 pb-3 border-b">
