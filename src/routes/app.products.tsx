@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search, Rows3, X as XIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, Calculator, Boxes, ClipboardList, Package, AlertTriangle, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
@@ -48,11 +48,6 @@ function ProductsPage() {
   const [open, setOpen] = useState(false);
   const [edit, setEdit] = useState<Row | null>(null);
   const [form, setForm] = useState<Omit<Row, "id">>(empty);
-  const [bulkOpen, setBulkOpen] = useState(false);
-  type BulkRow = { name: string; unit: string; hsn: string; purchase_rate: number; sale_rate: number; opening_stock: number };
-  const emptyBulk = (): BulkRow => ({ name: "", unit: "sqft", hsn: "", purchase_rate: 0, sale_rate: 0, opening_stock: 0 });
-  const [bulk, setBulk] = useState<BulkRow[]>(() => Array.from({ length: 5 }, emptyBulk));
-  const [bulkKind, setBulkKind] = useState<"stocked" | "order_basis">("stocked");
   // dimension calculator
   const [dim, setDim] = useState<{ l: number; b: number; pieces: number; unit: "in" | "cm" | "mm" | "ft" | "m" }>({ l: 0, b: 0, pieces: 1, unit: "in" });
 
@@ -190,9 +185,6 @@ function ProductsPage() {
         actions={
           <>
             <ExcelBar onExport={onExport} onImport={onImport} />
-            <Button size="sm" variant="outline" onClick={() => { setBulk(Array.from({ length: 5 }, emptyBulk)); setBulkKind(tab === "order" ? "order_basis" : "stocked"); setBulkOpen(true); }}>
-              <Rows3 className="h-4 w-4" /> <span className="hidden sm:inline">Bulk add</span>
-            </Button>
             <Button size="sm" onClick={() => startNew(tab === "order" ? "order_basis" : "stocked")}>
               <Plus className="h-4 w-4" /> New product
             </Button>
@@ -398,64 +390,6 @@ function ProductsPage() {
 
           <DialogFooter className="mt-2">
             <Button onClick={save} className="w-full sm:w-auto">Save product</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Bulk add dialog */}
-      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
-        <DialogContent className="max-w-3xl max-h-[92vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2"><Rows3 className="h-4 w-4" /> Bulk add products</DialogTitle>
-          </DialogHeader>
-          <div className="grid grid-cols-2 gap-2 rounded-md bg-muted/40 p-1 mb-2">
-            <button type="button" className={`text-xs px-2 py-1.5 rounded ${bulkKind === "stocked" ? "bg-background shadow font-medium" : "text-muted-foreground"}`} onClick={() => setBulkKind("stocked")}>Inventory</button>
-            <button type="button" className={`text-xs px-2 py-1.5 rounded ${bulkKind === "order_basis" ? "bg-background shadow font-medium" : "text-muted-foreground"}`} onClick={() => setBulkKind("order_basis")}>On-order</button>
-          </div>
-          <div className="rounded-lg border bg-muted/10">
-            <div className="hidden sm:grid grid-cols-[1.4fr_70px_80px_90px_90px_90px_32px] gap-2 px-3 py-2 text-[10px] uppercase tracking-wider text-muted-foreground border-b">
-              <div>Name</div><div>Unit</div><div>HSN</div><div className="text-right">Buy ₹</div><div className="text-right">Sell ₹</div><div className="text-right">Opening</div><div></div>
-            </div>
-            <div className="max-h-[55vh] overflow-y-auto divide-y">
-              {bulk.map((r, i) => (
-                <div key={i} className="grid grid-cols-2 sm:grid-cols-[1.4fr_70px_80px_90px_90px_90px_32px] gap-2 px-3 py-1.5 items-center">
-                  <Input className="h-8 text-sm col-span-2 sm:col-span-1" placeholder="Product name" value={r.name} onChange={e => { const c = [...bulk]; c[i] = { ...c[i], name: e.target.value }; setBulk(c); }} />
-                  <Input className="h-8 text-sm" placeholder="Unit" value={r.unit} onChange={e => { const c = [...bulk]; c[i] = { ...c[i], unit: e.target.value }; setBulk(c); }} />
-                  <Input className="h-8 text-sm" placeholder="HSN" value={r.hsn} onChange={e => { const c = [...bulk]; c[i] = { ...c[i], hsn: e.target.value }; setBulk(c); }} />
-                  <Input className="h-8 text-sm text-right tabular-nums" type="number" value={r.purchase_rate} onChange={e => { const c = [...bulk]; c[i] = { ...c[i], purchase_rate: +e.target.value }; setBulk(c); }} />
-                  <Input className="h-8 text-sm text-right tabular-nums" type="number" value={r.sale_rate} onChange={e => { const c = [...bulk]; c[i] = { ...c[i], sale_rate: +e.target.value }; setBulk(c); }} />
-                  <Input className="h-8 text-sm text-right tabular-nums" type="number" value={r.opening_stock} disabled={bulkKind === "order_basis"} onChange={e => { const c = [...bulk]; c[i] = { ...c[i], opening_stock: +e.target.value }; setBulk(c); }} />
-                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setBulk(bulk.filter((_, j) => j !== i))}><XIcon className="h-3.5 w-3.5" /></Button>
-                </div>
-              ))}
-            </div>
-            <div className="border-t px-3 py-2 bg-card flex items-center justify-between">
-              <Button size="sm" variant="outline" onClick={() => setBulk([...bulk, emptyBulk()])}><Plus className="h-3.5 w-3.5" /> Add row</Button>
-              <div className="text-xs text-muted-foreground">{bulk.filter(r => r.name.trim()).length} ready to save</div>
-            </div>
-          </div>
-          <DialogFooter className="mt-2">
-            <Button variant="outline" onClick={() => setBulkOpen(false)}>Cancel</Button>
-            <Button onClick={async () => {
-              const { data: { user } } = await supabase.auth.getUser();
-              if (!user) return;
-              const payload = bulk.filter(r => r.name.trim()).map(r => ({
-                user_id: user.id,
-                kind: bulkKind,
-                name: r.name.trim(),
-                unit: r.unit || "pc",
-                hsn: r.hsn || null,
-                purchase_rate: Number(r.purchase_rate || 0),
-                sale_rate: Number(r.sale_rate || 0),
-                opening_stock: bulkKind === "order_basis" ? 0 : Number(r.opening_stock || 0),
-                reorder_level: 0,
-              }));
-              if (!payload.length) { toast.error("Enter at least one product name"); return; }
-              const { error } = await supabase.from("products").insert(payload as any);
-              if (error) { toast.error(error.message); return; }
-              toast.success(`Added ${payload.length} products`);
-              setBulkOpen(false); load();
-            }}>Save {bulk.filter(r => r.name.trim()).length} products</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

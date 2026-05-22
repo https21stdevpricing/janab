@@ -1,8 +1,6 @@
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
-// Import = file going INTO the app  → FileInput
-// Export = file leaving the app     → FileOutput
-import { FileInput, FileOutput } from "lucide-react";
+import { Download, Upload } from "lucide-react";
 
 export function ExcelBar({
   onExport,
@@ -32,12 +30,12 @@ export function ExcelBar({
             }}
           />
           <Button size="sm" variant="outline" onClick={() => inp.current?.click()}>
-            <FileInput className="h-4 w-4" /> <span className="hidden sm:inline">{importLabel}</span>
+            <Upload className="h-4 w-4" /> <span className="hidden sm:inline">{importLabel}</span>
           </Button>
         </>
       )}
       <Button size="sm" variant="outline" onClick={onExport}>
-        <FileOutput className="h-4 w-4" /> <span className="hidden sm:inline">{exportLabel}</span>
+        <Download className="h-4 w-4" /> <span className="hidden sm:inline">{exportLabel}</span>
       </Button>
     </div>
   );

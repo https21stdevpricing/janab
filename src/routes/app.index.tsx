@@ -481,7 +481,7 @@ function Dashboard() {
 
       {/* ─────────── Section 2 · TRENDS — graphical view with filters ─────────── */}
       <section className="rounded-3xl border border-border/70 bg-card overflow-hidden">
-        <div className="p-4 sm:p-7 space-y-4 sm:space-y-5">
+        <div className="p-5 sm:p-7 space-y-5">
           {/* Top row: title + tap-to-lock pill */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div>
@@ -546,7 +546,7 @@ function Dashboard() {
                 {metricDef.hint}
               </div>
               <div className="mt-1 flex items-baseline gap-3 flex-wrap">
-                <div className="text-[32px] sm:text-[56px] font-semibold tabular-nums leading-none tracking-tight">
+                <div className="text-[40px] sm:text-[56px] font-semibold tabular-nums leading-none tracking-tight">
                   {s ? inr(current.value) : "—"}
                 </div>
                 {s && Math.abs(current.delta) > 0.5 && (

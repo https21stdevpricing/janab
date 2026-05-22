@@ -301,15 +301,16 @@ function ReportsPage() {
       <PageHeader title="Financial Reports" description="Auto-built from your ledger. Every figure is traceable to a journal entry." />
 
       {/* Trust strip — integrity at a glance, no jargon */}
-      <div className="mb-4 rounded-xl border border-border/60 bg-card p-3 sm:p-4 space-y-2 text-xs">
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-          <IntegrityBadge ok={tbBalanced} okLabel="Books balanced" badLabel="Books not balanced" />
-          <IntegrityBadge ok={balanceCheck} okLabel="Sheet ties out" badLabel="Sheet drift" />
+      <div className="mb-4 rounded-xl border border-border/70 bg-card p-3 sm:p-4 space-y-2 text-xs">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+          <IntegrityBadge ok={tbBalanced} okLabel="Books are balanced" badLabel="Books not balanced" />
+          <IntegrityBadge ok={balanceCheck} okLabel="Balance sheet ties out" badLabel="Balance sheet drift" />
         </div>
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-          <span>Method: <span className="font-medium text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Avg"}</span></span>
-          <span className="hidden sm:inline opacity-60">·</span>
-          <span className="hidden sm:inline">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-muted-foreground">
+          <span>Method: <span className="font-medium text-foreground">{cogsMethod === "fifo" ? "FIFO" : "Weighted Average"}</span></span>
+          <span className="hidden sm:inline">·</span>
+          <span>Change in Inventory tab</span>
+          <span className="sm:ml-auto">Standards: AS 2 · AS 9 · AS 10 · GST 2017</span>
         </div>
       </div>
 
@@ -329,8 +330,8 @@ function ReportsPage() {
         <TabsContent value="outlook" className="space-y-4">
           {/* Headline card — single source of truth */}
           <Card>
-            <CardContent className="p-4 sm:p-5">
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+            <CardContent className="p-5">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
                 <Headline label="Revenue" value={inr(revenue)} sub="Total billed to date" />
                 <Headline label="Net Profit" value={inr(netProfit)} sub={`Margin ${fmt(netMarginPct, 1)}%`} tone={netProfit >= 0 ? "good" : "bad"} />
                 <Headline label="Cash + Bank" value={inr(liquid)} sub={isFinite(runwayMonths) ? `${fmt(runwayMonths, 1)} months runway` : "No recent OPEX"} tone={runwayMonths >= 3 ? "good" : "bad"} />
@@ -340,7 +341,7 @@ function ReportsPage() {
           </Card>
 
           {/* Health meters — plain language under each */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <MeterCard label="Gross Margin" value={`${fmt(grossMarginPct, 1)}%`} status={statusFor(grossMarginPct, 20, 10)}
               meaning={grossMarginPct >= 20 ? "Pricing safely above stock cost." : grossMarginPct >= 10 ? "Margins thin — review pricing." : "Selling near or below cost."} />
             <MeterCard label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} status={statusFor(currentRatio, 1.5, 1)}
@@ -447,7 +448,7 @@ function ReportsPage() {
         </TabsContent>
 
         <TabsContent value="wc" className="space-y-4">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Kpi label="Working Capital" value={inr(workingCapital)} tone={workingCapital >= 0 ? "good" : "bad"} hint="Current Assets − Current Liabilities." />
             <Kpi label="Current Ratio" value={isFinite(currentRatio) ? fmt(currentRatio, 2) : "∞"} tone={currentRatio >= 1.5 ? "good" : currentRatio >= 1 ? "warn" : "bad"} hint="CA ÷ CL." />
             <Kpi label="Quick (Acid Test)" value={isFinite(quickRatio) ? fmt(quickRatio, 2) : "∞"} tone={quickRatio >= 1 ? "good" : quickRatio >= 0.7 ? "warn" : "bad"} hint="(Cash+Bank+AR) ÷ CL." />
@@ -697,11 +698,11 @@ function Kpi({ label, value, hint, tone }: { label: string; value: string; hint:
   return (
     <Card>
       <CardContent className="p-3">
-        <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground flex items-center gap-1 truncate">
+        <div className="text-[11px] uppercase tracking-wide text-muted-foreground flex items-center gap-1">
           {label}
           <HintTip text={hint} small />
         </div>
-        <div className={`text-base sm:text-xl font-semibold tabular-nums mt-1 truncate ${toneCls}`}>{value}</div>
+        <div className={`text-xl font-semibold tabular-nums mt-1 ${toneCls}`}>{value}</div>
       </CardContent>
     </Card>
   );
@@ -710,10 +711,10 @@ function Kpi({ label, value, hint, tone }: { label: string; value: string; hint:
 function Headline({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "warn" | "bad" }) {
   const toneCls = tone === "good" ? "text-primary" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : tone === "bad" ? "text-destructive" : "";
   return (
-    <div className="min-w-0">
-      <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground truncate">{label}</div>
-      <div className={`text-lg sm:text-2xl font-semibold tabular-nums mt-1 truncate ${toneCls}`}>{value}</div>
-      {sub && <div className="text-[11px] text-muted-foreground mt-0.5 truncate">{sub}</div>}
+    <div>
+      <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`text-2xl font-semibold tabular-nums mt-1 ${toneCls}`}>{value}</div>
+      {sub && <div className="text-xs text-muted-foreground mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -724,9 +725,9 @@ function MeterCard({ label, value, status, meaning }: { label: string; value: st
   return (
     <Card className={`border-l-4 ${ring}`}>
       <CardContent className="p-3">
-        <div className="text-[10px] uppercase tracking-[0.08em] text-muted-foreground truncate">{label}</div>
-        <div className={`text-base sm:text-xl font-semibold tabular-nums mt-1 truncate ${valueTone}`}>{value}</div>
-        <div className="text-[11px] text-muted-foreground mt-1 leading-snug">{meaning}</div>
+        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</div>
+        <div className={`text-xl font-semibold tabular-nums mt-1 ${valueTone}`}>{value}</div>
+        <div className="text-xs text-muted-foreground mt-1 leading-snug">{meaning}</div>
       </CardContent>
     </Card>
   );

@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,8 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { PageHeader } from "@/components/page-header";
 import { inr } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2, ClipboardList, UploadCloud } from "lucide-react";
-import * as XLSX from "xlsx";
+import { Sparkles, ArrowRight, ArrowLeft, CheckCircle2, Landmark, Boxes, Users, FileText, Building2, Plus, X, Trash2 } from "lucide-react";
 
 export const Route = createFileRoute("/app/onboarding")({
   component: OnboardingPage,
@@ -49,77 +48,6 @@ function OnboardingPage() {
   // Step 4 — inline contact rows
   type ContactRow = { id?: string; name: string; type: "buyer" | "supplier"; opening_balance: number; phone?: string; _dirty?: boolean };
   const [contacts, setContacts] = useState<ContactRow[]>([]);
-
-  // Step 1 — optional backup-file import (multi-sheet .xlsx from Settings → Backup)
-  const backupInputRef = useRef<HTMLInputElement>(null);
-  const [importing, setImporting] = useState(false);
-  const importBackup = async (file: File) => {
-    setImporting(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf, { type: "array" });
-      const pick = (name: string) => {
-        const k = wb.SheetNames.find(n => n.toLowerCase() === name.toLowerCase());
-        return k ? (XLSX.utils.sheet_to_json(wb.Sheets[k], { defval: null }) as any[]) : [];
-      };
-      const num = (v: any) => { const n = Number(String(v ?? "").replace(/[,₹\s]/g, "")); return isFinite(n) ? n : 0; };
-      const get = (r: any, ...keys: string[]) => { for (const k of keys) { const f = Object.keys(r).find(x => x.toLowerCase().trim() === k.toLowerCase().trim()); if (f && r[f] != null && r[f] !== "") return r[f]; } return null; };
-      const prodRows = pick("Products").map(r => ({
-        user_id: user.id,
-        kind: String(get(r, "Kind", "Type") ?? "").toLowerCase().startsWith("order") ? "order_basis" : "stocked",
-        code: get(r, "Code", "SKU") ?? "",
-        name: get(r, "Name", "Product") ?? "",
-        unit: get(r, "Unit", "UOM") ?? "pc",
-        hsn: get(r, "HSN") ?? null,
-        purchase_rate: num(get(r, "Purchase Rate", "Cost")),
-        sale_rate: num(get(r, "Sale Rate", "Price")),
-        opening_stock: num(get(r, "Opening Stock", "Stock")),
-        reorder_level: num(get(r, "Reorder Level")),
-      })).filter(r => r.name);
-      const cRows = pick("Contacts").map(r => ({
-        user_id: user.id,
-        name: get(r, "Name") ?? "",
-        type: (String(get(r, "Type") ?? "buyer").toLowerCase().startsWith("sup") ? "supplier" : "buyer"),
-        phone: get(r, "Phone") ?? null,
-        gstin: get(r, "GSTIN") ?? null,
-        state: get(r, "State") ?? null,
-        address: get(r, "Address") ?? null,
-        opening_balance: num(get(r, "Opening Balance")),
-      })).filter(r => r.name);
-      if (prodRows.length) { const { error } = await supabase.from("products").insert(prodRows as any); if (error) throw error; }
-      if (cRows.length)    { const { error } = await supabase.from("contacts").insert(cRows as any);  if (error) throw error; }
-      const company = pick("Company");
-      if (company.length) {
-        const map: Record<string, any> = {};
-        for (const r of company) map[String(r.Field).toLowerCase()] = r.Value;
-        const upd: any = {};
-        for (const k of ["company_name","gstin","state","phone","email","address","business_type","owner_name","pan","bank_name","bank_account_no","bank_ifsc"]) if (map[k]) upd[k] = map[k];
-        if (Object.keys(upd).length) { await supabase.from("settings").update(upd as never).eq("user_id" as never, user.id); }
-      }
-      toast.success(`Imported · ${prodRows.length} products · ${cRows.length} contacts`);
-      // refresh form state from db
-      const { data: st } = await supabase.from("settings").select("*").maybeSingle();
-      if (st) {
-        setBiz(b => ({ ...b,
-          company_name: st.company_name ?? b.company_name,
-          business_type: (st as any).business_type ?? b.business_type,
-          owner_name: (st as any).owner_name ?? b.owner_name,
-          pan: (st as any).pan ?? b.pan, gstin: st.gstin ?? b.gstin,
-          state: st.state ?? b.state, phone: st.phone ?? b.phone,
-          email: st.email ?? b.email, address: st.address ?? b.address,
-        }));
-        setBank(bk => ({
-          bank_name: (st as any).bank_name ?? bk.bank_name,
-          bank_account_no: (st as any).bank_account_no ?? bk.bank_account_no,
-          bank_ifsc: (st as any).bank_ifsc ?? bk.bank_ifsc,
-        }));
-      }
-      await refreshInline();
-    } catch (e: any) { toast.error(e?.message ?? "Import failed"); }
-    finally { setImporting(false); }
-  };
 
   useEffect(() => {
     (async () => {
@@ -298,7 +226,7 @@ function OnboardingPage() {
   return (
     <div className="max-w-2xl mx-auto py-2">
       <PageHeader
-        title={<span className="inline-flex items-center gap-2"><ClipboardList className="h-4 w-4 text-primary" /> First-time setup</span>}
+        title={<span className="inline-flex items-center gap-2"><Sparkles className="h-4 w-4 text-primary" /> First-time setup</span>}
         description="Five quick steps so your books start clean. Nothing posts until the final confirm."
       />
 
@@ -313,17 +241,6 @@ function OnboardingPage() {
         {step === 1 && (
           <>
             <Header n={1} title="Your business" hint="Legal identity for invoices, GST returns and reports." icon={Building2} />
-            <div className="rounded-lg border border-dashed bg-muted/20 px-3 py-3 flex items-center gap-3">
-              <UploadCloud className="h-5 w-5 text-muted-foreground shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium">Have a previous backup?</div>
-                <div className="text-[11px] text-muted-foreground">Restore company profile, products and contacts from a backup .xlsx — skip manual data entry.</div>
-              </div>
-              <input ref={backupInputRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) importBackup(f); if (backupInputRef.current) backupInputRef.current.value = ""; }} />
-              <Button size="sm" variant="outline" disabled={importing} onClick={() => backupInputRef.current?.click()}>
-                {importing ? "Importing…" : "Import backup"}
-              </Button>
-            </div>
             <div className="grid sm:grid-cols-2 gap-3">
               <Field label="Company name *"><Input value={biz.company_name} onChange={e => setBiz({ ...biz, company_name: e.target.value })} placeholder="StoneWorld Marble" /></Field>
               <Field label="Business type *">

@@ -126,24 +126,7 @@ function AppLayout() {
         <header className="md:hidden sticky top-0 z-30 flex items-center gap-2 border-b border-border/60 bg-background/85 backdrop-blur-xl px-4 py-3">
           <div className="text-[15px] font-semibold tracking-tight">StoneWorld</div>
           <div className="ml-auto flex items-center gap-1">
-            <button
-              aria-label="Search"
-              onClick={() => {
-                // Try to focus an on-page search input first (in-page search).
-                const el = document.querySelector<HTMLInputElement>(
-                  '[data-page-search="1"], input[placeholder^="Search" i], input[placeholder*="search" i]'
-                );
-                if (el) {
-                  el.scrollIntoView({ block: "center", behavior: "smooth" });
-                  setTimeout(() => el.focus(), 120);
-                  return;
-                }
-                navigate({ to: "/app/lookup" });
-              }}
-              className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted active:scale-95 transition-transform"
-            >
-              <Search className="h-[18px] w-[18px]" />
-            </button>
+            <Link to="/app/lookup" className="h-9 w-9 grid place-items-center rounded-full hover:bg-muted"><Search className="h-[18px] w-[18px]" /></Link>
             <NotificationsBell />
           </div>
         </header>
