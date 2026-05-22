@@ -80,42 +80,47 @@ function ReportsPage() {
 
     const [ledger, prods, salesLines, purchaseLines, purchaseLots, assets, pay, allocs, settings] =
       await Promise.all([
-        supabase.from("ledger_view").select("*").eq("user_id", auth.user.id),
-        supabase
-          .from("products")
-          .select("id,name,kind,opening_stock,purchase_rate,sale_rate,hsn")
-          .order("name"),
-        supabase.from("sale_items").select("product_id,qty"),
-        supabase.from("purchase_items").select("product_id,qty,rate"),
-        (supabase as any)
-          .from("purchase_items")
-          .select("product_id,qty,rate,purchases!inner(date)"),
-        (supabase as any).from("fixed_assets").select("*"),
-        supabase.from("payments").select("id,amount,direction"),
-        (supabase as any).from("payment_allocations").select("payment_id,amount"),
+        fetchAllPages((from, to) =>
+          paged(supabase.from("ledger_view").select("*").eq("user_id", auth.user.id).range(from, to)),
+        ),
+        fetchAllPages((from, to) =>
+          paged(
+            supabase
+              .from("products")
+              .select("id,name,kind,opening_stock,purchase_rate,sale_rate,hsn")
+              .order("name")
+              .range(from, to),
+          ),
+        ),
+        fetchAllPages((from, to) => paged(supabase.from("sale_items").select("product_id,qty").range(from, to))),
+        fetchAllPages((from, to) =>
+          paged(supabase.from("purchase_items").select("product_id,qty,rate").range(from, to)),
+        ),
+        fetchAllPages((from, to) =>
+          paged(
+            (supabase as any)
+              .from("purchase_items")
+              .select("product_id,qty,rate,purchases!inner(date)")
+              .range(from, to),
+          ),
+        ),
+        fetchAllPages((from, to) => paged((supabase as any).from("fixed_assets").select("*").range(from, to))),
+        fetchAllPages((from, to) => paged(supabase.from("payments").select("id,amount,direction").range(from, to))),
+        fetchAllPages((from, to) =>
+          paged((supabase as any).from("payment_allocations").select("payment_id,amount").range(from, to)),
+        ),
         (supabase as any).from("settings").select("cogs_method").maybeSingle(),
       ]);
 
-    const firstError = [
-      ledger,
-      prods,
-      salesLines,
-      purchaseLines,
-      purchaseLots,
-      assets,
-      pay,
-      allocs,
-      settings,
-    ].find((r: any) => r.error)?.error;
-    if (firstError) throw firstError;
-    setRows(ledger.data ?? []);
-    setProducts(prods.data ?? []);
-    setSaleItems(salesLines.data ?? []);
-    setPurchaseItems(purchaseLines.data ?? []);
-    setPurchaseHdr(purchaseLots.data ?? []);
-    setFixedAssets(assets.data ?? []);
-    setPayments(pay.data ?? []);
-    setAllocations(allocs.data ?? []);
+    if (settings.error) throw settings.error;
+    setRows(ledger);
+    setProducts(prods);
+    setSaleItems(salesLines);
+    setPurchaseItems(purchaseLines);
+    setPurchaseHdr(purchaseLots);
+    setFixedAssets(assets);
+    setPayments(pay);
+    setAllocations(allocs);
     if (settings.data?.cogs_method) setCogsMethod(settings.data.cogs_method);
   }, []);
   const { isLive, isRefreshing, lastSyncedAt, lastError, refresh } = useLiveSync({
