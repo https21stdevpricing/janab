@@ -199,7 +199,7 @@ function SettingsPage() {
           {invites.length > 0 && (
             <div className="rounded-md border divide-y">
               {invites.map(it => (
-                <div key={it.id} className="p-2.5 flex items-center gap-2 text-sm">
+                <div key={it.id} className="p-2.5 flex items-center gap-2 text-sm flex-wrap sm:flex-nowrap">
                   <div className="min-w-0 flex-1">
                     <div className="font-medium truncate">{it.email}</div>
                     <div className="text-[11px] text-muted-foreground">{it.role} · invited {new Date(it.invited_at).toLocaleDateString()}</div>
