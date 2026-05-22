@@ -93,11 +93,11 @@ function AuditPage() {
       return;
     }
 
-    const { data, error } = (await supabase
-      .from("audit_log" as never)
+    const { data, error } = await supabase
+      .from("audit_log")
       .select("*")
       .order("at", { ascending: false })
-      .limit(700)) as any;
+      .limit(700);
 
     if (error) {
       console.error("audit load", error);
@@ -227,10 +227,7 @@ function AuditPage() {
   const restore = async (id: string) => {
     if (!confirm("Restore this deleted record? It will be re-inserted exactly as it was.")) return;
     setRestoring((r) => ({ ...r, [id]: true }));
-    const { data, error } = (await supabase.rpc(
-      "restore_audit_entry" as never,
-      { _audit_id: id } as never,
-    )) as any;
+    const { data, error } = await supabase.rpc("restore_audit_entry", { _audit_id: id });
     setRestoring((r) => ({ ...r, [id]: false }));
     if (error) {
       toast.error(error.message);
@@ -533,7 +530,7 @@ function AuditDetailPanel({
       <div className="px-5 sm:px-6 py-4 flex gap-2">
         {selected.ref_no && selected.action !== "delete" && (
           <Button asChild size="sm" variant="outline" className="flex-1 rounded-full">
-            <Link to="/app/lookup" search={{ q: selected.ref_no } as any}>
+            <Link to="/app/lookup" search={{ q: selected.ref_no }}>
               <ExternalLink className="h-3.5 w-3.5" /> Open record
             </Link>
           </Button>
