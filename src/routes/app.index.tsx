@@ -690,7 +690,7 @@ function TodayTile({
   return (
     <Link
       to={to}
-      className="group rounded-2xl border border-border/70 bg-card p-3 sm:p-4 transition-all hover:border-foreground/30 hover:shadow-sm active:scale-[0.99]"
+      className="group surface p-3 sm:p-4 transition-all hover:border-foreground/30 hover:shadow-sm active:scale-[0.99]"
     >
       <div className="flex items-center justify-between mb-2">
         <div className="h-7 w-7 rounded-lg bg-muted grid place-items-center">
@@ -719,7 +719,7 @@ function MiniStat({
   return (
     <Link
       to={to}
-      className="group rounded-2xl border border-border/70 bg-card p-4 flex items-center gap-3 hover:border-foreground/30 transition-all"
+      className="group surface p-4 flex items-center gap-3 hover:border-foreground/30 transition-all"
     >
       <div className="h-9 w-9 rounded-xl bg-muted grid place-items-center shrink-0">
         <Icon className={cn("h-4 w-4", toneClass)} />
