@@ -14,7 +14,7 @@ import { ArrowDownToLine, ArrowUpFromLine, Banknote, Eye, ShieldCheck, Trash2 } 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useDraft } from "@/hooks/use-draft";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ActionStack, SegmentedTabs } from "@/components/ui-tokens";
+import { ActionStack, KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/bank")({ component: BankPage });
 
@@ -155,21 +155,22 @@ function BankPage() {
       <PageHeader title="Deposits" description="Track bank, cash and cheque clearance without mixing pending money into balances." />
 
       <div className="mb-4 grid gap-3 lg:grid-cols-[1fr_280px]">
-        <div className="surface overflow-hidden">
-          <div className="grid grid-cols-2 divide-x divide-border/60">
-            <Link to="/app/ledger" className="px-4 py-4 transition-colors hover:bg-muted/35">
-              <div className="eyebrow">Cash</div>
-              <div className={`mt-1 text-xl font-semibold tabular-nums ${cashBal < 0 ? "text-destructive" : ""}`}>{inr(cashBal)}</div>
-            </Link>
-            <Link to="/app/ledger" className="px-4 py-4 transition-colors hover:bg-muted/35">
-              <div className="eyebrow">Bank</div>
-              <div className={`mt-1 text-xl font-semibold tabular-nums ${bankBal < 0 ? "text-destructive" : "text-primary"}`}>{inr(bankBal)}</div>
-            </Link>
-          </div>
-          <div className="border-t px-4 py-2 text-xs text-muted-foreground">
-            Pending cheques: <span className="font-medium text-foreground">{inr(totals.pending)}</span>
-          </div>
-        </div>
+        <KpiGrid cols={2}>
+          <KpiTile
+            label="Cash"
+            value={inr(cashBal)}
+            tone={cashBal < 0 ? "bad" : undefined}
+            hint={`Pending cheques ${inr(totals.pending)}`}
+            onClick={() => { window.location.href = "/app/ledger"; }}
+          />
+          <KpiTile
+            label="Bank"
+            value={inr(bankBal)}
+            tone={bankBal < 0 ? "bad" : "good"}
+            hint="View ledger"
+            onClick={() => { window.location.href = "/app/ledger"; }}
+          />
+        </KpiGrid>
         <ActionStack
           title="New entry"
           items={[
