@@ -133,6 +133,7 @@ function BillsPage() {
   const [cleared, setCleared] = useState(true);
   const [openDocs, setOpenDocs] = useState<any[]>([]);
   const [allocs, setAllocs] = useState<Alloc[]>([]);
+  const [kind, setKind] = useState<"against_invoice" | "advance" | "on_account">("against_invoice");
 
   const openPreview = async (docNo: string) => {
     const r = await lookupDoc(docNo);
