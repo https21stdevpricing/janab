@@ -349,6 +349,12 @@ function BillsPage() {
     if (!contactId) { toast.error("Pick a party"); return; }
     if (amount <= 0) { toast.error("Amount must be > 0"); return; }
     if (mode === "Cheque" && !chequeNo.trim()) { toast.error("Cheque number is required"); return; }
+    const lockedAlloc = allocs.find((a) => lockMap.has(`${a.doc_kind}:${a.doc_id}`));
+    if (lockedAlloc) {
+      const lock = lockMap.get(`${lockedAlloc.doc_kind}:${lockedAlloc.doc_id}`)!;
+      toast.error(`Pending cheque ${lock.payment_no} is already linked to ${lockedAlloc.doc_no}. Open it and change cheque status instead.`);
+      return;
+    }
     // Strict duplicate guard — block any identical party + amount + date + direction recorded already.
     // Allows intentional duplicates only on explicit confirmation.
     const { data: dup } = await supabase
@@ -360,6 +366,10 @@ function BillsPage() {
       .eq("amount", amount)
       .limit(1);
     if (dup && dup.length > 0) {
+      if (mode === "Cheque") {
+        toast.error(`Cheque/payment already recorded as ${dup[0].payment_no}. Open that entry and update its status.`);
+        return;
+      }
       const ok = confirm(`A ${direction === "in" ? "receipt" : "payment"} of ${inr(amount)} for this party on ${fmtDate(date)} already exists (${dup[0].payment_no}). Record another one anyway?`);
       if (!ok) return;
     }
