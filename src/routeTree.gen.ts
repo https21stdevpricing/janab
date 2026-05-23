@@ -34,6 +34,7 @@ import { Route as AppGuideRouteImport } from './routes/app.guide'
 import { Route as AppGstRouteImport } from './routes/app.gst'
 import { Route as AppFixedAssetsRouteImport } from './routes/app.fixed-assets'
 import { Route as AppExpensesRouteImport } from './routes/app.expenses'
+import { Route as AppDocumentRouteImport } from './routes/app.document'
 import { Route as AppDeliveriesRouteImport } from './routes/app.deliveries'
 import { Route as AppContactsRouteImport } from './routes/app.contacts'
 import { Route as AppBuyersRouteImport } from './routes/app.buyers'
@@ -169,6 +170,11 @@ const AppExpensesRoute = AppExpensesRouteImport.update({
   path: '/expenses',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDocumentRoute = AppDocumentRouteImport.update({
+  id: '/document',
+  path: '/document',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDeliveriesRoute = AppDeliveriesRouteImport.update({
   id: '/deliveries',
   path: '/deliveries',
@@ -227,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/app/buyers': typeof AppBuyersRoute
   '/app/contacts': typeof AppContactsRoute
   '/app/deliveries': typeof AppDeliveriesRoute
+  '/app/document': typeof AppDocumentRoute
   '/app/expenses': typeof AppExpensesRoute
   '/app/fixed-assets': typeof AppFixedAssetsRoute
   '/app/gst': typeof AppGstRoute
@@ -262,6 +269,7 @@ export interface FileRoutesByTo {
   '/app/buyers': typeof AppBuyersRoute
   '/app/contacts': typeof AppContactsRoute
   '/app/deliveries': typeof AppDeliveriesRoute
+  '/app/document': typeof AppDocumentRoute
   '/app/expenses': typeof AppExpensesRoute
   '/app/fixed-assets': typeof AppFixedAssetsRoute
   '/app/gst': typeof AppGstRoute
@@ -299,6 +307,7 @@ export interface FileRoutesById {
   '/app/buyers': typeof AppBuyersRoute
   '/app/contacts': typeof AppContactsRoute
   '/app/deliveries': typeof AppDeliveriesRoute
+  '/app/document': typeof AppDocumentRoute
   '/app/expenses': typeof AppExpensesRoute
   '/app/fixed-assets': typeof AppFixedAssetsRoute
   '/app/gst': typeof AppGstRoute
@@ -337,6 +346,7 @@ export interface FileRouteTypes {
     | '/app/buyers'
     | '/app/contacts'
     | '/app/deliveries'
+    | '/app/document'
     | '/app/expenses'
     | '/app/fixed-assets'
     | '/app/gst'
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/app/buyers'
     | '/app/contacts'
     | '/app/deliveries'
+    | '/app/document'
     | '/app/expenses'
     | '/app/fixed-assets'
     | '/app/gst'
@@ -408,6 +419,7 @@ export interface FileRouteTypes {
     | '/app/buyers'
     | '/app/contacts'
     | '/app/deliveries'
+    | '/app/document'
     | '/app/expenses'
     | '/app/fixed-assets'
     | '/app/gst'
@@ -617,6 +629,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppExpensesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/document': {
+      id: '/app/document'
+      path: '/document'
+      fullPath: '/app/document'
+      preLoaderRoute: typeof AppDocumentRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/deliveries': {
       id: '/app/deliveries'
       path: '/deliveries'
@@ -705,6 +724,7 @@ interface AppRouteChildren {
   AppBuyersRoute: typeof AppBuyersRoute
   AppContactsRoute: typeof AppContactsRoute
   AppDeliveriesRoute: typeof AppDeliveriesRoute
+  AppDocumentRoute: typeof AppDocumentRoute
   AppExpensesRoute: typeof AppExpensesRoute
   AppFixedAssetsRoute: typeof AppFixedAssetsRoute
   AppGstRoute: typeof AppGstRoute
@@ -736,6 +756,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppBuyersRoute: AppBuyersRoute,
   AppContactsRoute: AppContactsRoute,
   AppDeliveriesRoute: AppDeliveriesRoute,
+  AppDocumentRoute: AppDocumentRoute,
   AppExpensesRoute: AppExpensesRoute,
   AppFixedAssetsRoute: AppFixedAssetsRoute,
   AppGstRoute: AppGstRoute,
