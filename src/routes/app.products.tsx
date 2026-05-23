@@ -542,12 +542,21 @@ function ProductPreview({ row, stock, onEdit, onDelete }: { row: Row; stock?: St
         </div>
       </div>
 
-      <DialogFooter className="border-t bg-muted/15 px-5 py-4">
-        <Button variant="outline" className="mr-auto text-destructive hover:text-destructive" onClick={onDelete}>
+      <div className="flex items-center gap-2 border-t bg-muted/15 px-5 py-4">
+        <Button
+          variant="outline"
+          className="h-10 flex-1 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={onDelete}
+        >
           <Trash2 className="h-4 w-4" /> Delete
         </Button>
-        <Button onClick={onEdit}><Pencil className="h-4 w-4" /> Edit</Button>
-      </DialogFooter>
+        <Button
+          className="h-10 flex-[2] rounded-xl"
+          onClick={onEdit}
+        >
+          <Pencil className="h-4 w-4" /> Edit
+        </Button>
+      </div>
     </div>
   );
 }
