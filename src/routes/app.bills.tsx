@@ -475,30 +475,56 @@ function BillsPage() {
         }
       />
 
-      <KpiGrid cols={2} className="mb-3 [&>*]:min-h-[96px] [&>*]:overflow-hidden">
-        <KpiTile
-          label="Collect"
-          value={inr(kpis.recv)}
-          tone="good"
-          hint={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "All on time"}
-          active={tab === "receivable"}
-          onClick={() => setTab("receivable")}
-        />
-        <KpiTile
-          label="Pay"
-          value={inr(kpis.pay)}
-          tone="bad"
-          hint={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "All on time"}
-          active={tab === "payable"}
-          onClick={() => setTab("payable")}
-        />
-      </KpiGrid>
-      <div className="mb-3 -mt-1 px-1 text-xs text-muted-foreground">
-        Net position{" "}
-        <span className={cn("font-medium tabular-nums", kpis.net >= 0 ? "text-primary" : "text-destructive")}>
-          {inr(kpis.net)}
-        </span>{" "}
-        · {kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"}
+      {/* Minimal money summary — two clean tiles + a net-position footnote */}
+      <div className="mb-3 overflow-hidden rounded-2xl border border-border/60 bg-card">
+        <div className="grid grid-cols-2 divide-x divide-border/60">
+          <button
+            type="button"
+            onClick={() => setTab("receivable")}
+            className={cn(
+              "px-4 py-3 text-left transition-colors hover:bg-muted/40",
+              tab === "receivable" && "bg-primary/5",
+            )}
+          >
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <ArrowDownLeft className="h-3 w-3 text-primary" /> Collect
+            </div>
+            <div className="mt-1 truncate text-[17px] font-semibold tabular-nums [overflow-wrap:anywhere]">
+              {inr(kpis.recv)}
+            </div>
+            <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+              {kpis.recvOverdue > 0 ? (
+                <span className="text-destructive">{inr(kpis.recvOverdue)} overdue</span>
+              ) : "All on time"}
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("payable")}
+            className={cn(
+              "px-4 py-3 text-left transition-colors hover:bg-muted/40",
+              tab === "payable" && "bg-destructive/5",
+            )}
+          >
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <ArrowUpRight className="h-3 w-3 text-destructive" /> Pay
+            </div>
+            <div className="mt-1 truncate text-[17px] font-semibold tabular-nums [overflow-wrap:anywhere]">
+              {inr(kpis.pay)}
+            </div>
+            <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+              {kpis.payOverdue > 0 ? (
+                <span className="text-destructive">{inr(kpis.payOverdue)} overdue</span>
+              ) : "All on time"}
+            </div>
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground">
+          <span>Net position</span>
+          <span className={cn("font-medium tabular-nums", kpis.net >= 0 ? "text-primary" : "text-destructive")}>
+            {inr(kpis.net)} <span className="text-muted-foreground font-normal">· {kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"}</span>
+          </span>
+        </div>
       </div>
 
       <div className="mb-3 min-w-0 overflow-hidden rounded-2xl border bg-card p-2 shadow-sm sm:p-3">
