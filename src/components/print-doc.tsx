@@ -31,6 +31,8 @@ const presetLabels: Record<PrintPreset, string> = {
   modern: "Modern",
   bold: "Bold",
   elegant: "Elegant",
+  "apple-minimal": "Apple Minimal",
+  "clean-compact": "Clean Compact",
 };
 
 const codePlacementLabels: Record<PrintCodePlacement, string> = {
