@@ -307,10 +307,15 @@ export function buildReconcileSignals(args: {
         "These SKUs have more sold than purchased + opening — your inventory value is understated.",
       likelyCause:
         "A purchase invoice is missing, opening stock was never entered, or a sale picked the wrong SKU.",
+      evidence: args.negativeStockDetails?.slice(0, 5).map((r) => ({
+        label: r.name,
+        detail: `Opening ${fmtQty(r.opening)} + Purchased ${fmtQty(r.purchased)} - Sold ${fmtQty(r.sold)} = ${fmtQty(r.onHand)} on hand`,
+        amount: `${fmtQty(Math.abs(r.onHand))} short`,
+      })),
       steps: [
-        "Open Stock and filter the table to negative on-hand.",
-        "For each item, decide: missing purchase, or wrong SKU on a sale?",
-        "Add the missing purchase, or edit the sale to point to the correct SKU.",
+        "Open Stock and click the exact SKU shown above.",
+        "Read its movement list from oldest to newest; the first row where running stock goes below zero is the problem point.",
+        "If goods really came in, add the missing purchase before that sale date. If not, edit the sale and choose the correct SKU / quantity.",
       ],
       fix: { label: "Open Stock", to: "/app/stock" },
       icon: Boxes,
@@ -325,9 +330,13 @@ export function buildReconcileSignals(args: {
       symptom:
         "Stocked items with zero opening can cause closing stock to look low if they existed before you started.",
       likelyCause: "Opening balances were skipped when products were created.",
+      evidence: args.productsWithoutOpeningDetails?.slice(0, 5).map((r) => ({
+        label: r.name,
+        detail: `Opening is zero while purchased is ${fmtQty(r.purchased)} and sold is ${fmtQty(r.sold)}.`,
+      })),
       steps: [
-        "Open Products.",
-        "For each affected SKU, enter the quantity that was physically present on day one.",
+        "Open Products and start with the products listed above.",
+        "For each affected SKU, enter the quantity and purchase rate that was physically present on day one.",
         "Save — the inventory tab in Reports will refresh.",
       ],
       fix: { label: "Open Products", to: "/app/products" },
@@ -344,9 +353,14 @@ export function buildReconcileSignals(args: {
         "Money was received or paid but not linked to a specific invoice — buyer/supplier balances will look incorrect.",
       likelyCause:
         "Payment entered in a hurry without selecting which bill it settles.",
+      evidence: args.unallocatedPaymentDetails?.slice(0, 5).map((p) => ({
+        label: `${p.direction === "in" ? "Receipt" : "Payment"}${p.party ? ` · ${p.party}` : ""}`,
+        detail: `Total ${formatINR(p.amount)} · allocated ${formatINR(p.used)} · still not linked to a bill`,
+        amount: formatINR(p.remaining),
+      })),
       steps: [
-        "Open Money.",
-        "Click each highlighted entry and choose the invoice it pays.",
+        "Open Money and search the amount / party shown above.",
+        "Open that entry and allocate the remaining amount to the exact invoice or purchase bill it settles.",
         "Buyer / supplier outstanding refreshes immediately.",
       ],
       fix: { label: "Open Money", to: "/app/bills" },
@@ -361,9 +375,13 @@ export function buildReconcileSignals(args: {
       title: `${args.missingHsnCount} product${args.missingHsnCount === 1 ? "" : "s"} missing HSN`,
       symptom: "GST returns require HSN — your GSTR-1 will reject these lines.",
       likelyCause: "Product created without an HSN code.",
+      evidence: args.missingHsnProducts?.slice(0, 5).map((p) => ({
+        label: p.name,
+        detail: "Product master has no HSN/SAC code, so invoice and GST reports cannot classify it.",
+      })),
       steps: [
-        "Open Products.",
-        "Enter the HSN for each affected item (usually printed on supplier invoices).",
+        "Open Products and search the product names listed above.",
+        "Enter the HSN for each affected item, usually available on supplier invoices or product packaging.",
         "Re-open GST summary to confirm.",
       ],
       fix: { label: "Open Products", to: "/app/products" },
