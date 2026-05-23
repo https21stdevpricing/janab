@@ -6,7 +6,19 @@ import { Plus, Printer, Trash2, FileDown } from "lucide-react";
 import { fmt, inr, todayISO } from "@/lib/format";
 import { amountInWords } from "@/lib/amount-words";
 import { exportStoneWorldDocument } from "@/lib/pdf-theme";
-import { loadPrintDesign } from "@/lib/print-customizer";
+import {
+  applyPrintPreset,
+  loadPrintDesign,
+  savePrintDesign,
+  PRINT_PRESETS,
+  type PrintDesign,
+  type PrintPreset,
+  type PrintLogoPosition,
+  type PrintLineHeight,
+  type PrintPageMargin,
+  type PrintFooterDivider,
+  type PrintCodePlacement,
+} from "@/lib/print-customizer";
 import type { DocLookupResult } from "@/lib/doc-lookup";
 
 export const Route = createFileRoute("/app/document")({ component: DocumentMaker });
@@ -43,6 +55,22 @@ function DocumentMaker() {
   });
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<Line[]>([blankLine()]);
+  const [design, setDesign] = useState<PrintDesign>(() => loadPrintDesign());
+
+  const patchDesign = (patch: Partial<PrintDesign>) => {
+    setDesign((d) => {
+      const next = { ...d, ...patch };
+      savePrintDesign(next);
+      return next;
+    });
+  };
+  const choosePreset = (p: PrintPreset) => {
+    setDesign((d) => {
+      const next = applyPrintPreset(d, p);
+      savePrintDesign(next);
+      return next;
+    });
+  };
 
   const totals = useMemo(() => {
     const subtotal = lines.reduce((a, l) => a + Number(l.qty || 0) * Number(l.rate || 0), 0);
@@ -95,7 +123,6 @@ function DocumentMaker() {
   });
 
   const downloadPdf = () => {
-    const design = loadPrintDesign();
     exportStoneWorldDocument(buildResult(), company as any, design);
   };
 
