@@ -800,8 +800,13 @@ export function exportStoneWorldDocument(
     position: design?.footerPosition ?? "above-signature",
     signatureY: blockY,
     everyPage: footerEvery,
+    dividerStyle: design?.footerDividerStyle ?? "solid",
+    accent,
   });
-  drawStoneWorldFooter(doc, company, M, { showPageNumber: design?.showPageNumber !== false });
+  drawStoneWorldFooter(doc, company, M, {
+    showPageNumber: design?.showPageNumber !== false,
+    hideCompanyName: !!design?.hideFooterCompanyName,
+  });
   doc.save(`${String(no || result.kind).replace(/\s+/g, "_")}.pdf`);
 }
 
