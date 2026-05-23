@@ -508,11 +508,23 @@ function ReportsPage() {
         liabilitiesPlusEquity: totalLiab + equity,
         bookStockValue: inventoryAsset,
         negativeStockSkus,
+        negativeStockDetails: stockProblemDetails.negative,
         unallocatedPaymentsAmt,
         unallocatedPaymentsCount,
+        unallocatedPaymentDetails: reconciliationDetails.unallocatedPaymentDetails,
         netGstPayable,
         missingHsnCount,
+        missingHsnProducts: products
+          .filter((p: any) => !p.hsn || String(p.hsn).trim() === "")
+          .slice(0, 5)
+          .map((p: any) => ({ name: p.name })),
         productsWithoutOpening,
+        productsWithoutOpeningDetails: stockProblemDetails.noOpening,
+        largestLedgerImbalances: tbAll
+          .filter((r) => Math.abs(r.net) > 0.5)
+          .sort((a, b) => Math.abs(b.net) - Math.abs(a.net))
+          .slice(0, 5),
+        ledgerEntryIssues: reconciliationDetails.ledgerEntryIssues,
       }),
     [
       tbTotalD,
@@ -522,11 +534,15 @@ function ReportsPage() {
       equity,
       inventoryAsset,
       negativeStockSkus,
+      stockProblemDetails,
       unallocatedPaymentsAmt,
       unallocatedPaymentsCount,
+      reconciliationDetails,
       netGstPayable,
       missingHsnCount,
       productsWithoutOpening,
+      tbAll,
+      products,
     ],
   );
 
