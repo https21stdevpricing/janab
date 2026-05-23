@@ -231,11 +231,16 @@ export function buildReconcileSignals(args: {
   liabilitiesPlusEquity: number;
   bookStockValue: number;
   negativeStockSkus: number;
+  negativeStockDetails?: Array<{ name: string; opening: number; purchased: number; sold: number; onHand: number }>;
   unallocatedPaymentsAmt: number;
   unallocatedPaymentsCount: number;
+  unallocatedPaymentDetails?: Array<{ direction: string; amount: number; used: number; remaining: number; id?: string | null; party?: string | null }>;
   netGstPayable: number;
   missingHsnCount: number;
+  missingHsnProducts?: Array<{ name: string }>;
   productsWithoutOpening: number;
+  productsWithoutOpeningDetails?: Array<{ name: string; sold: number; purchased: number }>;
+  largestLedgerImbalances?: Array<{ account: string; debit: number; credit: number; net: number }>;
 }): ReconcileSignal[] {
   const out: ReconcileSignal[] = [];
   const tbDiff = Math.abs(args.tbDebit - args.tbCredit);
@@ -248,11 +253,18 @@ export function buildReconcileSignals(args: {
         ? "Total debits equal total credits."
         : `Debits and credits differ by ${formatINR(tbDiff)}.`,
     likelyCause:
-      "A journal line was edited or deleted directly, or a transaction was saved with a typo in the amount.",
+      tbDiff < 1
+        ? "No action required. Every debit currently has a matching credit."
+        : "Usually one source document posted only one side, an amount was edited after posting, or a ledger line was deleted.",
+    evidence: args.largestLedgerImbalances?.slice(0, 4).map((r) => ({
+      label: r.account,
+      detail: `Debit ${formatINR(r.debit)} · Credit ${formatINR(r.credit)} · ${r.net >= 0 ? "Debit" : "Credit"} net`,
+      amount: formatINR(Math.abs(r.net)),
+    })),
     steps: [
-      "Open General Ledger and sort by date (newest first).",
-      "Look for entries close to the variance amount.",
-      "If you find a typo, edit the source document (sale / purchase / payment) — do not edit the ledger directly.",
+      "Open General Ledger and filter the accounts shown above first.",
+      "Inside those accounts, compare the document number, date and debit/credit side against the source invoice / payment.",
+      "If one side is missing or the amount differs, edit the source document — do not patch the ledger directly.",
       "Re-open Reports — the trial balance recomputes automatically.",
     ],
     fix: { label: "Open General Ledger", to: "/app/ledger" },
@@ -269,11 +281,18 @@ export function buildReconcileSignals(args: {
         ? "Assets equal Liabilities + Equity."
         : `Assets exceed Liabilities + Equity by ${formatINR(bsDiff)}.`,
     likelyCause:
-      "Most often caused by inventory value drift — sales posted for items that have no opening stock or no purchase yet.",
+      bsDiff < 1
+        ? "No action required. Assets, liabilities and equity currently tie out."
+        : "Most often caused by inventory value drift, missing opening stock, or documents that changed stock without the matching accounting effect.",
+    evidence: [
+      { label: "Assets", detail: "Total of cash, bank, receivables, GST input, inventory and fixed assets.", amount: formatINR(args.assetsTotal) },
+      { label: "Liabilities + Equity", detail: "Payables, GST output, profit and opening capital.", amount: formatINR(args.liabilitiesPlusEquity) },
+      { label: "Book stock value", detail: "Inventory valuation feeding the balance sheet.", amount: formatINR(args.bookStockValue) },
+    ],
     steps: [
-      "Open Products and set the correct opening stock for any item that was already in your godown when you started.",
-      "Open Stock and look for negative on-hand SKUs (highlighted red).",
-      "For each negative SKU, add the missing purchase entry.",
+      "Check the stock items listed in the other reconciliation warnings first — they usually explain this difference.",
+      "Open Products and set opening stock/value for items already in your godown when you started.",
+      "Open Stock and review negative on-hand SKUs; add the missing purchase or correct the wrong sale SKU.",
     ],
     fix: { label: "Open Products", to: "/app/products" },
     icon: Boxes,
