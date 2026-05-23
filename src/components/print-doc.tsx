@@ -275,7 +275,17 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   return (
     <div>
       <div className="grid gap-3 mb-3 print:hidden lg:grid-cols-[1fr_auto] lg:items-start">
-        <div className="surface p-3 space-y-2.5 text-xs">
+        <details className="surface p-3 text-xs group lg:open" open>
+          <summary className="flex cursor-pointer items-center justify-between gap-3 list-none [&::-webkit-details-marker]:hidden">
+            <div className="min-w-0">
+              <div className="eyebrow">Document design</div>
+              <div className="text-[11px] text-muted-foreground">
+                Tap to {`{open|close}`.replace("{open|close}", "show / hide")} the design controls.
+              </div>
+            </div>
+            <span className="rounded-full border bg-background px-2.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground group-open:bg-primary/10 group-open:text-primary">Customize</span>
+          </summary>
+          <div className="mt-3 space-y-2.5">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="eyebrow">Document design</div>
