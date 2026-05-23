@@ -371,6 +371,16 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               />
               <span>Show "Page x of y" in PDF footer</span>
             </label>
+            <label className="flex items-center gap-2 text-[11px] mt-1 sm:mt-5">
+              <input
+                type="checkbox"
+                checked={design.hideFooterCompanyName}
+                onChange={(e) =>
+                  updateDesign({ ...design, hideFooterCompanyName: e.target.checked })
+                }
+              />
+              <span>Hide bottom company name strip</span>
+            </label>
             <label className="flex flex-col gap-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                 Main logo (PNG)
@@ -930,15 +940,15 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 )}
               </dl>
               {(qrPlacement === "header" || barcodePlacement === "header") && (
-                <div className="mt-3 flex items-end justify-end gap-3">
+                <div className="mt-2 flex items-center justify-end gap-2">
                   {qrPlacement === "header" && renderedQr && (
-                    <img src={renderedQr} alt="qr" className="h-16 w-16 object-contain" />
+                    <img src={renderedQr} alt="qr" className="h-10 w-10 object-contain" />
                   )}
                   {barcodePlacement === "header" && renderedBarcode && (
                     <img
                       src={renderedBarcode}
                       alt={`barcode ${documentNo}`}
-                      className="h-9 max-w-[150px] object-contain"
+                      className="h-7 max-w-[130px] object-contain"
                     />
                   )}
                 </div>
