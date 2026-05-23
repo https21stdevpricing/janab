@@ -99,8 +99,7 @@ export function drawStoneWorldHeader(
   const name = co.company_name || "StoneWorld Traders";
   const accent = hexToRgb(design?.accent);
   const fs = Math.max(0.85, Math.min(1.2, Number(design?.fontScale ?? 1)));
-  const lh =
-    design?.lineHeight === "tight" ? 0.92 : design?.lineHeight === "relaxed" ? 1.12 : 1;
+  const lh = design?.lineHeight === "tight" ? 0.92 : design?.lineHeight === "relaxed" ? 1.12 : 1;
   const logoPos = design?.logoPosition ?? "left";
 
   // Apple-style masthead: white space first, larger brand mark, quiet metadata.
@@ -141,11 +140,7 @@ export function drawStoneWorldHeader(
   const companyAlign: "left" | "right" | "center" =
     logoPos === "right" ? "right" : logoPos === "center" ? "center" : "left";
   const companyAnchorX =
-    logoPos === "right"
-      ? logoX - 8
-      : logoPos === "center"
-        ? W / 2
-        : M + logoSize + 14;
+    logoPos === "right" ? logoX - 8 : logoPos === "center" ? W / 2 : M + logoSize + 14;
   doc
     .setFont("helvetica", "normal")
     .setFontSize(15 * fs)
@@ -157,7 +152,8 @@ export function drawStoneWorldHeader(
     .setTextColor(...swPdf.inkSoft);
   const address = [co.address, co.state].filter(Boolean).join(", ");
   const addressLines = address ? doc.splitTextToSize(address, 304).slice(0, 2) : [];
-  if (addressLines.length) doc.text(addressLines, companyAnchorX, top + 31, { align: companyAlign });
+  if (addressLines.length)
+    doc.text(addressLines, companyAnchorX, top + 31, { align: companyAlign });
   const contactLine = [
     co.phone && `Tel: ${co.phone}`,
     co.email,
@@ -672,13 +668,28 @@ export function exportStoneWorldDocument(
     margin: { left: M, right: M, top: 58, bottom: reservedFooter },
     head: productHead,
     body: productBody,
-    styles: { fontSize: 8.3 * fs, minCellHeight: 24, cellPadding: { top: 8, right: 5, bottom: 8, left: 5 } },
+    styles: {
+      fontSize: 8.3 * fs,
+      minCellHeight: 24,
+      cellPadding: { top: 8, right: 5, bottom: 8, left: 5 },
+    },
     headStyles: { fontSize: 7.2 * fs, cellPadding: { top: 6, right: 5, bottom: 6, left: 5 } },
     columnStyles: {
       0: { halign: "center", cellWidth: 22, textColor: swPdf.muted },
       1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 130 },
-      2: { halign: "center", cellWidth: 52, textColor: swPdf.muted, font: "courier", fontSize: 7.6 * fs },
-      3: { halign: "right", cellWidth: qtyWidth, font: "courier", fontSize: Math.max(5.8, Math.min(8.2 * fs, 56 / qtyMaxLen)) },
+      2: {
+        halign: "center",
+        cellWidth: 52,
+        textColor: swPdf.muted,
+        font: "courier",
+        fontSize: 7.6 * fs,
+      },
+      3: {
+        halign: "right",
+        cellWidth: qtyWidth,
+        font: "courier",
+        fontSize: Math.max(5.8, Math.min(8.2 * fs, 56 / qtyMaxLen)),
+      },
       4: { halign: "center", cellWidth: 36, textColor: swPdf.muted },
       5: { halign: "right", cellWidth: 62 },
       6: { halign: "right", cellWidth: 36, textColor: swPdf.muted },

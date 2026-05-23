@@ -117,7 +117,12 @@ function ReportsPage() {
           paged((supabase as any).from("fixed_assets").select("*").range(from, to)),
         ),
         fetchAllPages((from, to) =>
-          paged(supabase.from("payments").select("id,amount,direction,contact_name,payment_no").range(from, to)),
+          paged(
+            supabase
+              .from("payments")
+              .select("id,amount,direction,contact_name,payment_no")
+              .range(from, to),
+          ),
         ),
         fetchAllPages((from, to) =>
           paged(
@@ -411,13 +416,21 @@ function ReportsPage() {
       if (s.product_id) {
         const row = (soldByP[s.product_id] ??= { qty: 0, docs: [] });
         row.qty += Number(s.qty ?? 0);
-        const doc = s.sales?.invoice_no ? `${s.sales.invoice_no} (${s.sales.buyer_name ?? "sale"})` : "sale entry";
+        const doc = s.sales?.invoice_no
+          ? `${s.sales.invoice_no} (${s.sales.buyer_name ?? "sale"})`
+          : "sale entry";
         if (row.docs.length < 3) row.docs.push(doc);
       }
     const purByP: Record<string, number> = {};
     for (const p of purchaseItems)
       if (p.product_id) purByP[p.product_id] = (purByP[p.product_id] ?? 0) + Number(p.qty ?? 0);
-    const negative: Array<{ name: string; opening: number; purchased: number; sold: number; onHand: number }> = [];
+    const negative: Array<{
+      name: string;
+      opening: number;
+      purchased: number;
+      sold: number;
+      onHand: number;
+    }> = [];
     const noOpening: Array<{ name: string; sold: number; purchased: number }> = [];
     for (const pr of products) {
       if (pr.kind && pr.kind !== "stocked") continue;
@@ -425,7 +438,9 @@ function ReportsPage() {
       const purchased = purByP[pr.id] ?? 0;
       const sold = soldByP[pr.id]?.qty ?? 0;
       const onHand = opening + purchased - sold;
-      const name = soldByP[pr.id]?.docs?.length ? `${pr.name} · ${soldByP[pr.id].docs.join(", ")}` : pr.name;
+      const name = soldByP[pr.id]?.docs?.length
+        ? `${pr.name} · ${soldByP[pr.id].docs.join(", ")}`
+        : pr.name;
       if (onHand < 0) negative.push({ name, opening, purchased, sold, onHand });
       if (opening === 0) noOpening.push({ name: pr.name, sold, purchased });
     }
@@ -467,10 +482,19 @@ function ReportsPage() {
   }, [payments, allocations]);
 
   const reconciliationDetails = useMemo(() => {
-    const byEntry: Record<string, { d: number; c: number; date?: string; ref?: string; accounts: Set<string> }> = {};
+    const byEntry: Record<
+      string,
+      { d: number; c: number; date?: string; ref?: string; accounts: Set<string> }
+    > = {};
     for (const r of rows) {
       const key = String(r.entry_id ?? r.source_id ?? `${r.date}-${r.ref_no ?? "manual"}`);
-      const entry = (byEntry[key] ??= { d: 0, c: 0, date: r.date, ref: r.ref_no, accounts: new Set() });
+      const entry = (byEntry[key] ??= {
+        d: 0,
+        c: 0,
+        date: r.date,
+        ref: r.ref_no,
+        accounts: new Set(),
+      });
       entry.d += Number(r.debit ?? 0);
       entry.c += Number(r.credit ?? 0);
       if (r.account) entry.accounts.add(String(r.account));
@@ -486,12 +510,21 @@ function ReportsPage() {
         amount: e.diff,
       }));
     const allocByPay: Record<string, number> = {};
-    for (const a of allocations) allocByPay[a.payment_id as string] = (allocByPay[a.payment_id as string] ?? 0) + Number(a.amount ?? 0);
+    for (const a of allocations)
+      allocByPay[a.payment_id as string] =
+        (allocByPay[a.payment_id as string] ?? 0) + Number(a.amount ?? 0);
     const unallocatedPaymentDetails = payments
       .map((p) => {
         const amount = Number(p.amount ?? 0);
         const used = allocByPay[p.id] ?? 0;
-        return { direction: p.direction, amount, used, remaining: amount - used, id: p.payment_no ?? p.id, party: p.contact_name };
+        return {
+          direction: p.direction,
+          amount,
+          used,
+          remaining: amount - used,
+          id: p.payment_no ?? p.id,
+          party: p.contact_name,
+        };
       })
       .filter((p) => p.remaining > 0.5)
       .sort((a, b) => b.remaining - a.remaining)
