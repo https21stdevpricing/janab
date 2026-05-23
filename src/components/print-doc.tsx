@@ -15,7 +15,6 @@ import {
   savePrintDesign,
   type PrintDesign,
   type PrintCodePlacement,
-  type PrintProductLayout,
   type PrintPreset,
 } from "@/lib/print-customizer";
 import {
@@ -28,16 +27,10 @@ import { stateWithCode } from "@/lib/india-states";
 
 const presetLabels: Record<PrintPreset, string> = {
   minimal: "Minimal",
-  gst: "GST detail",
-  dispatch: "Dispatch",
-  letterhead: "Letterhead",
-};
-
-const productLayoutLabels: Record<PrintProductLayout, string> = {
-  standard: "Standard columns",
-  compact: "Compact list",
-  "description-first": "Description first",
-  "tax-detail": "GST detail",
+  clean: "Clean",
+  modern: "Modern",
+  bold: "Bold",
+  elegant: "Elegant",
 };
 
 const codePlacementLabels: Record<PrintCodePlacement, string> = {
@@ -334,24 +327,6 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 <option value="balanced">Balanced</option>
                 <option value="spacious">Spacious</option>
                 <option value="dense">Dense</option>
-              </select>
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                Products layout
-              </span>
-              <select
-                className="h-8 rounded-md border bg-background px-2 text-xs"
-                value={design.productLayout}
-                onChange={(e) =>
-                  updateDesign({ ...design, productLayout: e.target.value as PrintProductLayout })
-                }
-              >
-                {(Object.keys(productLayoutLabels) as PrintProductLayout[]).map((key) => (
-                  <option key={key} value={key}>
-                    {productLayoutLabels[key]}
-                  </option>
-                ))}
               </select>
             </label>
             <label className="flex flex-col gap-1">
