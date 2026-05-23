@@ -266,7 +266,7 @@ export async function importZohoCsv(file: File): Promise<ImportReport> {
         gst_pct: num(smartPick(l, ["CGST Rate %"])) + num(smartPick(l, ["SGST Rate %"])) || num(smartPick(l, ["IGST Rate %"])) || 18,
         unit: smartPick(l, ["Usage unit", "Unit"]) ?? null,
       }));
-      const { error: itErr } = await supabase.from("sale_items").insert(items);
+      const { error: itErr } = await supabase.from("sale_items").insert(items as any);
       if (itErr) report.errors.push(`invoice ${inv} items: ${itErr.message}`);
       report.inserted.sales = (report.inserted.sales ?? 0) + 1;
     }
@@ -298,7 +298,7 @@ export async function importZohoCsv(file: File): Promise<ImportReport> {
         gst_pct: num(smartPick(l, ["CGST Rate %"])) + num(smartPick(l, ["SGST Rate %"])) || num(smartPick(l, ["IGST Rate %"])) || 18,
         unit: smartPick(l, ["Usage unit", "Unit"]) ?? null,
       }));
-      const { error: itErr } = await supabase.from("purchase_items").insert(items);
+      const { error: itErr } = await supabase.from("purchase_items").insert(items as any);
       if (itErr) report.errors.push(`bill ${bn} items: ${itErr.message}`);
       report.inserted.purchases = (report.inserted.purchases ?? 0) + 1;
     }
