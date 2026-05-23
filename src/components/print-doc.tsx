@@ -1347,6 +1347,8 @@ function ProductPrintTable({
   // One fixed, professionally tuned table. Density only adjusts row padding.
   const padY = density === "dense" ? "py-2" : density === "spacious" ? "py-3.5" : "py-2.5";
   const td = `${padY} px-2.5 align-top`;
+  const qtyText = (value: unknown) => fmt(Number(value ?? 0), Math.abs(Number(value ?? 0) % 1) < 0.0001 ? 0 : 2);
+  const qtyFont = (value: string) => (value.length > 9 ? "text-[9px]" : value.length > 7 ? "text-[10px]" : "text-[11px]");
   return (
     <table className="w-full border-collapse text-[11px] leading-[15px]">
       <thead>
@@ -1367,6 +1369,7 @@ function ProductPrintTable({
       <tbody>
         {items.map((it, i) => {
           const base = Number(it.qty || 0) * Number(it.rate || 0);
+          const qty = qtyText(it.qty);
           return (
             <tr key={i} className="border-b border-slate-100 break-inside-avoid">
               <td className={`${td} text-center text-[#6e7886] tabular-nums`}>{i + 1}</td>
@@ -1376,7 +1379,7 @@ function ProductPrintTable({
               <td className={`${td} text-center text-[#6e7886] font-mono text-[10px]`}>
                 {(it as any).hsn ?? (it as any).hsn_code ?? "—"}
               </td>
-              <td className={`${td} text-right tabular-nums`}>{fmt(it.qty, 2)}</td>
+              <td className={`${td} text-right tabular-nums font-mono whitespace-nowrap ${qtyFont(qty)}`}>{qty}</td>
               <td className={`${td} text-center text-[#6e7886]`}>{it.unit ?? "—"}</td>
               <td className={`${td} text-right tabular-nums`}>{fmt(it.rate, 2)}</td>
               <td className={`${td} text-right tabular-nums text-[#6e7886]`}>
