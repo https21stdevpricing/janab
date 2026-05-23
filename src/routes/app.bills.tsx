@@ -21,7 +21,7 @@ import { lookupDoc, openDocsFor, type DocLookupResult } from "@/lib/doc-lookup";
 import { toast } from "sonner";
 import { useShortcut } from "@/lib/shortcuts";
 import { exportStoneWorldPayment } from "@/lib/pdf-theme";
-import { KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
+import { SegmentedTabs } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/bills")({
   component: BillsPage,
@@ -475,30 +475,56 @@ function BillsPage() {
         }
       />
 
-      <KpiGrid cols={2} className="mb-3 [&>*]:min-h-[96px] [&>*]:overflow-hidden">
-        <KpiTile
-          label="Collect"
-          value={inr(kpis.recv)}
-          tone="good"
-          hint={kpis.recvOverdue > 0 ? `${inr(kpis.recvOverdue)} overdue` : "All on time"}
-          active={tab === "receivable"}
-          onClick={() => setTab("receivable")}
-        />
-        <KpiTile
-          label="Pay"
-          value={inr(kpis.pay)}
-          tone="bad"
-          hint={kpis.payOverdue > 0 ? `${inr(kpis.payOverdue)} overdue` : "All on time"}
-          active={tab === "payable"}
-          onClick={() => setTab("payable")}
-        />
-      </KpiGrid>
-      <div className="mb-3 -mt-1 px-1 text-xs text-muted-foreground">
-        Net position{" "}
-        <span className={cn("font-medium tabular-nums", kpis.net >= 0 ? "text-primary" : "text-destructive")}>
-          {inr(kpis.net)}
-        </span>{" "}
-        · {kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"}
+      {/* Minimal money summary — two clean tiles + a net-position footnote */}
+      <div className="mb-3 overflow-hidden rounded-2xl border border-border/60 bg-card">
+        <div className="grid grid-cols-2 divide-x divide-border/60">
+          <button
+            type="button"
+            onClick={() => setTab("receivable")}
+            className={cn(
+              "px-4 py-3 text-left transition-colors hover:bg-muted/40",
+              tab === "receivable" && "bg-primary/5",
+            )}
+          >
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <ArrowDownLeft className="h-3 w-3 text-primary" /> Collect
+            </div>
+            <div className="mt-1 truncate text-[17px] font-semibold tabular-nums [overflow-wrap:anywhere]">
+              {inr(kpis.recv)}
+            </div>
+            <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+              {kpis.recvOverdue > 0 ? (
+                <span className="text-destructive">{inr(kpis.recvOverdue)} overdue</span>
+              ) : "All on time"}
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTab("payable")}
+            className={cn(
+              "px-4 py-3 text-left transition-colors hover:bg-muted/40",
+              tab === "payable" && "bg-destructive/5",
+            )}
+          >
+            <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+              <ArrowUpRight className="h-3 w-3 text-destructive" /> Pay
+            </div>
+            <div className="mt-1 truncate text-[17px] font-semibold tabular-nums [overflow-wrap:anywhere]">
+              {inr(kpis.pay)}
+            </div>
+            <div className="mt-0.5 truncate text-[11px] text-muted-foreground">
+              {kpis.payOverdue > 0 ? (
+                <span className="text-destructive">{inr(kpis.payOverdue)} overdue</span>
+              ) : "All on time"}
+            </div>
+          </button>
+        </div>
+        <div className="flex items-center justify-between gap-2 border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground">
+          <span>Net position</span>
+          <span className={cn("font-medium tabular-nums", kpis.net >= 0 ? "text-primary" : "text-destructive")}>
+            {inr(kpis.net)} <span className="text-muted-foreground font-normal">· {kpis.net >= 0 ? "Receivables ahead" : "Payables ahead"}</span>
+          </span>
+        </div>
       </div>
 
       <div className="mb-3 min-w-0 overflow-hidden rounded-2xl border bg-card p-2 shadow-sm sm:p-3">
@@ -722,7 +748,7 @@ function BillsPage() {
             </div>
           </DialogHeader>
 
-          <div className="space-y-5 p-4 sm:p-6">
+          <div className="space-y-4 p-4 sm:p-5">
           {/* Direction segmented switch */}
           <div className="grid grid-cols-2 gap-1 rounded-full bg-muted/60 p-1 ring-1 ring-border/60">
             <button type="button" onClick={() => { setDirection("in"); setAllocs([]); }}
@@ -735,83 +761,100 @@ function BillsPage() {
             </button>
           </div>
 
-          {/* Transaction kind: against invoice / advance / on-account */}
+          {/* Transaction kind — compact pills */}
           <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Apply as</Label>
-            <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Apply as</Label>
+            <div className="mt-1.5 grid grid-cols-3 gap-1 rounded-full bg-muted/60 p-1 ring-1 ring-border/60">
               {([
-                { v: "against_invoice", t: "Against invoice", d: "Knock off specific pending bill(s)." },
-                { v: "advance", t: "Advance payment", d: direction === "in" ? "Park as Advance from Customers." : "Park as Advances to Suppliers." },
-                { v: "on_account", t: "On account", d: "Sits open on the party ledger until allocated." },
+                { v: "against_invoice", t: "Invoice" },
+                { v: "advance", t: "Advance" },
+                { v: "on_account", t: "On a/c" },
               ] as const).map((k) => (
                 <button key={k.v} type="button"
                   onClick={() => { setKind(k.v); if (k.v !== "against_invoice") setAllocs([]); }}
-                  className={`rounded-xl border p-3 text-left transition-colors ${kind === k.v ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:bg-muted/40"}`}>
-                  <div className="text-xs font-medium">{k.t}</div>
-                  <div className="mt-0.5 text-[10px] text-muted-foreground">{k.d}</div>
+                  className={`h-8 rounded-full text-[12px] font-medium transition-colors ${kind === k.v ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}>
+                  {k.t}
                 </button>
               ))}
             </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              {kind === "against_invoice" ? "Knock off specific pending bill(s)." : kind === "advance" ? (direction === "in" ? "Park as Advance from Customers." : "Park as Advances to Suppliers.") : "Sits open on the party ledger until allocated."}
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-1.5"><Label className="text-xs">Date</Label><Input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></div>
-            <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">{direction === "in" ? "From buyer" : "To supplier"}</Label>
-              <ContactPicker filter={direction === "in" ? "buyer" : "supplier"} value={contactId} onChange={(id, n) => { setContactId(id); setContactName(n); setAllocs([]); }} />
+          {/* Party — full width */}
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">{direction === "in" ? "From buyer" : "To supplier"}</Label>
+            <ContactPicker filter={direction === "in" ? "buyer" : "supplier"} value={contactId} onChange={(id, n) => { setContactId(id); setContactName(n); setAllocs([]); }} />
+          </div>
+
+          {/* Amount + Date + Mode — single tidy row */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="col-span-2 space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">{direction === "in" ? "Amount received" : "Amount paid"} (₹)</Label>
+              <Input type="number" inputMode="decimal" value={amount} onChange={(e) => setAmount(+e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">{direction === "in" ? "Amount received" : "Amount paid"} (₹)</Label>
-              <Input type="number" value={amount} onChange={(e) => setAmount(+e.target.value)} />
-              <p className="text-[10px] text-muted-foreground">Total of this single receipt/payment, not per invoice.</p>
+              <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Date</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </div>
-            <div className="space-y-1.5"><Label className="text-xs">Mode</Label>
-              <Select value={mode} onValueChange={(v) => { setMode(v); setCleared(v !== "Cheque"); }}><SelectTrigger><SelectValue /></SelectTrigger>
+            <div className="space-y-1.5">
+              <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Mode</Label>
+              <Select value={mode} onValueChange={(v) => { setMode(v); setCleared(v !== "Cheque"); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Bank">Bank transfer (NEFT/RTGS/IMPS)</SelectItem>
+                  <SelectItem value="Bank">Bank</SelectItem>
                   <SelectItem value="UPI">UPI</SelectItem>
                   <SelectItem value="Cheque">Cheque</SelectItem>
                   <SelectItem value="Cash">Cash</SelectItem>
                   <SelectItem value="Card">Card</SelectItem>
                 </SelectContent>
-              </Select></div>
-            <div className="sm:col-span-2 space-y-1.5"><Label className="text-xs">Notes</Label><Input value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+              </Select>
+            </div>
+          </div>
 
-            {(mode === "Bank" || mode === "UPI" || mode === "Card") && (
-              <>
-                <div className="sm:col-span-1 space-y-1.5">
-                  <Label className="text-xs">Bank / app name</Label>
-                  <Input placeholder={mode === "UPI" ? "GPay, PhonePe…" : "HDFC ****1234"} value={bankName} onChange={(e) => setBankName(e.target.value)} />
-                </div>
-                <div className="sm:col-span-1 space-y-1.5">
-                  <Label className="text-xs">Transaction ID / UTR</Label>
-                  <Input placeholder="UTR / UPI ref no." value={txnId} onChange={(e) => setTxnId(e.target.value)} />
-                </div>
-              </>
-            )}
+          {/* Mode-specific fields */}
+          {(mode === "Bank" || mode === "UPI" || mode === "Card") && (
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Bank / app</Label>
+                <Input placeholder={mode === "UPI" ? "GPay, PhonePe…" : "HDFC ****1234"} value={bankName} onChange={(e) => setBankName(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Txn ID / UTR</Label>
+                <Input placeholder="UTR / UPI ref no." value={txnId} onChange={(e) => setTxnId(e.target.value)} />
+              </div>
+            </div>
+          )}
 
-            {mode === "Cheque" && (
-              <>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Cheque number *</Label>
-                  <Input placeholder="e.g. 045123" value={chequeNo} onChange={(e) => setChequeNo(e.target.value)} />
-                </div>
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Cheque date</Label>
-                  <Input type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} />
-                </div>
-                <div className="sm:col-span-2 space-y-1.5">
-                  <Label className="text-xs">Drawee bank</Label>
-                  <Input placeholder="Bank on the cheque" value={bankName} onChange={(e) => setBankName(e.target.value)} />
-                </div>
-                <label className="sm:col-span-2 flex items-start gap-3 rounded-lg border bg-muted/20 p-3 text-sm">
-                  <Checkbox checked={cleared} onCheckedChange={(v) => setCleared(!!v)} className="mt-0.5" />
-                  <span>
-                    <span className="block font-medium">Cheque is cleared</span>
-                    <span className="block text-xs text-muted-foreground">Leave unchecked for in-transit or uncertain cheques. Pending cheques will not settle bills or change Cash/Bank ledgers.</span>
-                  </span>
-                </label>
-              </>
-            )}
+          {mode === "Cheque" && (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Cheque no. *</Label>
+                <Input placeholder="045123" value={chequeNo} onChange={(e) => setChequeNo(e.target.value)} />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Cheque date</Label>
+                <Input type="date" value={chequeDate} onChange={(e) => setChequeDate(e.target.value)} />
+              </div>
+              <div className="col-span-2 space-y-1.5">
+                <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Drawee bank</Label>
+                <Input placeholder="Bank on the cheque" value={bankName} onChange={(e) => setBankName(e.target.value)} />
+              </div>
+              <label className="col-span-2 flex items-start gap-2.5 rounded-lg border bg-muted/20 p-2.5 text-xs">
+                <Checkbox checked={cleared} onCheckedChange={(v) => setCleared(!!v)} className="mt-0.5" />
+                <span>
+                  <span className="block font-medium">Cheque is cleared</span>
+                  <span className="block text-[11px] text-muted-foreground">Pending cheques won't settle bills or change Cash/Bank ledgers.</span>
+                </span>
+              </label>
+            </div>
+          )}
+
+          {/* Notes — collapsed last */}
+          <div className="space-y-1.5">
+            <Label className="text-[10px] uppercase tracking-wide text-muted-foreground">Notes</Label>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Optional" />
           </div>
 
           {mode === "Cheque" && !cleared && (

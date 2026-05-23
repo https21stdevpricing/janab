@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +8,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Empty } from "@/components/empty";
 import { fmt, inr } from "@/lib/format";
 import { toast } from "sonner";
-import { Plus, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus, ChevronRight, AlertTriangle, Pencil } from "lucide-react";
+import { Plus, Trash2, Calculator, Boxes, ClipboardList, Search, ListPlus, ChevronRight, AlertTriangle, Pencil, ArrowDownToLine, ArrowUpFromLine } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ExcelBar } from "@/components/excel-bar";
 import { exportToExcel, importFromExcel, smartPick, num } from "@/lib/excel";
 import { SegmentedTabs } from "@/components/ui-tokens";
 
@@ -50,6 +49,7 @@ function ProductsPage() {
   const [bulkOpen, setBulkOpen] = useState(false);
   const [bulkText, setBulkText] = useState("");
   const [bulkKind, setBulkKind] = useState<"stocked" | "order_basis">("stocked");
+  const fileInp = useRef<HTMLInputElement>(null);
   // dimension calculator
   const [dim, setDim] = useState<{ l: number; b: number; pieces: number; unit: "in" | "cm" | "mm" | "ft" | "m" }>({ l: 0, b: 0, pieces: 1, unit: "in" });
 
@@ -235,6 +235,37 @@ function ProductsPage() {
         </div>
       </div>
 
+      {/* Top panel — quick stats + import/export */}
+      <div className="mb-5 rounded-2xl border border-border/60 bg-card">
+        <div className="grid grid-cols-3 divide-x divide-border/60">
+          <PanelStat label="Stock value" value={inr(summary.valueCost)} />
+          <PanelStat label="Sale value" value={inr(summary.valueSale)} tone="good" />
+          <PanelStat label="Low stock" value={fmt(summary.low)} tone={summary.low > 0 ? "bad" : undefined} />
+        </div>
+        <div className="flex items-center justify-end gap-1.5 border-t border-border/60 px-3 py-2">
+          <input
+            ref={fileInp}
+            type="file"
+            accept=".xlsx,.xls,.csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) onImport(f);
+              if (fileInp.current) fileInp.current.value = "";
+            }}
+          />
+          <Button size="sm" variant="ghost" className="h-8 rounded-full px-3 text-xs" onClick={() => fileInp.current?.click()} title="Import from Excel / CSV">
+            <ArrowDownToLine className="h-3.5 w-3.5" /> Import
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 rounded-full px-3 text-xs" onClick={onExport} title="Download as Excel">
+            <ArrowUpFromLine className="h-3.5 w-3.5" /> Export
+          </Button>
+          <Button size="sm" variant="ghost" className="h-8 rounded-full px-3 text-xs text-muted-foreground" onClick={() => { setBulkKind(tab === "order" ? "order_basis" : "stocked"); setBulkOpen(true); }}>
+            <ListPlus className="h-3.5 w-3.5" /> Bulk add
+          </Button>
+        </div>
+      </div>
+
       {/* Type segmented control */}
       <div className="mb-4">
         <SegmentedTabs
@@ -299,14 +330,6 @@ function ProductsPage() {
           </ul>
         </div>
       )}
-
-      {/* Secondary actions — kept out of the hero to keep it clean */}
-      <div className="mt-6 flex flex-wrap items-center gap-2 justify-end">
-        <ExcelBar onExport={onExport} onImport={onImport} />
-        <Button size="sm" variant="ghost" className="rounded-full text-muted-foreground" onClick={() => { setBulkKind(tab === "order" ? "order_basis" : "stocked"); setBulkOpen(true); }}>
-          <ListPlus className="h-4 w-4" /> Bulk add
-        </Button>
-      </div>
 
       <Dialog open={!!preview} onOpenChange={(o) => !o && setPreview(null)}>
         <DialogContent className="max-h-[90vh] w-[calc(100vw-1.5rem)] max-w-lg overflow-y-auto rounded-2xl p-0 sm:w-full">
@@ -519,12 +542,21 @@ function ProductPreview({ row, stock, onEdit, onDelete }: { row: Row; stock?: St
         </div>
       </div>
 
-      <DialogFooter className="border-t bg-muted/15 px-5 py-4">
-        <Button variant="outline" className="mr-auto text-destructive hover:text-destructive" onClick={onDelete}>
+      <div className="flex items-center gap-2 border-t bg-muted/15 px-5 py-4">
+        <Button
+          variant="outline"
+          className="h-10 flex-1 rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={onDelete}
+        >
           <Trash2 className="h-4 w-4" /> Delete
         </Button>
-        <Button onClick={onEdit}><Pencil className="h-4 w-4" /> Edit</Button>
-      </DialogFooter>
+        <Button
+          className="h-10 flex-[2] rounded-xl"
+          onClick={onEdit}
+        >
+          <Pencil className="h-4 w-4" /> Edit
+        </Button>
+      </div>
     </div>
   );
 }
@@ -549,4 +581,14 @@ function Field({ label, children, wide }: { label: string; children: React.React
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <div className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground mb-2">{children}</div>;
+}
+
+function PanelStat({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "good" | "bad" }) {
+  const cls = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "text-foreground";
+  return (
+    <div className="min-w-0 px-3 py-3 text-center">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={`mt-1 truncate text-[15px] font-semibold tabular-nums ${cls}`}>{value}</div>
+    </div>
+  );
 }
