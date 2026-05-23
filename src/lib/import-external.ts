@@ -99,7 +99,7 @@ export async function importTallyXml(text: string): Promise<ImportReport> {
     });
   }
   if (contactRows.length) {
-    const { error } = await supabase.from("contacts").insert(contactRows);
+    const { error } = await supabase.from("contacts").insert(contactRows as any);
     if (error) report.errors.push(`contacts: ${error.message}`);
     else report.inserted.contacts = contactRows.length;
   }
@@ -121,7 +121,7 @@ export async function importTallyXml(text: string): Promise<ImportReport> {
     });
   }
   if (productRows.length) {
-    const { error } = await supabase.from("products").insert(productRows);
+    const { error } = await supabase.from("products").insert(productRows as any);
     if (error) report.errors.push(`products: ${error.message}`);
     else report.inserted.products = productRows.length;
   }
@@ -213,7 +213,7 @@ export async function importZohoCsv(file: File): Promise<ImportReport> {
       opening_stock: num(smartPick(r, ["Opening Stock", "Stock On Hand"])),
       kind: "stocked",
     }));
-    const { error } = await supabase.from("products").insert(data);
+    const { error } = await supabase.from("products").insert(data as any);
     if (error) report.errors.push(`products: ${error.message}`);
     else report.inserted.products = data.length;
   }
@@ -233,7 +233,7 @@ export async function importZohoCsv(file: File): Promise<ImportReport> {
         opening_balance: num(smartPick(r, ["Opening Balance"])),
       };
     });
-    const { error } = await supabase.from("contacts").insert(data);
+    const { error } = await supabase.from("contacts").insert(data as any);
     if (error) report.errors.push(`contacts: ${error.message}`);
     else report.inserted.contacts = data.length;
   }
@@ -317,7 +317,7 @@ export async function importZohoCsv(file: File): Promise<ImportReport> {
       kind: "advance",
       notes: "Imported from Zoho",
     }));
-    const { error } = await supabase.from("payments").insert(data);
+    const { error } = await supabase.from("payments").insert(data as any);
     if (error) report.errors.push(`payments: ${error.message}`);
     else report.inserted.payments = data.length;
   }
