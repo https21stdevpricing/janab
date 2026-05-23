@@ -422,6 +422,131 @@ function DocumentMaker() {
               safe to use as a sample, mock-up, or quick share.
             </p>
           </div>
+
+          <div className="surface p-4 space-y-3">
+            <div className="eyebrow">Design</div>
+            <DField label="Preset">
+              <select
+                className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                value={design.preset}
+                onChange={(e) => choosePreset(e.target.value as PrintPreset)}
+              >
+                {(Object.keys(PRINT_PRESETS) as PrintPreset[]).map((p) => (
+                  <option key={p} value={p}>
+                    {presetLabel(p)}
+                  </option>
+                ))}
+              </select>
+            </DField>
+
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground pt-1">
+              Header
+            </div>
+            <DField label="Logo placement">
+              <select
+                className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                value={design.logoPosition}
+                onChange={(e) =>
+                  patchDesign({ logoPosition: e.target.value as PrintLogoPosition })
+                }
+              >
+                <option value="left">Left</option>
+                <option value="center">Center</option>
+                <option value="right">Right</option>
+              </select>
+            </DField>
+            <DField label="Header divider">
+              <select
+                className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                value={design.headerDividerStyle}
+                onChange={(e) =>
+                  patchDesign({ headerDividerStyle: e.target.value as PrintFooterDivider })
+                }
+              >
+                <option value="solid">Solid hairline</option>
+                <option value="dashed">Dashed</option>
+                <option value="double">Double</option>
+                <option value="accent">Accent colour</option>
+                <option value="none">None</option>
+              </select>
+            </DField>
+            <div className="grid grid-cols-2 gap-2">
+              <DField label="QR position">
+                <select
+                  className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                  value={design.qrPlacement}
+                  onChange={(e) =>
+                    patchDesign({ qrPlacement: e.target.value as PrintCodePlacement })
+                  }
+                >
+                  <option value="header">Header</option>
+                  <option value="totals">Totals</option>
+                  <option value="terms">Terms</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </DField>
+              <DField label="Barcode position">
+                <select
+                  className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                  value={design.barcodePlacement}
+                  onChange={(e) =>
+                    patchDesign({ barcodePlacement: e.target.value as PrintCodePlacement })
+                  }
+                >
+                  <option value="header">Header</option>
+                  <option value="totals">Totals</option>
+                  <option value="terms">Terms</option>
+                  <option value="hidden">Hidden</option>
+                </select>
+              </DField>
+            </div>
+
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground pt-1">
+              Typography (Apple-style)
+            </div>
+            <DField label={`Font scale · ${design.fontScale.toFixed(2)}×`}>
+              <input
+                type="range"
+                min={0.85}
+                max={1.2}
+                step={0.01}
+                value={design.fontScale}
+                onChange={(e) => patchDesign({ fontScale: Number(e.target.value) })}
+                className="w-full"
+              />
+            </DField>
+            <div className="grid grid-cols-2 gap-2">
+              <DField label="Line height">
+                <select
+                  className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                  value={design.lineHeight}
+                  onChange={(e) =>
+                    patchDesign({ lineHeight: e.target.value as PrintLineHeight })
+                  }
+                >
+                  <option value="tight">Tight</option>
+                  <option value="normal">Normal</option>
+                  <option value="relaxed">Relaxed</option>
+                </select>
+              </DField>
+              <DField label="Page margins">
+                <select
+                  className="h-8 w-full rounded-md border bg-background px-2 text-xs"
+                  value={design.pageMargin}
+                  onChange={(e) =>
+                    patchDesign({ pageMargin: e.target.value as PrintPageMargin })
+                  }
+                >
+                  <option value="compact">Compact</option>
+                  <option value="standard">Standard</option>
+                  <option value="wide">Wide</option>
+                </select>
+              </DField>
+            </div>
+            <p className="text-[10.5px] text-muted-foreground leading-4">
+              Changes apply to every branded PDF — invoice, quotation, and this document maker.
+            </p>
+          </div>
         </aside>
       </div>
     </div>
@@ -452,4 +577,26 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="tabular-nums font-semibold">{value}</span>
     </div>
   );
+}
+
+function DField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="flex flex-col gap-1">
+      <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function presetLabel(p: PrintPreset): string {
+  const map: Record<PrintPreset, string> = {
+    minimal: "Minimal",
+    clean: "Clean",
+    modern: "Modern",
+    bold: "Bold",
+    elegant: "Elegant",
+    "apple-minimal": "Apple Minimal",
+    "clean-compact": "Clean Compact",
+  };
+  return map[p];
 }
