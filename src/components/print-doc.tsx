@@ -840,7 +840,11 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
       <article
         id="print-area"
         className="sw-print-doc bg-white text-[#111621] mx-auto max-w-[820px] rounded-md border border-slate-200 shadow-sm overflow-hidden print:border-0 print:shadow-none print:max-w-full print:rounded-none relative"
-        style={{ fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif" }}
+        style={{
+          fontFamily:
+            "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Pro Display', 'Helvetica Neue', Helvetica, Arial, sans-serif",
+          letterSpacing: "-0.005em",
+        }}
       >
         {(design.watermarkText || design.watermarkLogoDataUrl) && (
           <div
@@ -881,18 +885,18 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               <img
                 src={design.logoDataUrl || swLogo}
                 alt="logo"
-                className="h-14 w-14 object-contain shrink-0"
+                className="h-12 w-12 object-contain shrink-0"
               />
               <div className="min-w-0">
-                <h1 className="text-[20px] font-bold leading-tight text-[#111621] tracking-tight">
+                <h1 className="text-[19px] font-semibold leading-tight text-[#111621] tracking-[-0.01em]">
                   {company?.company_name ?? "StoneWorld Traders"}
                 </h1>
                 {address && (
-                  <p className="mt-1 text-[11px] leading-4 text-[#374050] max-w-[380px]">
+                  <p className="mt-1 text-[11px] leading-[16px] text-[#4a5260] max-w-[380px]">
                     {address}
                   </p>
                 )}
-                <p className="mt-1 text-[11px] leading-4 text-[#6e7886]">
+                <p className="mt-0.5 text-[10.5px] leading-[15px] text-[#86909c]">
                   {[
                     company?.phone && `Tel: ${company.phone}`,
                     company?.email,
@@ -905,21 +909,21 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               </div>
             </div>
             <div className="text-right shrink-0">
-              <div className="text-[22px] font-bold uppercase tracking-tight text-[#111621] leading-none">
+              <div className="text-[20px] font-semibold tracking-[-0.015em] text-[#111621] leading-none">
                 {title}
               </div>
-              <div className="mt-1 text-[10px] uppercase tracking-[0.18em] text-[#6e7886]">
+              <div className="mt-1.5 text-[9.5px] uppercase tracking-[0.22em] text-[#86909c]">
                 {kind === "invoice" ? "Original for Recipient" : "Proposal · Not a tax invoice"}
               </div>
-              <dl className="mt-4 grid grid-cols-[auto_auto] gap-x-4 gap-y-1 text-[11px] justify-end">
-                <dt className="text-[#6e7886]">No.</dt>
-                <dd className="font-bold tabular-nums text-[#111621]">{documentNo}</dd>
-                <dt className="text-[#6e7886]">Date</dt>
-                <dd className="font-bold tabular-nums text-[#111621]">{fmtDate(doc.date)}</dd>
+              <dl className="mt-4 grid grid-cols-[auto_auto] gap-x-5 gap-y-1 text-[11px] justify-end">
+                <dt className="text-[#86909c]">No.</dt>
+                <dd className="font-semibold tabular-nums text-[#111621]">{documentNo}</dd>
+                <dt className="text-[#86909c]">Date</dt>
+                <dd className="font-semibold tabular-nums text-[#111621]">{fmtDate(doc.date)}</dd>
                 {doc.valid_until && (
                   <>
-                    <dt className="text-[#6e7886]">Valid</dt>
-                    <dd className="font-bold tabular-nums text-[#111621]">
+                    <dt className="text-[#86909c]">Valid</dt>
+                    <dd className="font-semibold tabular-nums text-[#111621]">
                       {fmtDate(doc.valid_until)}
                     </dd>
                   </>
@@ -942,13 +946,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
             </div>
           </div>
           {design.headerContainer === "open" ? null : (
-            <>
-              <div className="mt-5 h-px bg-slate-200" />
-              <div
-                className="mt-1 h-[2px] w-16"
-                style={{ backgroundColor: design.accent }}
-              />
-            </>
+            <div className="mt-5 h-px bg-slate-200" />
           )}
         </header>
 

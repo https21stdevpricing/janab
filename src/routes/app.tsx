@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { History, PackageCheck, Keyboard } from "lucide-react";
 import { BookOpenCheck } from "lucide-react";
-import { Download as DownloadIcon } from "lucide-react";
+import { Download as DownloadIcon, FilePlus2 } from "lucide-react";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { ShortcutsProvider, useShortcutsHelp } from "@/lib/shortcuts";
 import { Kbd } from "@/components/kbd";
@@ -78,6 +78,7 @@ const moreGroups: { label: string; items: { to: string; label: string; icon: any
     items: [
       { to: "/app/lookup", label: "Lookup", icon: Search },
       { to: "/app/print", label: "Print", icon: Printer },
+      { to: "/app/document", label: "Document maker", icon: FilePlus2 },
       { to: "/app/audit", label: "Audit log", icon: History },
       { to: "/app/guide", label: "Quick guide", icon: BookOpenCheck },
       { to: "/app/import", label: "Import data", icon: DownloadIcon },
