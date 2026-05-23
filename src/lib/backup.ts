@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { exportWorkbook } from "@/lib/excel";
+import JSZip from "jszip";
+import * as XLSX from "xlsx";
 
 const LAST_KEY = "stoneworld:lastBackupAt";
 
@@ -512,6 +514,68 @@ export async function downloadFullBackup() {
   });
 
   const today = new Date().toISOString().slice(0, 10);
-  exportWorkbook({ filename: `stoneworld-backup-${today}`, sheets });
+
+  // Build the Excel workbook in memory (multi-sheet, auto-sized columns)
+  const wb = XLSX.utils.book_new();
+  for (const sh of sheets) {
+    const cols = sh.columns ?? (sh.rows[0] ? Object.keys(sh.rows[0]) : ["info"]);
+    const rows = sh.rows.length ? sh.rows : [{ [cols[0]]: "(no records — table is empty)" }];
+    const ws = XLSX.utils.json_to_sheet(rows, { header: cols });
+    const widths = cols.map((c) => {
+      let max = c.length;
+      for (const r of rows) {
+        const s = (r as any)[c] == null ? "" : String((r as any)[c]);
+        if (s.length > max) max = s.length;
+      }
+      return { wch: Math.min(Math.max(max + 2, 8), 40) };
+    });
+    (ws as any)["!cols"] = widths;
+    XLSX.utils.book_append_sheet(wb, ws, sh.name.slice(0, 31));
+  }
+  const xlsxBuf: ArrayBuffer = XLSX.write(wb, { type: "array", bookType: "xlsx" });
+
+  // Lossless JSON snapshot — one file per logical table, plus a manifest
+  const jsonTables = {
+    settings, products, contacts,
+    sales, sale_items: saleItems,
+    purchases, purchase_items: purchaseItems,
+    third_party: tp, tp_items: tpItems,
+    quotations, quotation_items: quotationItems,
+    deliveries, delivery_items: deliveryItems,
+    payments, payment_allocations: allocations,
+    expenses,
+    journal_entries: journalEntries, journal_lines: journalLines,
+  };
+  const manifest = {
+    schema: "stoneworld.backup/1",
+    generated_at: new Date().toISOString(),
+    company: settings[0]?.company_name ?? null,
+    counts: Object.fromEntries(Object.entries(jsonTables).map(([k, v]: any) => [k, v.length])),
+    note: "Restore by re-importing the JSON files (Settings → Restore). Keep this zip safe.",
+  };
+
+  const zip = new JSZip();
+  zip.file(`stoneworld-backup-${today}.xlsx`, xlsxBuf);
+  zip.file("README.txt",
+    `StoneWorld full backup — ${new Date().toLocaleString()}\n` +
+    `Excel (.xlsx): human-readable, every table on its own sheet.\n` +
+    `data/*.json: lossless machine-readable snapshot used for one-click restore.\n` +
+    `manifest.json: row counts and integrity info.\n`,
+  );
+  zip.file("manifest.json", JSON.stringify(manifest, null, 2));
+  const dataFolder = zip.folder("data")!;
+  for (const [name, rows] of Object.entries(jsonTables)) {
+    dataFolder.file(`${name}.json`, JSON.stringify(rows, null, 2));
+  }
+  const blob = await zip.generateAsync({ type: "blob", compression: "DEFLATE" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `stoneworld-backup-${today}.zip`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+
   try { localStorage.setItem(LAST_KEY, new Date().toISOString()); } catch {}
+  // Silence unused import lint; exportWorkbook is still exported elsewhere via excel.ts
+  void exportWorkbook;
 }
