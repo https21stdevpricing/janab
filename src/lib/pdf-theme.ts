@@ -171,11 +171,13 @@ export function drawStoneWorldFooter(
   doc: jsPDF,
   company: PdfCompany | null | undefined,
   margin = 34,
+  opts: { showPageNumber?: boolean } = {},
 ) {
   const pageCount = doc.getNumberOfPages();
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const name = company?.company_name || "StoneWorld Traders";
+  const showPageNumber = opts.showPageNumber !== false;
   for (let page = 1; page <= pageCount; page++) {
     doc.setPage(page);
     doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
@@ -185,7 +187,9 @@ export function drawStoneWorldFooter(
       .setFontSize(8)
       .setTextColor(...swPdf.muted);
     doc.text(name, margin, H - 21);
-    doc.text(`Page ${page} of ${pageCount}`, W - margin, H - 21, { align: "right" });
+    if (showPageNumber) {
+      doc.text(`Page ${page} of ${pageCount}`, W - margin, H - 21, { align: "right" });
+    }
   }
 }
 
