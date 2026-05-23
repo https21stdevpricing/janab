@@ -275,28 +275,22 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   return (
     <div>
       <div className="grid gap-3 mb-3 print:hidden lg:grid-cols-[1fr_auto] lg:items-start">
-        <details className="surface p-3 text-xs group lg:open" open>
+        <details className="surface p-3 text-xs group" open>
           <summary className="flex cursor-pointer items-center justify-between gap-3 list-none [&::-webkit-details-marker]:hidden">
             <div className="min-w-0">
               <div className="eyebrow">Document design</div>
               <div className="text-[11px] text-muted-foreground">
-                Tap to {`{open|close}`.replace("{open|close}", "show / hide")} the design controls.
+                Tap to show / hide the design controls. Edits apply live.
               </div>
             </div>
-            <span className="rounded-full border bg-background px-2.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground group-open:bg-primary/10 group-open:text-primary">Customize</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={(e) => { e.preventDefault(); updateDesign(DEFAULT_PRINT_DESIGN); }}>
+                Reset
+              </Button>
+              <span className="rounded-full border bg-background px-2.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground group-open:bg-primary/10 group-open:text-primary">Customize</span>
+            </div>
           </summary>
           <div className="mt-3 space-y-2.5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="eyebrow">Document design</div>
-              <div className="text-[11px] text-muted-foreground">
-                Edits apply live to the preview and the branded PDF.
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={() => updateDesign(DEFAULT_PRINT_DESIGN)}>
-              Reset
-            </Button>
-          </div>
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="flex flex-col gap-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
