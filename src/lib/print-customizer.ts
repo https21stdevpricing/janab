@@ -1,6 +1,9 @@
 export type PrintHeaderStyle = "classic" | "editorial" | "compact";
 export type PrintBodyLayout = "balanced" | "spacious" | "dense";
-export type PrintPreset = "minimal" | "gst" | "dispatch" | "letterhead";
+export type PrintPreset = "minimal" | "clean" | "modern" | "bold" | "elegant";
+// Kept for backward compatibility with persisted localStorage values.
+// The print template now always renders the "standard" structure;
+// presets only tweak typography, spacing and accent colour.
 export type PrintProductLayout = "standard" | "compact" | "description-first" | "tax-detail";
 export type PrintCodePlacement = "totals" | "header" | "terms" | "hidden";
 export type PrintFooterPosition = "above-signature" | "page-bottom";
@@ -44,6 +47,7 @@ export type PrintDesign = {
   showPageNumber: boolean; // print "Page x of y" footer text
   footerDividerStyle: PrintFooterDivider; // divider above footer logos / signature row
   headerContainer: PrintHeaderContainer; // visual containment for the header block
+  accent: string; // hex accent colour driving rules, totals divider and brand stripe
   transporter?: string; // editable transporter name
   vehicleNo?: string; // editable vehicle no
   destination?: string; // editable destination
@@ -54,7 +58,7 @@ export type PrintDesign = {
 };
 
 export const DEFAULT_PRINT_DESIGN: PrintDesign = {
-  preset: "minimal",
+  preset: "clean",
   headerStyle: "classic",
   bodyLayout: "balanced",
   productLayout: "standard",
@@ -86,6 +90,7 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   showPageNumber: true,
   footerDividerStyle: "solid",
   headerContainer: "rule",
+  accent: "#00abb5",
   transporter: "",
   vehicleNo: "",
   destination: "",
@@ -98,44 +103,48 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
 export const PRINT_PRESETS: Record<PrintPreset, Partial<PrintDesign>> = {
   minimal: {
     preset: "minimal",
+    headerStyle: "compact",
+    bodyLayout: "balanced",
+    productLayout: "standard",
+    headerContainer: "open",
+    footerDividerStyle: "solid",
+    accent: "#111621",
+  },
+  clean: {
+    preset: "clean",
     headerStyle: "classic",
     bodyLayout: "balanced",
     productLayout: "standard",
-    barcodePlacement: "terms",
-    qrPlacement: "totals",
-    showTransport: false,
-    showHsnSummary: true,
+    headerContainer: "rule",
+    footerDividerStyle: "solid",
+    accent: "#00abb5",
   },
-  gst: {
-    preset: "gst",
+  modern: {
+    preset: "modern",
     headerStyle: "compact",
-    bodyLayout: "dense",
-    productLayout: "tax-detail",
-    barcodePlacement: "header",
-    qrPlacement: "totals",
-    showGstSummary: true,
-    showHsnSummary: true,
-    showTaxInWords: true,
+    bodyLayout: "balanced",
+    productLayout: "standard",
+    headerContainer: "boxed",
+    footerDividerStyle: "accent",
+    accent: "#0ea5b7",
   },
-  dispatch: {
-    preset: "dispatch",
-    headerStyle: "compact",
+  bold: {
+    preset: "bold",
+    headerStyle: "classic",
     bodyLayout: "dense",
-    productLayout: "compact",
-    barcodePlacement: "header",
-    qrPlacement: "hidden",
-    showTransport: true,
-    showShipTo: true,
+    productLayout: "standard",
+    headerContainer: "boxed",
+    footerDividerStyle: "double",
+    accent: "#111621",
   },
-  letterhead: {
-    preset: "letterhead",
+  elegant: {
+    preset: "elegant",
     headerStyle: "editorial",
     bodyLayout: "spacious",
-    productLayout: "description-first",
-    barcodePlacement: "terms",
-    qrPlacement: "totals",
-    showBankDetails: true,
-    showShipTo: true,
+    productLayout: "standard",
+    headerContainer: "rule",
+    footerDividerStyle: "dashed",
+    accent: "#9a7b3f",
   },
 };
 
@@ -147,9 +156,17 @@ export function loadPrintDesign(): PrintDesign {
     const raw = window.localStorage.getItem(KEY);
     if (!raw) return DEFAULT_PRINT_DESIGN;
     const parsed = JSON.parse(raw);
+    // Migrate legacy preset names from older builds.
+    const legacyMap: Record<string, PrintPreset> = {
+      gst: "modern", dispatch: "bold", letterhead: "elegant",
+    };
+    const preset: PrintPreset =
+      (legacyMap[parsed.preset] as PrintPreset | undefined) ?? (parsed.preset ?? "clean");
     return {
       ...DEFAULT_PRINT_DESIGN,
       ...parsed,
+      preset,
+      productLayout: "standard",
       footerLogos: Array.isArray(parsed.footerLogos) ? parsed.footerLogos.slice(0, 20) : [],
     };
   } catch {
