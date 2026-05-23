@@ -104,10 +104,10 @@ function Stat({ label, value }: { label: string; value: Record<string, number> }
       ) : (
         <dl className="mt-2 grid grid-cols-2 gap-y-1 text-xs">
           {entries.map(([k, v]) => (
-            <>
-              <dt key={k + "k"} className="text-muted-foreground capitalize">{k.replace(/_/g, " ")}</dt>
-              <dd key={k + "v"} className="text-right font-semibold tabular-nums">{v}</dd>
-            </>
+            <div key={k} className="contents">
+              <dt className="text-muted-foreground capitalize">{k.replace(/_/g, " ")}</dt>
+              <dd className="text-right font-semibold tabular-nums">{v}</dd>
+            </div>
           ))}
         </dl>
       )}
