@@ -75,52 +75,72 @@ export function drawStoneWorldHeader(
   design?: Partial<PrintDesign>,
 ) {
   const W = doc.internal.pageSize.getWidth();
-  const M = 36;
+  const marginScale =
+    design?.pageMargin === "compact" ? 26 : design?.pageMargin === "wide" ? 52 : 36;
+  const M = marginScale;
   const co = company ?? {};
   const name = co.company_name || "StoneWorld Traders";
   const accent = hexToRgb(design?.accent);
+  const fs = Math.max(0.85, Math.min(1.2, Number(design?.fontScale ?? 1)));
+  const lh =
+    design?.lineHeight === "tight" ? 0.92 : design?.lineHeight === "relaxed" ? 1.12 : 1;
+  const logoPos = design?.logoPosition ?? "left";
 
   // Minimal, editorial-style header. Thin teal accent rule only.
   doc.setFillColor(255, 255, 255);
   doc.rect(0, 0, W, 130, "F");
 
-  // Big title on the right, very tight letter spacing
+  // Title — placement flips based on logo position so they never collide
+  const titleAlign: "left" | "right" | "center" =
+    logoPos === "right" ? "left" : logoPos === "center" ? "center" : "right";
+  const titleX = titleAlign === "left" ? M : titleAlign === "center" ? W / 2 : W - M;
   doc
     .setFont("helvetica", "bold")
-    .setFontSize(22)
+    .setFontSize(22 * fs)
     .setTextColor(...swPdf.ink);
-  doc.text(meta.title.toUpperCase(), W - M, top + 14, { align: "right" });
+  doc.text(meta.title.toUpperCase(), titleX, top + 14, { align: titleAlign });
   if (meta.subtitle) {
     doc
       .setFont("helvetica", "normal")
-      .setFontSize(8)
+      .setFontSize(8 * fs)
       .setTextColor(...swPdf.muted);
-    doc.text(String(meta.subtitle).toUpperCase(), W - M, top + 28, { align: "right" });
+    doc.text(String(meta.subtitle).toUpperCase(), titleX, top + 28, { align: titleAlign });
   }
 
-  // Logo + company block (left)
+  // Logo + company block — anchor swaps with logoPosition
+  const logoSize = 46;
+  const logoX =
+    logoPos === "center" ? (W - logoSize) / 2 : logoPos === "right" ? W - M - logoSize : M;
   try {
     doc.addImage(
       design?.logoDataUrl || swLogo,
       imageFormat(design?.logoDataUrl) as any,
-      M,
+      logoX,
       top,
-      46,
-      46,
+      logoSize,
+      logoSize,
     );
   } catch {}
+  const companyAlign: "left" | "right" | "center" =
+    logoPos === "right" ? "right" : logoPos === "center" ? "center" : "left";
+  const companyAnchorX =
+    logoPos === "right"
+      ? logoX - 8
+      : logoPos === "center"
+        ? W / 2
+        : M + logoSize + 12;
   doc
     .setFont("helvetica", "bold")
-    .setFontSize(14)
+    .setFontSize(14 * fs)
     .setTextColor(...swPdf.ink);
-  doc.text(name, M + 58, top + 14, { maxWidth: 280 });
+  doc.text(name, companyAnchorX, top + 14, { maxWidth: 280, align: companyAlign });
   doc
     .setFont("helvetica", "normal")
-    .setFontSize(8)
+    .setFontSize(8 * fs)
     .setTextColor(...swPdf.inkSoft);
   const address = [co.address, co.state].filter(Boolean).join(", ");
   const addressLines = address ? doc.splitTextToSize(address, 290).slice(0, 2) : [];
-  if (addressLines.length) doc.text(addressLines, M + 58, top + 27);
+  if (addressLines.length) doc.text(addressLines, companyAnchorX, top + 27, { align: companyAlign });
   const contactLine = [
     co.phone && `Tel: ${co.phone}`,
     co.email,
@@ -132,25 +152,36 @@ export function drawStoneWorldHeader(
   if (contactLine)
     doc.text(
       doc.splitTextToSize(contactLine, 290).slice(0, 2),
-      M + 58,
+      companyAnchorX,
       top + (addressLines.length > 1 ? 49 : 41),
+      { align: companyAlign },
     );
 
   // Meta lines under title
   doc
     .setFont("helvetica", "normal")
-    .setFontSize(8.5)
+    .setFontSize(8.5 * fs)
     .setTextColor(...swPdf.inkSoft);
   const metaLines: Array<[string, string]> = [];
   if (meta.reference) metaLines.push(["No.", String(meta.reference)]);
   if (meta.date) metaLines.push(["Date", fmtDate(meta.date)]);
   if (meta.validUntil) metaLines.push(["Valid", fmtDate(meta.validUntil)]);
+  // When the title is right-aligned, keep meta on the right; otherwise place
+  // meta opposite the title to balance the masthead.
+  const metaRight = titleAlign !== "left";
+  const metaStep = 12 * lh;
   metaLines.slice(0, 3).forEach(([k, v], i) => {
-    const y = top + 44 + i * 12;
+    const y = top + 44 + i * metaStep;
     doc.setFont("helvetica", "normal").setTextColor(...swPdf.muted);
-    doc.text(k, W - M - 110, y);
-    doc.setFont("helvetica", "bold").setTextColor(...swPdf.ink);
-    doc.text(v, W - M, y, { align: "right" });
+    if (metaRight) {
+      doc.text(k, W - M - 110, y);
+      doc.setFont("helvetica", "bold").setTextColor(...swPdf.ink);
+      doc.text(v, W - M, y, { align: "right" });
+    } else {
+      doc.text(k, M, y);
+      doc.setFont("helvetica", "bold").setTextColor(...swPdf.ink);
+      doc.text(v, M + 110, y, { align: "right" });
+    }
   });
 
   const qr = design?.qrPlacement === "header" ? design?.qrCodeDataUrl : null;
@@ -160,30 +191,55 @@ export function drawStoneWorldHeader(
   // empty band between the header and the Bill-To block).
   const hasCodes = !!(qr || barcode);
   const metaCount = [meta.reference, meta.date, meta.validUntil].filter(Boolean).length;
-  const metaBottom = top + 44 + Math.max(0, metaCount - 1) * 12 + 4;
+  const metaBottom = top + 44 + Math.max(0, metaCount - 1) * metaStep + 4;
   let ruleY = Math.max(top + 64, metaBottom);
   if (hasCodes) {
     const codeTop = metaBottom + 6;
+    const codeAnchorRight = metaRight ? W - M : M; // place codes near the meta column
     if (barcode) {
       try {
-        doc.addImage(barcode, imageFormat(barcode) as any, W - M - 96, codeTop, 96, 18);
+        const bx = metaRight ? codeAnchorRight - 96 : codeAnchorRight;
+        doc.addImage(barcode, imageFormat(barcode) as any, bx, codeTop, 96, 18);
       } catch {}
     }
     if (qr) {
       try {
-        doc.addImage(qr, imageFormat(qr) as any, W - M - (barcode ? 124 : 28), codeTop - 2, 26, 26);
+        const qx = metaRight
+          ? codeAnchorRight - (barcode ? 124 : 28)
+          : codeAnchorRight + (barcode ? 100 : 0);
+        doc.addImage(qr, imageFormat(qr) as any, qx, codeTop - 2, 26, 26);
       } catch {}
     }
     ruleY = codeTop + 24;
   }
 
-  // Single thin hairline — no decorative accent stub (Apple-minimal).
-  doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
-  doc.line(M, ruleY, W - M, ruleY);
+  // Header divider — honours headerDividerStyle (solid / dashed / double /
+  // accent / none) so users can tune the masthead separator independently.
+  const div = design?.headerDividerStyle ?? "solid";
+  if (div !== "none") {
+    if (div === "accent") {
+      doc.setDrawColor(...accent).setLineWidth(0.9);
+      doc.line(M, ruleY, W - M, ruleY);
+    } else if (div === "double") {
+      doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
+      doc.line(M, ruleY, W - M, ruleY);
+      doc.line(M, ruleY + 2.4, W - M, ruleY + 2.4);
+      ruleY += 2.4;
+    } else if (div === "dashed") {
+      doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
+      const dx = 3;
+      for (let x = M; x < W - M; x += dx * 2) {
+        doc.line(x, ruleY, Math.min(x + dx, W - M), ruleY);
+      }
+    } else {
+      doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
+      doc.line(M, ruleY, W - M, ruleY);
+    }
+  }
   // Reference the accent so the unused-variable lint stays quiet; intentionally
-  // omitted from the visible rule for a cleaner editorial header.
+  // referenced above only when the "accent" divider is selected.
   void accent;
-  return { margin: M, y: ruleY + 22 };
+  return { margin: M, y: ruleY + Math.round(22 * lh) };
 }
 
 export function drawStoneWorldFooter(
