@@ -556,9 +556,9 @@ function BillsPage() {
 
       {tab === "history" ? (
         filteredPays.length === 0 ? <Empty>No payments recorded yet.</Empty> : (
-          <div className="min-w-0 overflow-hidden rounded-2xl border bg-card shadow-sm divide-y">
+          <div className="min-w-0 space-y-2">
             {filteredPays.map(p => (
-              <button key={p.id} type="button" className="grid w-full min-w-0 grid-cols-[1fr_auto] items-start gap-3 px-3 py-2.5 text-left transition-colors hover:bg-muted/30 sm:px-4" onClick={() => openPayView(p)}>
+              <button key={p.id} type="button" className="grid w-full min-w-0 grid-cols-[1fr_auto] items-start gap-3 rounded-xl border border-border/60 bg-card px-3.5 py-3 text-left shadow-sm transition-colors hover:bg-muted/30 sm:px-4" onClick={() => openPayView(p)}>
                 <div className="min-w-0">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <span className="min-w-0 max-w-full truncate font-mono text-sm font-medium">{p.payment_no}</span>
@@ -624,14 +624,14 @@ function BillsPage() {
             </tbody>
           </table>
         </div>
-        <div className="overflow-hidden rounded-2xl border bg-card shadow-sm divide-y md:hidden">
+        <div className="space-y-2 md:hidden">
           {filtered.map(r => {
             const d = ageDays(r.date); const b = bucket(d);
             const pct = r.total > 0 ? Math.min(100, Math.round((r.paid / r.total) * 100)) : 0;
             const st = payStatus(Number(r.total), Number(r.paid), d);
             const lock = lockMap.get(`${r.doc_kind}:${r.doc_id}`);
             return (
-              <div key={`${r.doc_kind}-${r.doc_id}`} className="min-w-0 space-y-2.5 p-3">
+              <div key={`${r.doc_kind}-${r.doc_id}`} className="min-w-0 space-y-2.5 rounded-xl border border-border/60 bg-card p-3.5 shadow-sm">
                 <button type="button" onClick={() => openPreview(r.doc_no)} className="w-full text-left">
                   <div className="grid min-w-0 grid-cols-[1fr_auto] items-start gap-3">
                     <div className="min-w-0">
@@ -650,12 +650,10 @@ function BillsPage() {
                   <span>{inr(r.paid)} of {inr(r.total)} · {b}d</span>
                   {lock && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">Pending cheque</Badge>}
                 </div>
-                <div>
-                  <Button size="sm" className="w-full rounded-full" variant={lock ? "secondary" : "default"} onClick={() => settleBill(r)}>
-                    {tab === "receivable" ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
-                    {lock ? "View pending cheque" : tab === "receivable" ? "Receive" : "Pay"}
-                  </Button>
-                </div>
+                <Button size="sm" className="h-9 w-full rounded-lg" variant={lock ? "secondary" : "default"} onClick={() => settleBill(r)}>
+                  {tab === "receivable" ? <ArrowDownLeft className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
+                  {lock ? "View pending cheque" : tab === "receivable" ? "Receive" : "Pay"}
+                </Button>
               </div>
             );
           })}

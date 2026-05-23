@@ -238,9 +238,9 @@ function ProductsPage() {
       {/* Top panel — quick stats + import/export */}
       <div className="mb-5 rounded-2xl border border-border/60 bg-card">
         <div className="grid grid-cols-3 divide-x divide-border/60">
-          <PanelStat label="Stock value" value={inr(summary.valueCost)} />
-          <PanelStat label="Sale value" value={inr(summary.valueSale)} tone="good" />
-          <PanelStat label="Low stock" value={fmt(summary.low)} tone={summary.low > 0 ? "bad" : undefined} />
+          <PanelStat label="Stock value" value={"₹" + fmt(summary.valueCost, 0)} />
+          <PanelStat label="Sale value" value={"₹" + fmt(summary.valueSale, 0)} tone="good" />
+          <PanelStat label="Low stock" value={fmt(summary.low, 0)} tone={summary.low > 0 ? "bad" : undefined} />
         </div>
         <div className="flex items-center justify-end gap-1.5 border-t border-border/60 px-3 py-2">
           <input
@@ -586,9 +586,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function PanelStat({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "good" | "bad" }) {
   const cls = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "text-foreground";
   return (
-    <div className="min-w-0 px-3 py-3 text-center">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`mt-1 truncate text-[15px] font-semibold tabular-nums ${cls}`}>{value}</div>
+    <div className="min-w-0 px-2.5 py-3 text-center">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">{label}</div>
+      <div className={`mt-1 text-[13px] sm:text-[15px] font-semibold tabular-nums leading-tight break-words ${cls}`}>{value}</div>
     </div>
   );
 }

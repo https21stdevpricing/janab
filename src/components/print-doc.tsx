@@ -245,9 +245,19 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
 
   const footerCols = Math.ceil(design.footerLogos.length / design.footerRows) || 1;
   const watermarkOpacity = Math.max(0, Math.min(100, design.watermarkOpacity)) / 100;
+  const dividerClass =
+    design.footerDividerStyle === "none"
+      ? ""
+      : design.footerDividerStyle === "dashed"
+        ? "border-t border-dashed border-slate-300"
+        : design.footerDividerStyle === "double"
+          ? "border-t-4 border-double border-slate-300"
+          : design.footerDividerStyle === "accent"
+            ? "border-t-2 border-[#00abb5]"
+            : "border-t border-slate-200";
   const footerLogoBlock = design.footerLogos.length > 0 && (
     <div
-      className="mt-8 border-t border-slate-200 pt-4 grid gap-3 items-center break-inside-avoid"
+      className={`mt-8 ${dividerClass} ${design.footerDividerStyle === "none" ? "" : "pt-4"} grid gap-3 items-center break-inside-avoid`}
       style={{ gridTemplateColumns: `repeat(${Math.max(1, footerCols)}, minmax(0, 1fr))` }}
     >
       {design.footerLogos.map((src, i) => (
@@ -265,18 +275,22 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   return (
     <div>
       <div className="grid gap-3 mb-3 print:hidden lg:grid-cols-[1fr_auto] lg:items-start">
-        <div className="surface p-3 space-y-2.5 text-xs">
-          <div className="flex items-center justify-between gap-3">
+        <details className="surface p-3 text-xs group" open>
+          <summary className="flex cursor-pointer items-center justify-between gap-3 list-none [&::-webkit-details-marker]:hidden">
             <div className="min-w-0">
               <div className="eyebrow">Document design</div>
               <div className="text-[11px] text-muted-foreground">
-                Edits apply live to the preview and the branded PDF.
+                Tap to show / hide the design controls. Edits apply live.
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={() => updateDesign(DEFAULT_PRINT_DESIGN)}>
-              Reset
-            </Button>
-          </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button variant="outline" size="sm" onClick={(e) => { e.preventDefault(); updateDesign(DEFAULT_PRINT_DESIGN); }}>
+                Reset
+              </Button>
+              <span className="rounded-full border bg-background px-2.5 py-1 text-[10px] uppercase tracking-wide text-muted-foreground group-open:bg-primary/10 group-open:text-primary">Customize</span>
+            </div>
+          </summary>
+          <div className="mt-3 space-y-2.5">
           <div className="grid gap-2 sm:grid-cols-3">
             <label className="flex flex-col gap-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -339,6 +353,48 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                   </option>
                 ))}
               </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Header containment
+              </span>
+              <select
+                className="h-8 rounded-md border bg-background px-2 text-xs"
+                value={design.headerContainer}
+                onChange={(e) =>
+                  updateDesign({ ...design, headerContainer: e.target.value as any })
+                }
+              >
+                <option value="rule">Underline rule</option>
+                <option value="boxed">Boxed panel</option>
+                <option value="open">Open / no divider</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Divider above footer logos
+              </span>
+              <select
+                className="h-8 rounded-md border bg-background px-2 text-xs"
+                value={design.footerDividerStyle}
+                onChange={(e) =>
+                  updateDesign({ ...design, footerDividerStyle: e.target.value as any })
+                }
+              >
+                <option value="solid">Solid line</option>
+                <option value="dashed">Dashed line</option>
+                <option value="double">Double line</option>
+                <option value="accent">Brand accent</option>
+                <option value="none">No line</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-[11px] mt-1 sm:mt-5">
+              <input
+                type="checkbox"
+                checked={design.showPageNumber}
+                onChange={(e) => updateDesign({ ...design, showPageNumber: e.target.checked })}
+              />
+              <span>Show "Page x of y" in PDF footer</span>
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -793,7 +849,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               </div>
             )}
           </div>
-        </div>
+          </div>
+        </details>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={downloadPdf}>
             <Printer className="h-4 w-4" /> Download Branded PDF
@@ -804,6 +861,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
         </div>
       </div>
 
+      <div className="overflow-x-auto -mx-3 px-3 print:overflow-visible print:mx-0 print:px-0">
       <article
         id="print-area"
         className="sw-print-doc bg-white text-[#111621] mx-auto max-w-[820px] rounded-md border border-slate-200 shadow-sm overflow-hidden print:border-0 print:shadow-none print:max-w-full print:rounded-none relative"
@@ -836,7 +894,13 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           </div>
         )}
 
-        <header className="px-9 pt-8 pb-5 relative">
+        <header
+          className={`relative ${
+            design.headerContainer === "boxed"
+              ? "mx-6 mt-6 mb-2 rounded-lg border border-slate-200 bg-slate-50/60 px-7 pt-6 pb-5"
+              : "px-9 pt-8 pb-5"
+          }`}
+        >
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-start gap-4 min-w-0">
               <img
@@ -902,8 +966,12 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               )}
             </div>
           </div>
-          <div className="mt-5 h-px bg-slate-200" />
-          <div className="mt-1 h-[2px] w-16 bg-[#00abb5]" />
+          {design.headerContainer === "open" ? null : (
+            <>
+              <div className="mt-5 h-px bg-slate-200" />
+              <div className="mt-1 h-[2px] w-16 bg-[#00abb5]" />
+            </>
+          )}
         </header>
 
         <section
@@ -1273,6 +1341,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           {(design.footerPosition === "page-bottom" || design.footerOnEveryPage) && footerLogoBlock}
         </section>
       </article>
+      </div>
 
       <style>{`@media print { @page { size: A4; margin: 14mm 12mm 22mm 12mm; } body { background: white !important; } .print\\:hidden { display: none !important; } #print-area { width: 186mm; } .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; } tr, .sw-row { page-break-inside: avoid; } thead { display: table-header-group; } tfoot { display: table-footer-group; } }`}</style>
     </div>

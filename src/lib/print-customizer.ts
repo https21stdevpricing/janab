@@ -8,6 +8,8 @@ export type PrintWatermarkLayer = "back" | "front";
 export type PrintQrMode = "digital-copy" | "upi-pay" | "manual" | "off";
 export type PrintBarcodeMode = "auto" | "manual" | "off";
 export type PrintRoundOffMode = "off" | "nearest" | "up" | "down";
+export type PrintFooterDivider = "solid" | "dashed" | "double" | "accent" | "none";
+export type PrintHeaderContainer = "open" | "boxed" | "rule";
 
 export type PrintDesign = {
   preset: PrintPreset;
@@ -39,6 +41,9 @@ export type PrintDesign = {
   showShipTo: boolean; // separate Ship-To panel
   showTransport: boolean; // transport details panel (dispatch/vehicle/destination)
   roundOff: PrintRoundOffMode; // rounding behaviour on grand total
+  showPageNumber: boolean; // print "Page x of y" footer text
+  footerDividerStyle: PrintFooterDivider; // divider above footer logos / signature row
+  headerContainer: PrintHeaderContainer; // visual containment for the header block
   transporter?: string; // editable transporter name
   vehicleNo?: string; // editable vehicle no
   destination?: string; // editable destination
@@ -78,6 +83,9 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   showShipTo: true,
   showTransport: false,
   roundOff: "nearest",
+  showPageNumber: true,
+  footerDividerStyle: "solid",
+  headerContainer: "rule",
   transporter: "",
   vehicleNo: "",
   destination: "",
