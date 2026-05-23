@@ -892,23 +892,23 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               : "px-9 pt-8 pb-5"
           }`}
         >
-          <div className="flex items-start justify-between gap-6">
-            <div className="flex items-start gap-4 min-w-0">
+          <div className="flex items-start justify-between gap-8">
+            <div className="flex items-start gap-5 min-w-0 max-w-[62%]">
               <img
                 src={design.logoDataUrl || swLogo}
                 alt="logo"
-                className="h-12 w-12 object-contain shrink-0"
+                className="h-14 w-14 object-contain shrink-0"
               />
               <div className="min-w-0">
-                <h1 className="text-[19px] font-semibold leading-tight text-[#111621] tracking-[-0.01em]">
+                <h1 className="text-[20px] font-normal leading-tight text-[#111621] tracking-normal">
                   {company?.company_name ?? "StoneWorld Traders"}
                 </h1>
                 {address && (
-                  <p className="mt-1 text-[11px] leading-[16px] text-[#4a5260] max-w-[380px]">
+                  <p className="mt-1.5 text-[11.5px] leading-[17px] text-[#4a5260] max-w-[390px]">
                     {address}
                   </p>
                 )}
-                <p className="mt-0.5 text-[10.5px] leading-[15px] text-[#86909c]">
+                <p className="mt-1 text-[10.5px] leading-[16px] text-[#86909c] max-w-[390px]">
                   {[
                     company?.phone && `Tel: ${company.phone}`,
                     company?.email,
@@ -920,8 +920,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                 </p>
               </div>
             </div>
-            <div className="text-right shrink-0">
-              <div className="text-[20px] font-semibold tracking-[-0.015em] text-[#111621] leading-none">
+            <div className="text-right shrink-0 pt-1">
+              <div className="text-[21px] font-normal tracking-normal text-[#111621] leading-none">
                 {title}
               </div>
               <div className="mt-1.5 text-[9.5px] uppercase tracking-[0.22em] text-[#86909c]">
