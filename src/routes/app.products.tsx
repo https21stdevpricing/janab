@@ -586,9 +586,9 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 function PanelStat({ label, value, tone }: { label: string; value: React.ReactNode; tone?: "good" | "bad" }) {
   const cls = tone === "good" ? "text-primary" : tone === "bad" ? "text-destructive" : "text-foreground";
   return (
-    <div className="min-w-0 px-3 py-3 text-center">
-      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`mt-1 truncate text-[15px] font-semibold tabular-nums ${cls}`}>{value}</div>
+    <div className="min-w-0 px-2.5 py-3 text-center">
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground truncate">{label}</div>
+      <div className={`mt-1 text-[13px] sm:text-[15px] font-semibold tabular-nums leading-tight break-words ${cls}`}>{value}</div>
     </div>
   );
 }
