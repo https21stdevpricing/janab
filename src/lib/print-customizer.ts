@@ -1,6 +1,13 @@
 export type PrintHeaderStyle = "classic" | "editorial" | "compact";
 export type PrintBodyLayout = "balanced" | "spacious" | "dense";
-export type PrintPreset = "minimal" | "clean" | "modern" | "bold" | "elegant";
+export type PrintPreset =
+  | "minimal"
+  | "clean"
+  | "modern"
+  | "bold"
+  | "elegant"
+  | "apple-minimal"
+  | "clean-compact";
 // Kept for backward compatibility with persisted localStorage values.
 // The print template now always renders the "standard" structure;
 // presets only tweak typography, spacing and accent colour.
@@ -13,6 +20,9 @@ export type PrintBarcodeMode = "auto" | "manual" | "off";
 export type PrintRoundOffMode = "off" | "nearest" | "up" | "down";
 export type PrintFooterDivider = "solid" | "dashed" | "double" | "accent" | "none";
 export type PrintHeaderContainer = "open" | "boxed" | "rule";
+export type PrintLogoPosition = "left" | "center" | "right";
+export type PrintLineHeight = "tight" | "normal" | "relaxed";
+export type PrintPageMargin = "compact" | "standard" | "wide";
 
 export type PrintDesign = {
   preset: PrintPreset;
@@ -48,6 +58,11 @@ export type PrintDesign = {
   hideFooterCompanyName: boolean; // hide "StoneWorld Traders" line in the bottom footer band
   footerDividerStyle: PrintFooterDivider; // divider above footer logos / signature row
   headerContainer: PrintHeaderContainer; // visual containment for the header block
+  headerDividerStyle: PrintFooterDivider; // hairline style under the header
+  logoPosition: PrintLogoPosition; // logo placement in header
+  fontScale: number; // 0.85 – 1.20, multiplies header / meta font sizes
+  lineHeight: PrintLineHeight; // body / meta vertical rhythm
+  pageMargin: PrintPageMargin; // outer page margins
   accent: string; // hex accent colour driving rules, totals divider and brand stripe
   transporter?: string; // editable transporter name
   vehicleNo?: string; // editable vehicle no
@@ -92,6 +107,11 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   hideFooterCompanyName: false,
   footerDividerStyle: "solid",
   headerContainer: "rule",
+  headerDividerStyle: "solid",
+  logoPosition: "left",
+  fontScale: 1,
+  lineHeight: "normal",
+  pageMargin: "standard",
   accent: "#00abb5",
   transporter: "",
   vehicleNo: "",
@@ -147,6 +167,35 @@ export const PRINT_PRESETS: Record<PrintPreset, Partial<PrintDesign>> = {
     headerContainer: "rule",
     footerDividerStyle: "dashed",
     accent: "#9a7b3f",
+  },
+  "apple-minimal": {
+    preset: "apple-minimal",
+    headerStyle: "editorial",
+    bodyLayout: "spacious",
+    productLayout: "standard",
+    headerContainer: "open",
+    headerDividerStyle: "solid",
+    footerDividerStyle: "none",
+    logoPosition: "left",
+    fontScale: 0.95,
+    lineHeight: "relaxed",
+    pageMargin: "wide",
+    accent: "#111621",
+    hideFooterCompanyName: true,
+  },
+  "clean-compact": {
+    preset: "clean-compact",
+    headerStyle: "compact",
+    bodyLayout: "dense",
+    productLayout: "standard",
+    headerContainer: "rule",
+    headerDividerStyle: "solid",
+    footerDividerStyle: "solid",
+    logoPosition: "left",
+    fontScale: 0.9,
+    lineHeight: "tight",
+    pageMargin: "compact",
+    accent: "#00abb5",
   },
 };
 
