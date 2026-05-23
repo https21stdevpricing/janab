@@ -1,6 +1,13 @@
 export type PrintHeaderStyle = "classic" | "editorial" | "compact";
 export type PrintBodyLayout = "balanced" | "spacious" | "dense";
-export type PrintPreset = "minimal" | "clean" | "modern" | "bold" | "elegant";
+export type PrintPreset =
+  | "minimal"
+  | "clean"
+  | "modern"
+  | "bold"
+  | "elegant"
+  | "apple-minimal"
+  | "clean-compact";
 // Kept for backward compatibility with persisted localStorage values.
 // The print template now always renders the "standard" structure;
 // presets only tweak typography, spacing and accent colour.
@@ -13,6 +20,9 @@ export type PrintBarcodeMode = "auto" | "manual" | "off";
 export type PrintRoundOffMode = "off" | "nearest" | "up" | "down";
 export type PrintFooterDivider = "solid" | "dashed" | "double" | "accent" | "none";
 export type PrintHeaderContainer = "open" | "boxed" | "rule";
+export type PrintLogoPosition = "left" | "center" | "right";
+export type PrintLineHeight = "tight" | "normal" | "relaxed";
+export type PrintPageMargin = "compact" | "standard" | "wide";
 
 export type PrintDesign = {
   preset: PrintPreset;
@@ -48,6 +58,11 @@ export type PrintDesign = {
   hideFooterCompanyName: boolean; // hide "StoneWorld Traders" line in the bottom footer band
   footerDividerStyle: PrintFooterDivider; // divider above footer logos / signature row
   headerContainer: PrintHeaderContainer; // visual containment for the header block
+  headerDividerStyle: PrintFooterDivider; // hairline style under the header
+  logoPosition: PrintLogoPosition; // logo placement in header
+  fontScale: number; // 0.85 – 1.20, multiplies header / meta font sizes
+  lineHeight: PrintLineHeight; // body / meta vertical rhythm
+  pageMargin: PrintPageMargin; // outer page margins
   accent: string; // hex accent colour driving rules, totals divider and brand stripe
   transporter?: string; // editable transporter name
   vehicleNo?: string; // editable vehicle no
