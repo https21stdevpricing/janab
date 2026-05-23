@@ -666,7 +666,7 @@ export function exportStoneWorldDocument(
   });
   const fs = Math.max(0.85, Math.min(1.2, Number(design?.fontScale ?? 1)));
   const qtyMaxLen = Math.max(3, ...productBody.map((row) => String(row[3]).length));
-  const qtyWidth = Math.max(50, Math.min(66, qtyMaxLen * 5.4 + 18));
+  const qtyWidth = Math.max(54, Math.min(78, qtyMaxLen * 5.6 + 20));
   stoneWorldTable(doc, {
     startY: y + 140,
     margin: { left: M, right: M, top: 58, bottom: reservedFooter },
@@ -678,7 +678,7 @@ export function exportStoneWorldDocument(
       0: { halign: "center", cellWidth: 22, textColor: swPdf.muted },
       1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 130 },
       2: { halign: "center", cellWidth: 52, textColor: swPdf.muted, font: "courier", fontSize: 7.6 * fs },
-      3: { halign: "right", cellWidth: qtyWidth, font: "courier", fontSize: Math.max(6.4, Math.min(8.2 * fs, 48 / qtyMaxLen)) },
+      3: { halign: "right", cellWidth: qtyWidth, font: "courier", fontSize: Math.max(5.8, Math.min(8.2 * fs, 56 / qtyMaxLen)) },
       4: { halign: "center", cellWidth: 36, textColor: swPdf.muted },
       5: { halign: "right", cellWidth: 62 },
       6: { halign: "right", cellWidth: 36, textColor: swPdf.muted },
@@ -687,7 +687,7 @@ export function exportStoneWorldDocument(
     didParseCell: (data: any) => {
       if (data.section === "body" && data.column.index === 3) {
         const value = String(data.cell.raw ?? "");
-        data.cell.styles.fontSize = fitPdfFontSize(doc, value, qtyWidth - 10, 8.2 * fs, 6.2);
+        data.cell.styles.fontSize = fitPdfFontSize(doc, value, qtyWidth - 10, 8.2 * fs, 5.8);
         data.cell.styles.overflow = "visible";
       }
     },
