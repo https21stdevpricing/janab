@@ -352,6 +352,48 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
             </label>
             <label className="flex flex-col gap-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Header containment
+              </span>
+              <select
+                className="h-8 rounded-md border bg-background px-2 text-xs"
+                value={design.headerContainer}
+                onChange={(e) =>
+                  updateDesign({ ...design, headerContainer: e.target.value as any })
+                }
+              >
+                <option value="rule">Underline rule</option>
+                <option value="boxed">Boxed panel</option>
+                <option value="open">Open / no divider</option>
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                Divider above footer logos
+              </span>
+              <select
+                className="h-8 rounded-md border bg-background px-2 text-xs"
+                value={design.footerDividerStyle}
+                onChange={(e) =>
+                  updateDesign({ ...design, footerDividerStyle: e.target.value as any })
+                }
+              >
+                <option value="solid">Solid line</option>
+                <option value="dashed">Dashed line</option>
+                <option value="double">Double line</option>
+                <option value="accent">Brand accent</option>
+                <option value="none">No line</option>
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-[11px] mt-1 sm:mt-5">
+              <input
+                type="checkbox"
+                checked={design.showPageNumber}
+                onChange={(e) => updateDesign({ ...design, showPageNumber: e.target.checked })}
+              />
+              <span>Show "Page x of y" in PDF footer</span>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                 Main logo (PNG)
               </span>
               <span className="h-8 rounded-md border bg-background px-2 text-xs flex items-center justify-between gap-2 cursor-pointer">
