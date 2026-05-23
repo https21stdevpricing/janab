@@ -688,7 +688,7 @@ export function exportStoneWorldDocument(
       if (data.section === "body" && data.column.index === 3) {
         const value = String(data.cell.raw ?? "");
         data.cell.styles.fontSize = fitPdfFontSize(doc, value, qtyWidth - 10, 8.2 * fs, 5.8);
-        data.cell.styles.overflow = "visible";
+        data.cell.styles.overflow = "ellipsize";
       }
     },
     didDrawPage: (data: any) => {
