@@ -57,6 +57,23 @@ export const pdfPct = (value: number | null | undefined) => {
   return `${fmt(n, n % 1 === 0 ? 0 : 2)}%`;
 };
 
+const pdfQty = (value: number | null | undefined) => {
+  const n = Number(value ?? 0);
+  if (!isFinite(n)) return "0";
+  const decimals = Math.abs(n % 1) < 0.0001 ? 0 : 2;
+  return fmt(n, decimals);
+};
+
+function fitPdfFontSize(doc: jsPDF, text: string, maxWidth: number, start = 8.4, min = 6.2) {
+  let size = start;
+  doc.setFontSize(size);
+  while (size > min && doc.getTextWidth(text) > maxWidth) {
+    size -= 0.25;
+    doc.setFontSize(size);
+  }
+  return size;
+}
+
 export function newStoneWorldPdf() {
   const doc = new jsPDF({ unit: "pt", format: "a4", compress: true });
   doc.setFont("helvetica", "normal");
@@ -82,21 +99,20 @@ export function drawStoneWorldHeader(
   const name = co.company_name || "StoneWorld Traders";
   const accent = hexToRgb(design?.accent);
   const fs = Math.max(0.85, Math.min(1.2, Number(design?.fontScale ?? 1)));
-  const lh =
-    design?.lineHeight === "tight" ? 0.92 : design?.lineHeight === "relaxed" ? 1.12 : 1;
+  const lh = design?.lineHeight === "tight" ? 0.92 : design?.lineHeight === "relaxed" ? 1.12 : 1;
   const logoPos = design?.logoPosition ?? "left";
 
-  // Minimal, editorial-style header. Thin teal accent rule only.
+  // Apple-style masthead: white space first, larger brand mark, quiet metadata.
   doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, W, 130, "F");
+  doc.rect(0, 0, W, 126, "F");
 
   // Title — placement flips based on logo position so they never collide
   const titleAlign: "left" | "right" | "center" =
     logoPos === "right" ? "left" : logoPos === "center" ? "center" : "right";
   const titleX = titleAlign === "left" ? M : titleAlign === "center" ? W / 2 : W - M;
   doc
-    .setFont("helvetica", "bold")
-    .setFontSize(22 * fs)
+    .setFont("helvetica", "normal")
+    .setFontSize(21 * fs)
     .setTextColor(...swPdf.ink);
   doc.text(meta.title.toUpperCase(), titleX, top + 14, { align: titleAlign });
   if (meta.subtitle) {
@@ -108,7 +124,7 @@ export function drawStoneWorldHeader(
   }
 
   // Logo + company block — anchor swaps with logoPosition
-  const logoSize = 46;
+  const logoSize = logoPos === "center" ? 42 : 54;
   const logoX =
     logoPos === "center" ? (W - logoSize) / 2 : logoPos === "right" ? W - M - logoSize : M;
   try {
@@ -124,23 +140,20 @@ export function drawStoneWorldHeader(
   const companyAlign: "left" | "right" | "center" =
     logoPos === "right" ? "right" : logoPos === "center" ? "center" : "left";
   const companyAnchorX =
-    logoPos === "right"
-      ? logoX - 8
-      : logoPos === "center"
-        ? W / 2
-        : M + logoSize + 12;
-  doc
-    .setFont("helvetica", "bold")
-    .setFontSize(14 * fs)
-    .setTextColor(...swPdf.ink);
-  doc.text(name, companyAnchorX, top + 14, { maxWidth: 280, align: companyAlign });
+    logoPos === "right" ? logoX - 8 : logoPos === "center" ? W / 2 : M + logoSize + 14;
   doc
     .setFont("helvetica", "normal")
-    .setFontSize(8 * fs)
+    .setFontSize(15 * fs)
+    .setTextColor(...swPdf.ink);
+  doc.text(name, companyAnchorX, top + 16, { maxWidth: 300, align: companyAlign });
+  doc
+    .setFont("helvetica", "normal")
+    .setFontSize(8.4 * fs)
     .setTextColor(...swPdf.inkSoft);
   const address = [co.address, co.state].filter(Boolean).join(", ");
-  const addressLines = address ? doc.splitTextToSize(address, 290).slice(0, 2) : [];
-  if (addressLines.length) doc.text(addressLines, companyAnchorX, top + 27, { align: companyAlign });
+  const addressLines = address ? doc.splitTextToSize(address, 304).slice(0, 2) : [];
+  if (addressLines.length)
+    doc.text(addressLines, companyAnchorX, top + 31, { align: companyAlign });
   const contactLine = [
     co.phone && `Tel: ${co.phone}`,
     co.email,
@@ -153,7 +166,7 @@ export function drawStoneWorldHeader(
     doc.text(
       doc.splitTextToSize(contactLine, 290).slice(0, 2),
       companyAnchorX,
-      top + (addressLines.length > 1 ? 49 : 41),
+      top + (addressLines.length > 1 ? 55 : 45),
       { align: companyAlign },
     );
 
@@ -640,27 +653,54 @@ export function exportStoneWorldDocument(
       String(i + 1),
       name,
       String(hsn),
-      fmt(qty),
+      pdfQty(qty),
       it.unit ?? "—",
       pdfMoney(rate),
       pdfPct(it.gst_pct),
       pdfMoney(taxable),
     ];
   });
+  const fs = Math.max(0.85, Math.min(1.2, Number(design?.fontScale ?? 1)));
+  const qtyMaxLen = Math.max(3, ...productBody.map((row) => String(row[3]).length));
+  const qtyWidth = Math.max(54, Math.min(78, qtyMaxLen * 5.6 + 20));
   stoneWorldTable(doc, {
     startY: y + 140,
     margin: { left: M, right: M, top: 58, bottom: reservedFooter },
     head: productHead,
     body: productBody,
+    styles: {
+      fontSize: 8.3 * fs,
+      minCellHeight: 24,
+      cellPadding: { top: 8, right: 5, bottom: 8, left: 5 },
+    },
+    headStyles: { fontSize: 7.2 * fs, cellPadding: { top: 6, right: 5, bottom: 6, left: 5 } },
     columnStyles: {
       0: { halign: "center", cellWidth: 22, textColor: swPdf.muted },
       1: { cellWidth: "auto", fontStyle: "bold", minCellWidth: 130 },
-      2: { halign: "center", cellWidth: 56, textColor: swPdf.muted, font: "courier", fontSize: 8 },
-      3: { halign: "right", cellWidth: 40 },
+      2: {
+        halign: "center",
+        cellWidth: 52,
+        textColor: swPdf.muted,
+        font: "courier",
+        fontSize: 7.6 * fs,
+      },
+      3: {
+        halign: "right",
+        cellWidth: qtyWidth,
+        font: "courier",
+        fontSize: Math.max(5.8, Math.min(8.2 * fs, 56 / qtyMaxLen)),
+      },
       4: { halign: "center", cellWidth: 36, textColor: swPdf.muted },
       5: { halign: "right", cellWidth: 62 },
       6: { halign: "right", cellWidth: 36, textColor: swPdf.muted },
       7: { halign: "right", cellWidth: 74, fontStyle: "bold" },
+    },
+    didParseCell: (data: any) => {
+      if (data.section === "body" && data.column.index === 3) {
+        const value = String(data.cell.raw ?? "");
+        data.cell.styles.fontSize = fitPdfFontSize(doc, value, qtyWidth - 10, 8.2 * fs, 5.8);
+        data.cell.styles.overflow = "ellipsize";
+      }
     },
     didDrawPage: (data: any) => {
       if (data.pageNumber > 1) {

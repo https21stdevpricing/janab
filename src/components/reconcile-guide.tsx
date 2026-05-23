@@ -1,5 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ChevronRight, CheckCircle2, Wrench, BookOpen, Scale, Boxes, Wallet, Receipt, History } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronRight,
+  CheckCircle2,
+  Wrench,
+  BookOpen,
+  Scale,
+  Boxes,
+  Wallet,
+  Receipt,
+  History,
+} from "lucide-react";
 import { Surface, SectionTitle, Pill } from "@/components/ui-tokens";
 
 /**
@@ -22,6 +33,8 @@ export interface ReconcileSignal {
   likelyCause: string;
   /** Step-by-step fix the user can follow. */
   steps: string[];
+  /** Exact rows / documents that most likely caused the issue. */
+  evidence?: Array<{ label: string; detail: string; amount?: string }>;
   /** Deep link that takes the user to the fix surface. */
   fix: { label: string; to: string };
   icon?: any;
@@ -36,7 +49,9 @@ export function ReconcileGuide({ signals }: { signals: ReconcileSignal[] }) {
         description="If a number looks wrong, start here. Each item explains what likely caused the mismatch and links to the exact page to fix it."
         action={
           open.length === 0 ? (
-            <Pill tone="good"><CheckCircle2 className="h-3 w-3" /> All checks pass</Pill>
+            <Pill tone="good">
+              <CheckCircle2 className="h-3 w-3" /> All checks pass
+            </Pill>
           ) : (
             <Pill tone={open.some((s) => s.severity === "bad") ? "bad" : "warn"}>
               <AlertTriangle className="h-3 w-3" /> {open.length} to review
@@ -47,8 +62,9 @@ export function ReconcileGuide({ signals }: { signals: ReconcileSignal[] }) {
 
       {open.length === 0 ? (
         <div className="text-sm text-muted-foreground">
-          Your books are tying out across the trial balance, balance sheet, stock ledger and GST.
-          If a specific figure still feels off, open the relevant section below for a guided walkthrough.
+          Your books are tying out across the trial balance, balance sheet, stock ledger and GST. If
+          a specific figure still feels off, open the relevant section below for a guided
+          walkthrough.
         </div>
       ) : (
         <div className="space-y-3">
@@ -115,8 +131,7 @@ export function ReconcileGuide({ signals }: { signals: ReconcileSignal[] }) {
 
 function ReconcileRow({ signal }: { signal: ReconcileSignal }) {
   const Icon = signal.icon ?? AlertTriangle;
-  const tone =
-    signal.severity === "bad" ? "bad" : signal.severity === "warn" ? "warn" : "good";
+  const tone = signal.severity === "bad" ? "bad" : signal.severity === "warn" ? "warn" : "good";
   return (
     <details className="group rounded-xl border border-border/70 bg-card overflow-hidden">
       <summary className="flex items-center gap-3 p-3 sm:p-4 cursor-pointer hover:bg-muted/40">
@@ -126,8 +141,8 @@ function ReconcileRow({ signal }: { signal: ReconcileSignal }) {
             (tone === "bad"
               ? "bg-destructive/10 text-destructive"
               : tone === "warn"
-              ? "bg-amber-500/10 text-amber-600 dark:text-amber-300"
-              : "bg-primary/10 text-primary")
+                ? "bg-amber-500/10 text-amber-600 dark:text-amber-300"
+                : "bg-primary/10 text-primary")
           }
         >
           <Icon className="h-4 w-4" />
@@ -136,7 +151,9 @@ function ReconcileRow({ signal }: { signal: ReconcileSignal }) {
           <div className="font-medium text-sm leading-tight">{signal.title}</div>
           <div className="text-xs text-muted-foreground mt-0.5 truncate">{signal.symptom}</div>
         </div>
-        <Pill tone={tone}>{tone === "bad" ? "Action needed" : tone === "warn" ? "Review" : "OK"}</Pill>
+        <Pill tone={tone}>
+          {tone === "bad" ? "Action needed" : tone === "warn" ? "Review" : "OK"}
+        </Pill>
         <ChevronRight className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-90" />
       </summary>
       <div className="px-3 sm:px-4 pb-4 space-y-3 border-t bg-muted/20">
@@ -144,6 +161,33 @@ function ReconcileRow({ signal }: { signal: ReconcileSignal }) {
           <Block title="What this means">{signal.symptom}</Block>
           <Block title="Why it usually happens">{signal.likelyCause}</Block>
         </div>
+        {signal.evidence?.length ? (
+          <div>
+            <div className="eyebrow mb-1.5">Exact entries to check first</div>
+            <div className="grid gap-2">
+              {signal.evidence.slice(0, 5).map((item, i) => (
+                <div
+                  key={`${item.label}-${i}`}
+                  className="rounded-lg border border-border/60 bg-card px-3 py-2"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{item.label}</div>
+                      <div className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+                        {item.detail}
+                      </div>
+                    </div>
+                    {item.amount ? (
+                      <div className="text-sm font-semibold tabular-nums whitespace-nowrap">
+                        {item.amount}
+                      </div>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div>
           <div className="eyebrow mb-1.5">How to fix it</div>
           <ol className="text-sm text-foreground/90 space-y-1 list-decimal pl-5 leading-relaxed">
@@ -192,7 +236,10 @@ function WalkthroughCard({
         <div className="text-sm font-medium">{title}</div>
       </div>
       <p className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{body}</p>
-      <Link to={to} className="inline-flex items-center gap-1 text-xs font-medium text-primary mt-2 hover:underline">
+      <Link
+        to={to}
+        className="inline-flex items-center gap-1 text-xs font-medium text-primary mt-2 hover:underline"
+      >
         {cta} <ChevronRight className="h-3.5 w-3.5" />
       </Link>
     </div>
@@ -211,11 +258,30 @@ export function buildReconcileSignals(args: {
   liabilitiesPlusEquity: number;
   bookStockValue: number;
   negativeStockSkus: number;
+  negativeStockDetails?: Array<{
+    name: string;
+    opening: number;
+    purchased: number;
+    sold: number;
+    onHand: number;
+  }>;
   unallocatedPaymentsAmt: number;
   unallocatedPaymentsCount: number;
+  unallocatedPaymentDetails?: Array<{
+    direction: string;
+    amount: number;
+    used: number;
+    remaining: number;
+    id?: string | null;
+    party?: string | null;
+  }>;
   netGstPayable: number;
   missingHsnCount: number;
+  missingHsnProducts?: Array<{ name: string }>;
   productsWithoutOpening: number;
+  productsWithoutOpeningDetails?: Array<{ name: string; sold: number; purchased: number }>;
+  largestLedgerImbalances?: Array<{ account: string; debit: number; credit: number; net: number }>;
+  ledgerEntryIssues?: Array<{ label: string; detail: string; amount: number }>;
 }): ReconcileSignal[] {
   const out: ReconcileSignal[] = [];
   const tbDiff = Math.abs(args.tbDebit - args.tbCredit);
@@ -228,11 +294,20 @@ export function buildReconcileSignals(args: {
         ? "Total debits equal total credits."
         : `Debits and credits differ by ${formatINR(tbDiff)}.`,
     likelyCause:
-      "A journal line was edited or deleted directly, or a transaction was saved with a typo in the amount.",
+      tbDiff < 1
+        ? "No action required. Every debit currently has a matching credit."
+        : "Usually one source document posted only one side, an amount was edited after posting, or a ledger line was deleted.",
+    evidence: args.ledgerEntryIssues?.length
+      ? args.ledgerEntryIssues.slice(0, 5).map((r) => ({ ...r, amount: formatINR(r.amount) }))
+      : args.largestLedgerImbalances?.slice(0, 4).map((r) => ({
+          label: r.account,
+          detail: `Debit ${formatINR(r.debit)} · Credit ${formatINR(r.credit)} · ${r.net >= 0 ? "Debit" : "Credit"} net`,
+          amount: formatINR(Math.abs(r.net)),
+        })),
     steps: [
-      "Open General Ledger and sort by date (newest first).",
-      "Look for entries close to the variance amount.",
-      "If you find a typo, edit the source document (sale / purchase / payment) — do not edit the ledger directly.",
+      "Open General Ledger and filter the accounts shown above first.",
+      "Inside those accounts, compare the document number, date and debit/credit side against the source invoice / payment.",
+      "If one side is missing or the amount differs, edit the source document — do not patch the ledger directly.",
       "Re-open Reports — the trial balance recomputes automatically.",
     ],
     fix: { label: "Open General Ledger", to: "/app/ledger" },
@@ -249,11 +324,30 @@ export function buildReconcileSignals(args: {
         ? "Assets equal Liabilities + Equity."
         : `Assets exceed Liabilities + Equity by ${formatINR(bsDiff)}.`,
     likelyCause:
-      "Most often caused by inventory value drift — sales posted for items that have no opening stock or no purchase yet.",
+      bsDiff < 1
+        ? "No action required. Assets, liabilities and equity currently tie out."
+        : "Most often caused by inventory value drift, missing opening stock, or documents that changed stock without the matching accounting effect.",
+    evidence: [
+      {
+        label: "Assets",
+        detail: "Total of cash, bank, receivables, GST input, inventory and fixed assets.",
+        amount: formatINR(args.assetsTotal),
+      },
+      {
+        label: "Liabilities + Equity",
+        detail: "Payables, GST output, profit and opening capital.",
+        amount: formatINR(args.liabilitiesPlusEquity),
+      },
+      {
+        label: "Book stock value",
+        detail: "Inventory valuation feeding the balance sheet.",
+        amount: formatINR(args.bookStockValue),
+      },
+    ],
     steps: [
-      "Open Products and set the correct opening stock for any item that was already in your godown when you started.",
-      "Open Stock and look for negative on-hand SKUs (highlighted red).",
-      "For each negative SKU, add the missing purchase entry.",
+      "Check the stock items listed in the other reconciliation warnings first — they usually explain this difference.",
+      "Open Products and set opening stock/value for items already in your godown when you started.",
+      "Open Stock and review negative on-hand SKUs; add the missing purchase or correct the wrong sale SKU.",
     ],
     fix: { label: "Open Products", to: "/app/products" },
     icon: Boxes,
@@ -268,10 +362,15 @@ export function buildReconcileSignals(args: {
         "These SKUs have more sold than purchased + opening — your inventory value is understated.",
       likelyCause:
         "A purchase invoice is missing, opening stock was never entered, or a sale picked the wrong SKU.",
+      evidence: args.negativeStockDetails?.slice(0, 5).map((r) => ({
+        label: r.name,
+        detail: `Opening ${fmtQty(r.opening)} + Purchased ${fmtQty(r.purchased)} - Sold ${fmtQty(r.sold)} = ${fmtQty(r.onHand)} on hand`,
+        amount: `${fmtQty(Math.abs(r.onHand))} short`,
+      })),
       steps: [
-        "Open Stock and filter the table to negative on-hand.",
-        "For each item, decide: missing purchase, or wrong SKU on a sale?",
-        "Add the missing purchase, or edit the sale to point to the correct SKU.",
+        "Open Stock and click the exact SKU shown above.",
+        "Read its movement list from oldest to newest; the first row where running stock goes below zero is the problem point.",
+        "If goods really came in, add the missing purchase before that sale date. If not, edit the sale and choose the correct SKU / quantity.",
       ],
       fix: { label: "Open Stock", to: "/app/stock" },
       icon: Boxes,
@@ -286,9 +385,13 @@ export function buildReconcileSignals(args: {
       symptom:
         "Stocked items with zero opening can cause closing stock to look low if they existed before you started.",
       likelyCause: "Opening balances were skipped when products were created.",
+      evidence: args.productsWithoutOpeningDetails?.slice(0, 5).map((r) => ({
+        label: r.name,
+        detail: `Opening is zero while purchased is ${fmtQty(r.purchased)} and sold is ${fmtQty(r.sold)}.`,
+      })),
       steps: [
-        "Open Products.",
-        "For each affected SKU, enter the quantity that was physically present on day one.",
+        "Open Products and start with the products listed above.",
+        "For each affected SKU, enter the quantity and purchase rate that was physically present on day one.",
         "Save — the inventory tab in Reports will refresh.",
       ],
       fix: { label: "Open Products", to: "/app/products" },
@@ -303,11 +406,15 @@ export function buildReconcileSignals(args: {
       title: `${args.unallocatedPaymentsCount} unallocated payment${args.unallocatedPaymentsCount === 1 ? "" : "s"} (${formatINR(args.unallocatedPaymentsAmt)})`,
       symptom:
         "Money was received or paid but not linked to a specific invoice — buyer/supplier balances will look incorrect.",
-      likelyCause:
-        "Payment entered in a hurry without selecting which bill it settles.",
+      likelyCause: "Payment entered in a hurry without selecting which bill it settles.",
+      evidence: args.unallocatedPaymentDetails?.slice(0, 5).map((p) => ({
+        label: `${p.direction === "in" ? "Receipt" : "Payment"}${p.party ? ` · ${p.party}` : ""}`,
+        detail: `Total ${formatINR(p.amount)} · allocated ${formatINR(p.used)} · still not linked to a bill`,
+        amount: formatINR(p.remaining),
+      })),
       steps: [
-        "Open Money.",
-        "Click each highlighted entry and choose the invoice it pays.",
+        "Open Money and search the amount / party shown above.",
+        "Open that entry and allocate the remaining amount to the exact invoice or purchase bill it settles.",
         "Buyer / supplier outstanding refreshes immediately.",
       ],
       fix: { label: "Open Money", to: "/app/bills" },
@@ -322,9 +429,14 @@ export function buildReconcileSignals(args: {
       title: `${args.missingHsnCount} product${args.missingHsnCount === 1 ? "" : "s"} missing HSN`,
       symptom: "GST returns require HSN — your GSTR-1 will reject these lines.",
       likelyCause: "Product created without an HSN code.",
+      evidence: args.missingHsnProducts?.slice(0, 5).map((p) => ({
+        label: p.name,
+        detail:
+          "Product master has no HSN/SAC code, so invoice and GST reports cannot classify it.",
+      })),
       steps: [
-        "Open Products.",
-        "Enter the HSN for each affected item (usually printed on supplier invoices).",
+        "Open Products and search the product names listed above.",
+        "Enter the HSN for each affected item, usually available on supplier invoices or product packaging.",
         "Re-open GST summary to confirm.",
       ],
       fix: { label: "Open Products", to: "/app/products" },
@@ -345,4 +457,12 @@ function formatINR(n: number) {
   } catch {
     return `₹${Math.round(n)}`;
   }
+}
+
+function fmtQty(n: number) {
+  const v = Number(n ?? 0);
+  if (!isFinite(v)) return "0";
+  return v.toLocaleString("en-IN", {
+    maximumFractionDigits: Math.abs(v % 1) < 0.0001 ? 0 : 2,
+  });
 }

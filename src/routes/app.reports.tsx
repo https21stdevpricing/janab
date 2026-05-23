@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { SegmentedTabs } from "@/components/ui-tokens";
-import { inr, fmt } from "@/lib/format";
+import { inr, fmt, fmtDate } from "@/lib/format";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Info,
@@ -95,7 +95,12 @@ function ReportsPage() {
           ),
         ),
         fetchAllPages((from, to) =>
-          paged(supabase.from("sale_items").select("product_id,qty").range(from, to)),
+          paged(
+            (supabase as any)
+              .from("sale_items")
+              .select("product_id,qty,sales!inner(invoice_no,date,buyer_name)")
+              .range(from, to),
+          ),
         ),
         fetchAllPages((from, to) =>
           paged(supabase.from("purchase_items").select("product_id,qty,rate").range(from, to)),
@@ -112,7 +117,12 @@ function ReportsPage() {
           paged((supabase as any).from("fixed_assets").select("*").range(from, to)),
         ),
         fetchAllPages((from, to) =>
-          paged(supabase.from("payments").select("id,amount,direction").range(from, to)),
+          paged(
+            supabase
+              .from("payments")
+              .select("id,amount,direction,contact_name,payment_no")
+              .range(from, to),
+          ),
         ),
         fetchAllPages((from, to) =>
           paged(
@@ -400,30 +410,50 @@ function ReportsPage() {
   });
 
   // ---------- Reconciliation signals ----------
-  const negativeStockSkus = useMemo(() => {
-    const soldByP: Record<string, number> = {};
+  const stockProblemDetails = useMemo(() => {
+    const soldByP: Record<string, { qty: number; docs: string[] }> = {};
     for (const s of saleItems)
-      if (s.product_id) soldByP[s.product_id] = (soldByP[s.product_id] ?? 0) + Number(s.qty ?? 0);
+      if (s.product_id) {
+        const row = (soldByP[s.product_id] ??= { qty: 0, docs: [] });
+        row.qty += Number(s.qty ?? 0);
+        const doc = s.sales?.invoice_no
+          ? `${s.sales.invoice_no} (${s.sales.buyer_name ?? "sale"})`
+          : "sale entry";
+        if (row.docs.length < 3) row.docs.push(doc);
+      }
     const purByP: Record<string, number> = {};
     for (const p of purchaseItems)
       if (p.product_id) purByP[p.product_id] = (purByP[p.product_id] ?? 0) + Number(p.qty ?? 0);
-    let n = 0;
+    const negative: Array<{
+      name: string;
+      opening: number;
+      purchased: number;
+      sold: number;
+      onHand: number;
+    }> = [];
+    const noOpening: Array<{ name: string; sold: number; purchased: number }> = [];
     for (const pr of products) {
       if (pr.kind && pr.kind !== "stocked") continue;
-      const onHand = Number(pr.opening_stock ?? 0) + (purByP[pr.id] ?? 0) - (soldByP[pr.id] ?? 0);
-      if (onHand < 0) n++;
+      const opening = Number(pr.opening_stock ?? 0);
+      const purchased = purByP[pr.id] ?? 0;
+      const sold = soldByP[pr.id]?.qty ?? 0;
+      const onHand = opening + purchased - sold;
+      const name = soldByP[pr.id]?.docs?.length
+        ? `${pr.name} · ${soldByP[pr.id].docs.join(", ")}`
+        : pr.name;
+      if (onHand < 0) negative.push({ name, opening, purchased, sold, onHand });
+      if (opening === 0) noOpening.push({ name: pr.name, sold, purchased });
     }
-    return n;
+    negative.sort((a, b) => a.onHand - b.onHand);
+    noOpening.sort((a, b) => b.sold - a.sold);
+    return { negative, noOpening };
   }, [products, saleItems, purchaseItems]);
 
+  const negativeStockSkus = stockProblemDetails.negative.length;
+
   const productsWithoutOpening = useMemo(
-    () =>
-      products.filter(
-        (p: any) =>
-          (!p.kind || p.kind === "stocked") &&
-          (p.opening_stock == null || Number(p.opening_stock) === 0),
-      ).length,
-    [products],
+    () => stockProblemDetails.noOpening.length,
+    [stockProblemDetails],
   );
 
   const missingHsnCount = useMemo(
@@ -451,6 +481,57 @@ function ReportsPage() {
     return { unallocatedPaymentsAmt: amt, unallocatedPaymentsCount: count };
   }, [payments, allocations]);
 
+  const reconciliationDetails = useMemo(() => {
+    const byEntry: Record<
+      string,
+      { d: number; c: number; date?: string; ref?: string; accounts: Set<string> }
+    > = {};
+    for (const r of rows) {
+      const key = String(r.entry_id ?? r.source_id ?? `${r.date}-${r.ref_no ?? "manual"}`);
+      const entry = (byEntry[key] ??= {
+        d: 0,
+        c: 0,
+        date: r.date,
+        ref: r.ref_no,
+        accounts: new Set(),
+      });
+      entry.d += Number(r.debit ?? 0);
+      entry.c += Number(r.credit ?? 0);
+      if (r.account) entry.accounts.add(String(r.account));
+    }
+    const ledgerEntryIssues = Object.values(byEntry)
+      .map((e) => ({ ...e, diff: Math.abs(e.d - e.c) }))
+      .filter((e) => e.diff > 0.5)
+      .sort((a, b) => b.diff - a.diff)
+      .slice(0, 5)
+      .map((e) => ({
+        label: `${e.ref ?? "Ledger entry"}${e.date ? ` · ${fmtDate(e.date)}` : ""}`,
+        detail: `Debit ${inr(e.d)} · Credit ${inr(e.c)} · accounts: ${Array.from(e.accounts).slice(0, 3).join(", ") || "—"}`,
+        amount: e.diff,
+      }));
+    const allocByPay: Record<string, number> = {};
+    for (const a of allocations)
+      allocByPay[a.payment_id as string] =
+        (allocByPay[a.payment_id as string] ?? 0) + Number(a.amount ?? 0);
+    const unallocatedPaymentDetails = payments
+      .map((p) => {
+        const amount = Number(p.amount ?? 0);
+        const used = allocByPay[p.id] ?? 0;
+        return {
+          direction: p.direction,
+          amount,
+          used,
+          remaining: amount - used,
+          id: p.payment_no ?? p.id,
+          party: p.contact_name,
+        };
+      })
+      .filter((p) => p.remaining > 0.5)
+      .sort((a, b) => b.remaining - a.remaining)
+      .slice(0, 5);
+    return { ledgerEntryIssues, unallocatedPaymentDetails };
+  }, [rows, payments, allocations]);
+
   const reconcileSignals = useMemo(
     () =>
       buildReconcileSignals({
@@ -460,11 +541,24 @@ function ReportsPage() {
         liabilitiesPlusEquity: totalLiab + equity,
         bookStockValue: inventoryAsset,
         negativeStockSkus,
+        negativeStockDetails: stockProblemDetails.negative,
         unallocatedPaymentsAmt,
         unallocatedPaymentsCount,
+        unallocatedPaymentDetails: reconciliationDetails.unallocatedPaymentDetails,
         netGstPayable,
         missingHsnCount,
+        missingHsnProducts: products
+          .filter((p: any) => !p.hsn || String(p.hsn).trim() === "")
+          .slice(0, 5)
+          .map((p: any) => ({ name: p.name })),
         productsWithoutOpening,
+        productsWithoutOpeningDetails: stockProblemDetails.noOpening,
+        largestLedgerImbalances: tbAll
+          .filter((r) => Math.abs(r.net) > 0.5)
+          .sort((a, b) => Math.abs(b.net) - Math.abs(a.net))
+          .slice(0, 5)
+          .map((r) => ({ account: r.acct, debit: r.debit, credit: r.credit, net: r.net })),
+        ledgerEntryIssues: reconciliationDetails.ledgerEntryIssues,
       }),
     [
       tbTotalD,
@@ -474,11 +568,15 @@ function ReportsPage() {
       equity,
       inventoryAsset,
       negativeStockSkus,
+      stockProblemDetails,
       unallocatedPaymentsAmt,
       unallocatedPaymentsCount,
+      reconciliationDetails,
       netGstPayable,
       missingHsnCount,
       productsWithoutOpening,
+      tbAll,
+      products,
     ],
   );
 
