@@ -155,22 +155,26 @@ export function drawStoneWorldHeader(
 
   const qr = design?.qrPlacement === "header" ? design?.qrCodeDataUrl : null;
   const barcode = design?.barcodePlacement === "header" ? design?.barcodeDataUrl : null;
-  // Push the rule down so header codes never overlap it or the meta lines.
+  // Apple-style: pack header codes tightly under the meta column so the rule
+  // never floats far below the title (the previous 138pt rule left a huge
+  // empty band between the header and the Bill-To block).
   const hasCodes = !!(qr || barcode);
-  const ruleY = hasCodes ? 138 : 110;
+  const metaCount = [meta.reference, meta.date, meta.validUntil].filter(Boolean).length;
+  const metaBottom = top + 44 + Math.max(0, metaCount - 1) * 12 + 4;
+  let ruleY = Math.max(top + 64, metaBottom);
   if (hasCodes) {
-    // Place codes BELOW the meta block and ABOVE the rule, fully contained.
-    const codeBaseY = top + 86;
+    const codeTop = metaBottom + 6;
     if (barcode) {
       try {
-        doc.addImage(barcode, imageFormat(barcode) as any, W - M - 150, codeBaseY, 110, 22);
+        doc.addImage(barcode, imageFormat(barcode) as any, W - M - 96, codeTop, 96, 18);
       } catch {}
     }
     if (qr) {
       try {
-        doc.addImage(qr, imageFormat(qr) as any, W - M - 32, codeBaseY - 4, 32, 32);
+        doc.addImage(qr, imageFormat(qr) as any, W - M - (barcode ? 124 : 28), codeTop - 2, 26, 26);
       } catch {}
     }
+    ruleY = codeTop + 24;
   }
 
   // Single thin hairline — no decorative accent stub (Apple-minimal).
@@ -186,22 +190,26 @@ export function drawStoneWorldFooter(
   doc: jsPDF,
   company: PdfCompany | null | undefined,
   margin = 34,
-  opts: { showPageNumber?: boolean } = {},
+  opts: { showPageNumber?: boolean; hideCompanyName?: boolean } = {},
 ) {
   const pageCount = doc.getNumberOfPages();
   const W = doc.internal.pageSize.getWidth();
   const H = doc.internal.pageSize.getHeight();
   const name = company?.company_name || "StoneWorld Traders";
-  const showPageNumber = opts.showPageNumber !== false;
+  // Page number only makes sense when there's more than one page.
+  const showPageNumber = opts.showPageNumber !== false && pageCount > 1;
+  const hideCompanyName = !!opts.hideCompanyName;
   for (let page = 1; page <= pageCount; page++) {
     doc.setPage(page);
-    doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
-    doc.line(margin, H - 36, W - margin, H - 36);
+    if (!hideCompanyName || showPageNumber) {
+      doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
+      doc.line(margin, H - 36, W - margin, H - 36);
+    }
     doc
       .setFont("helvetica", "normal")
       .setFontSize(8)
       .setTextColor(...swPdf.muted);
-    doc.text(name, margin, H - 21);
+    if (!hideCompanyName) doc.text(name, margin, H - 21);
     if (showPageNumber) {
       doc.text(`Page ${page} of ${pageCount}`, W - margin, H - 21, { align: "right" });
     }
