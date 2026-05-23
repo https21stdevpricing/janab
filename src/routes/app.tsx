@@ -79,6 +79,7 @@ const moreGroups: { label: string; items: { to: string; label: string; icon: any
       { to: "/app/print", label: "Print", icon: Printer },
       { to: "/app/audit", label: "Audit log", icon: History },
       { to: "/app/guide", label: "Quick guide", icon: BookOpenCheck },
+      { to: "/app/import", label: "Import data", icon: UserCheck },
       { to: "/app/settings", label: "Settings", icon: Settings },
     ],
   },
