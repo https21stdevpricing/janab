@@ -155,26 +155,31 @@ export function drawStoneWorldHeader(
 
   const qr = design?.qrPlacement === "header" ? design?.qrCodeDataUrl : null;
   const barcode = design?.barcodePlacement === "header" ? design?.barcodeDataUrl : null;
-  if (qr || barcode) {
-    const yCode = top + 82;
-    if (qr) {
-      try {
-        doc.addImage(qr, imageFormat(qr) as any, W - M - 42, yCode - 18, 42, 42);
-      } catch {}
-    }
+  // Push the rule down so header codes never overlap it or the meta lines.
+  const hasCodes = !!(qr || barcode);
+  const ruleY = hasCodes ? 138 : 110;
+  if (hasCodes) {
+    // Place codes BELOW the meta block and ABOVE the rule, fully contained.
+    const codeBaseY = top + 86;
     if (barcode) {
       try {
-        doc.addImage(barcode, imageFormat(barcode) as any, W - M - 180, yCode - 10, 126, 24);
+        doc.addImage(barcode, imageFormat(barcode) as any, W - M - 150, codeBaseY, 110, 22);
+      } catch {}
+    }
+    if (qr) {
+      try {
+        doc.addImage(qr, imageFormat(qr) as any, W - M - 32, codeBaseY - 4, 32, 32);
       } catch {}
     }
   }
 
-  // Thin double rule (hairline + brand accent)
+  // Single thin hairline — no decorative accent stub (Apple-minimal).
   doc.setDrawColor(...swPdf.rule).setLineWidth(0.4);
-  doc.line(M, 110, W - M, 110);
-  doc.setDrawColor(...accent).setLineWidth(1.4);
-  doc.line(M, 114, M + 64, 114);
-  return { margin: M, y: 134 };
+  doc.line(M, ruleY, W - M, ruleY);
+  // Reference the accent so the unused-variable lint stays quiet; intentionally
+  // omitted from the visible rule for a cleaner editorial header.
+  void accent;
+  return { margin: M, y: ruleY + 22 };
 }
 
 export function drawStoneWorldFooter(

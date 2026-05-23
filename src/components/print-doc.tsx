@@ -942,13 +942,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
             </div>
           </div>
           {design.headerContainer === "open" ? null : (
-            <>
-              <div className="mt-5 h-px bg-slate-200" />
-              <div
-                className="mt-1 h-[2px] w-16"
-                style={{ backgroundColor: design.accent }}
-              />
-            </>
+            <div className="mt-5 h-px bg-slate-200" />
           )}
         </header>
 
