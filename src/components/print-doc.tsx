@@ -245,9 +245,19 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
 
   const footerCols = Math.ceil(design.footerLogos.length / design.footerRows) || 1;
   const watermarkOpacity = Math.max(0, Math.min(100, design.watermarkOpacity)) / 100;
+  const dividerClass =
+    design.footerDividerStyle === "none"
+      ? ""
+      : design.footerDividerStyle === "dashed"
+        ? "border-t border-dashed border-slate-300"
+        : design.footerDividerStyle === "double"
+          ? "border-t-4 border-double border-slate-300"
+          : design.footerDividerStyle === "accent"
+            ? "border-t-2 border-[#00abb5]"
+            : "border-t border-slate-200";
   const footerLogoBlock = design.footerLogos.length > 0 && (
     <div
-      className="mt-8 border-t border-slate-200 pt-4 grid gap-3 items-center break-inside-avoid"
+      className={`mt-8 ${dividerClass} ${design.footerDividerStyle === "none" ? "" : "pt-4"} grid gap-3 items-center break-inside-avoid`}
       style={{ gridTemplateColumns: `repeat(${Math.max(1, footerCols)}, minmax(0, 1fr))` }}
     >
       {design.footerLogos.map((src, i) => (
