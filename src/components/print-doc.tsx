@@ -944,7 +944,10 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           {design.headerContainer === "open" ? null : (
             <>
               <div className="mt-5 h-px bg-slate-200" />
-              <div className="mt-1 h-[2px] w-16 bg-[#00abb5]" />
+              <div
+                className="mt-1 h-[2px] w-16"
+                style={{ backgroundColor: design.accent }}
+              />
             </>
           )}
         </header>
@@ -1153,7 +1156,10 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
                   value={Math.abs(totals.roundOff)}
                 />
               )}
-              <div className="border-t-2 border-[#111621] mt-1 pt-2 flex justify-between items-baseline">
+              <div
+                className="mt-1 pt-2 flex justify-between items-baseline"
+                style={{ borderTop: `2px solid ${design.accent}` }}
+              >
                 <span className="text-[10px] font-bold uppercase tracking-[0.14em]">
                   Grand Total
                 </span>
