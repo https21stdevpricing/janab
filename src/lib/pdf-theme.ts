@@ -57,6 +57,23 @@ export const pdfPct = (value: number | null | undefined) => {
   return `${fmt(n, n % 1 === 0 ? 0 : 2)}%`;
 };
 
+const pdfQty = (value: number | null | undefined) => {
+  const n = Number(value ?? 0);
+  if (!isFinite(n)) return "0";
+  const decimals = Math.abs(n % 1) < 0.0001 ? 0 : 2;
+  return fmt(n, decimals);
+};
+
+function fitPdfFontSize(doc: jsPDF, text: string, maxWidth: number, start = 8.4, min = 6.2) {
+  let size = start;
+  doc.setFontSize(size);
+  while (size > min && doc.getTextWidth(text) > maxWidth) {
+    size -= 0.25;
+    doc.setFontSize(size);
+  }
+  return size;
+}
+
 export function newStoneWorldPdf() {
   const doc = new jsPDF({ unit: "pt", format: "a4", compress: true });
   doc.setFont("helvetica", "normal");
