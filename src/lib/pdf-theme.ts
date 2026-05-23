@@ -103,17 +103,17 @@ export function drawStoneWorldHeader(
     design?.lineHeight === "tight" ? 0.92 : design?.lineHeight === "relaxed" ? 1.12 : 1;
   const logoPos = design?.logoPosition ?? "left";
 
-  // Minimal, editorial-style header. Thin teal accent rule only.
+  // Apple-style masthead: white space first, larger brand mark, quiet metadata.
   doc.setFillColor(255, 255, 255);
-  doc.rect(0, 0, W, 130, "F");
+  doc.rect(0, 0, W, 126, "F");
 
   // Title — placement flips based on logo position so they never collide
   const titleAlign: "left" | "right" | "center" =
     logoPos === "right" ? "left" : logoPos === "center" ? "center" : "right";
   const titleX = titleAlign === "left" ? M : titleAlign === "center" ? W / 2 : W - M;
   doc
-    .setFont("helvetica", "bold")
-    .setFontSize(22 * fs)
+    .setFont("helvetica", "normal")
+    .setFontSize(21 * fs)
     .setTextColor(...swPdf.ink);
   doc.text(meta.title.toUpperCase(), titleX, top + 14, { align: titleAlign });
   if (meta.subtitle) {
@@ -125,7 +125,7 @@ export function drawStoneWorldHeader(
   }
 
   // Logo + company block — anchor swaps with logoPosition
-  const logoSize = 46;
+  const logoSize = logoPos === "center" ? 42 : 54;
   const logoX =
     logoPos === "center" ? (W - logoSize) / 2 : logoPos === "right" ? W - M - logoSize : M;
   try {
@@ -145,19 +145,19 @@ export function drawStoneWorldHeader(
       ? logoX - 8
       : logoPos === "center"
         ? W / 2
-        : M + logoSize + 12;
-  doc
-    .setFont("helvetica", "bold")
-    .setFontSize(14 * fs)
-    .setTextColor(...swPdf.ink);
-  doc.text(name, companyAnchorX, top + 14, { maxWidth: 280, align: companyAlign });
+        : M + logoSize + 14;
   doc
     .setFont("helvetica", "normal")
-    .setFontSize(8 * fs)
+    .setFontSize(15 * fs)
+    .setTextColor(...swPdf.ink);
+  doc.text(name, companyAnchorX, top + 16, { maxWidth: 300, align: companyAlign });
+  doc
+    .setFont("helvetica", "normal")
+    .setFontSize(8.4 * fs)
     .setTextColor(...swPdf.inkSoft);
   const address = [co.address, co.state].filter(Boolean).join(", ");
-  const addressLines = address ? doc.splitTextToSize(address, 290).slice(0, 2) : [];
-  if (addressLines.length) doc.text(addressLines, companyAnchorX, top + 27, { align: companyAlign });
+  const addressLines = address ? doc.splitTextToSize(address, 304).slice(0, 2) : [];
+  if (addressLines.length) doc.text(addressLines, companyAnchorX, top + 31, { align: companyAlign });
   const contactLine = [
     co.phone && `Tel: ${co.phone}`,
     co.email,
@@ -170,7 +170,7 @@ export function drawStoneWorldHeader(
     doc.text(
       doc.splitTextToSize(contactLine, 290).slice(0, 2),
       companyAnchorX,
-      top + (addressLines.length > 1 ? 49 : 41),
+      top + (addressLines.length > 1 ? 55 : 45),
       { align: companyAlign },
     );
 
