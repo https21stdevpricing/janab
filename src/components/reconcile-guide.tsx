@@ -22,6 +22,8 @@ export interface ReconcileSignal {
   likelyCause: string;
   /** Step-by-step fix the user can follow. */
   steps: string[];
+  /** Exact rows / documents that most likely caused the issue. */
+  evidence?: Array<{ label: string; detail: string; amount?: string }>;
   /** Deep link that takes the user to the fix surface. */
   fix: { label: string; to: string };
   icon?: any;
@@ -144,6 +146,24 @@ function ReconcileRow({ signal }: { signal: ReconcileSignal }) {
           <Block title="What this means">{signal.symptom}</Block>
           <Block title="Why it usually happens">{signal.likelyCause}</Block>
         </div>
+        {signal.evidence?.length ? (
+          <div>
+            <div className="eyebrow mb-1.5">Exact entries to check first</div>
+            <div className="grid gap-2">
+              {signal.evidence.slice(0, 5).map((item, i) => (
+                <div key={`${item.label}-${i}`} className="rounded-lg border border-border/60 bg-card px-3 py-2">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium truncate">{item.label}</div>
+                      <div className="text-xs text-muted-foreground leading-relaxed mt-0.5">{item.detail}</div>
+                    </div>
+                    {item.amount ? <div className="text-sm font-semibold tabular-nums whitespace-nowrap">{item.amount}</div> : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <div>
           <div className="eyebrow mb-1.5">How to fix it</div>
           <ol className="text-sm text-foreground/90 space-y-1 list-decimal pl-5 leading-relaxed">
