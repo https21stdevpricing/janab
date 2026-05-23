@@ -278,6 +278,8 @@ export function drawFooterBrandLogos(
     position?: "above-signature" | "page-bottom";
     signatureY?: number;
     everyPage?: boolean;
+    dividerStyle?: "solid" | "dashed" | "double" | "accent" | "none";
+    accent?: PdfRgb;
   } = {},
 ) {
   if (!logos?.length) return;
@@ -292,6 +294,7 @@ export function drawFooterBrandLogos(
   const totalH = rows * (cellH + 6);
   const position = opts.position ?? "above-signature";
   const everyPage = opts.everyPage ?? false;
+  const divider = opts.dividerStyle ?? "solid";
   const startYOnPage = (pageIndex: number, pageCount: number) => {
     const isLast = pageIndex === pageCount;
     if (everyPage || position === "page-bottom") return H - 56 - totalH;
@@ -303,6 +306,26 @@ export function drawFooterBrandLogos(
     doc.setPage(page);
     const startY = startYOnPage(page, pageCount);
     if (startY < 0) continue;
+    // Thin divider above the brand logo strip.
+    if (divider !== "none") {
+      const yLine = startY - 8;
+      if (divider === "accent" && opts.accent) {
+        doc.setDrawColor(...opts.accent).setLineWidth(1.1);
+        doc.line(margin, yLine, W - margin, yLine);
+      } else if (divider === "dashed") {
+        doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
+        (doc as any).setLineDashPattern?.([2, 2], 0);
+        doc.line(margin, yLine, W - margin, yLine);
+        (doc as any).setLineDashPattern?.([], 0);
+      } else if (divider === "double") {
+        doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
+        doc.line(margin, yLine - 1.5, W - margin, yLine - 1.5);
+        doc.line(margin, yLine + 1.5, W - margin, yLine + 1.5);
+      } else {
+        doc.setDrawColor(...swPdf.rule).setLineWidth(0.5);
+        doc.line(margin, yLine, W - margin, yLine);
+      }
+    }
     logos.slice(0, count).forEach((logo, i) => {
       const c = i % cols;
       const r = Math.floor(i / cols);
