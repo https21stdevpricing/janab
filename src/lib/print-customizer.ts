@@ -45,6 +45,7 @@ export type PrintDesign = {
   showTransport: boolean; // transport details panel (dispatch/vehicle/destination)
   roundOff: PrintRoundOffMode; // rounding behaviour on grand total
   showPageNumber: boolean; // print "Page x of y" footer text
+  hideFooterCompanyName: boolean; // hide "StoneWorld Traders" line in the bottom footer band
   footerDividerStyle: PrintFooterDivider; // divider above footer logos / signature row
   headerContainer: PrintHeaderContainer; // visual containment for the header block
   accent: string; // hex accent colour driving rules, totals divider and brand stripe
@@ -88,6 +89,7 @@ export const DEFAULT_PRINT_DESIGN: PrintDesign = {
   showTransport: false,
   roundOff: "nearest",
   showPageNumber: true,
+  hideFooterCompanyName: false,
   footerDividerStyle: "solid",
   headerContainer: "rule",
   accent: "#00abb5",
