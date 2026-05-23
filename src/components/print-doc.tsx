@@ -861,6 +861,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
         </div>
       </div>
 
+      <div className="overflow-x-auto -mx-3 px-3 print:overflow-visible print:mx-0 print:px-0">
       <article
         id="print-area"
         className="sw-print-doc bg-white text-[#111621] mx-auto max-w-[820px] rounded-md border border-slate-200 shadow-sm overflow-hidden print:border-0 print:shadow-none print:max-w-full print:rounded-none relative"
