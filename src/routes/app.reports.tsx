@@ -523,7 +523,8 @@ function ReportsPage() {
         largestLedgerImbalances: tbAll
           .filter((r) => Math.abs(r.net) > 0.5)
           .sort((a, b) => Math.abs(b.net) - Math.abs(a.net))
-          .slice(0, 5),
+          .slice(0, 5)
+          .map((r) => ({ account: r.acct, debit: r.debit, credit: r.credit, net: r.net })),
         ledgerEntryIssues: reconciliationDetails.ledgerEntryIssues,
       }),
     [
