@@ -256,7 +256,7 @@ export async function importZohoCsv(file: File): Promise<ImportReport> {
         date: parseDate(smartPick(first, ["Invoice Date"])) ?? new Date().toISOString().slice(0, 10),
         buyer_name: smartPick(first, ["Customer Name"]) ?? null,
         notes: "Imported from Zoho",
-      }).select("id").single();
+      } as any).select("id").single();
       if (error || !sale) { report.errors.push(`invoice ${inv}: ${error?.message}`); continue; }
       const items = lines.map((l, i) => ({
         sale_id: sale.id, position: i,
@@ -288,7 +288,7 @@ export async function importZohoCsv(file: File): Promise<ImportReport> {
         date: parseDate(smartPick(first, ["Bill Date"])) ?? new Date().toISOString().slice(0, 10),
         supplier_name: smartPick(first, ["Vendor Name"]) ?? null,
         notes: "Imported from Zoho",
-      }).select("id").single();
+      } as any).select("id").single();
       if (error || !po) { report.errors.push(`bill ${bn}: ${error?.message}`); continue; }
       const items = lines.map((l, i) => ({
         purchase_id: po.id, position: i,
