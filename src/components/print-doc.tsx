@@ -849,7 +849,8 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               </div>
             )}
           </div>
-        </div>
+          </div>
+        </details>
         <div className="flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={downloadPdf}>
             <Printer className="h-4 w-4" /> Download Branded PDF
