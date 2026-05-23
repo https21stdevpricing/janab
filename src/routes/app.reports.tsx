@@ -405,30 +405,40 @@ function ReportsPage() {
   });
 
   // ---------- Reconciliation signals ----------
-  const negativeStockSkus = useMemo(() => {
-    const soldByP: Record<string, number> = {};
+  const stockProblemDetails = useMemo(() => {
+    const soldByP: Record<string, { qty: number; docs: string[] }> = {};
     for (const s of saleItems)
-      if (s.product_id) soldByP[s.product_id] = (soldByP[s.product_id] ?? 0) + Number(s.qty ?? 0);
+      if (s.product_id) {
+        const row = (soldByP[s.product_id] ??= { qty: 0, docs: [] });
+        row.qty += Number(s.qty ?? 0);
+        const doc = s.sales?.invoice_no ? `${s.sales.invoice_no} (${s.sales.buyer_name ?? "sale"})` : "sale entry";
+        if (row.docs.length < 3) row.docs.push(doc);
+      }
     const purByP: Record<string, number> = {};
     for (const p of purchaseItems)
       if (p.product_id) purByP[p.product_id] = (purByP[p.product_id] ?? 0) + Number(p.qty ?? 0);
-    let n = 0;
+    const negative: Array<{ name: string; opening: number; purchased: number; sold: number; onHand: number }> = [];
+    const noOpening: Array<{ name: string; sold: number; purchased: number }> = [];
     for (const pr of products) {
       if (pr.kind && pr.kind !== "stocked") continue;
-      const onHand = Number(pr.opening_stock ?? 0) + (purByP[pr.id] ?? 0) - (soldByP[pr.id] ?? 0);
-      if (onHand < 0) n++;
+      const opening = Number(pr.opening_stock ?? 0);
+      const purchased = purByP[pr.id] ?? 0;
+      const sold = soldByP[pr.id]?.qty ?? 0;
+      const onHand = opening + purchased - sold;
+      const name = soldByP[pr.id]?.docs?.length ? `${pr.name} · ${soldByP[pr.id].docs.join(", ")}` : pr.name;
+      if (onHand < 0) negative.push({ name, opening, purchased, sold, onHand });
+      if (opening === 0) noOpening.push({ name: pr.name, sold, purchased });
     }
-    return n;
+    negative.sort((a, b) => a.onHand - b.onHand);
+    noOpening.sort((a, b) => b.sold - a.sold);
+    return { negative, noOpening };
   }, [products, saleItems, purchaseItems]);
 
+  const negativeStockSkus = stockProblemDetails.negative.length;
+
   const productsWithoutOpening = useMemo(
-    () =>
-      products.filter(
-        (p: any) =>
-          (!p.kind || p.kind === "stocked") &&
-          (p.opening_stock == null || Number(p.opening_stock) === 0),
-      ).length,
-    [products],
+    () => stockProblemDetails.noOpening.length,
+    [stockProblemDetails],
   );
 
   const missingHsnCount = useMemo(
