@@ -846,7 +846,13 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           </div>
         )}
 
-        <header className="px-9 pt-8 pb-5 relative">
+        <header
+          className={`relative ${
+            design.headerContainer === "boxed"
+              ? "mx-6 mt-6 mb-2 rounded-lg border border-slate-200 bg-slate-50/60 px-7 pt-6 pb-5"
+              : "px-9 pt-8 pb-5"
+          }`}
+        >
           <div className="flex items-start justify-between gap-6">
             <div className="flex items-start gap-4 min-w-0">
               <img
@@ -912,8 +918,12 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               )}
             </div>
           </div>
-          <div className="mt-5 h-px bg-slate-200" />
-          <div className="mt-1 h-[2px] w-16 bg-[#00abb5]" />
+          {design.headerContainer === "open" ? null : (
+            <>
+              <div className="mt-5 h-px bg-slate-200" />
+              <div className="mt-1 h-[2px] w-16 bg-[#00abb5]" />
+            </>
+          )}
         </header>
 
         <section
