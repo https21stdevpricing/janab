@@ -813,7 +813,7 @@ export function exportStoneWorldDocument(
     signatureY: blockY,
     everyPage: footerEvery,
   });
-  drawStoneWorldFooter(doc, company, M);
+  drawStoneWorldFooter(doc, company, M, { showPageNumber: design?.showPageNumber !== false });
   doc.save(`${String(no || result.kind).replace(/\s+/g, "_")}.pdf`);
 }
 
