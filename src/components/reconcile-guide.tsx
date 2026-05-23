@@ -406,3 +406,11 @@ function formatINR(n: number) {
     return `₹${Math.round(n)}`;
   }
 }
+
+function fmtQty(n: number) {
+  const v = Number(n ?? 0);
+  if (!isFinite(v)) return "0";
+  return v.toLocaleString("en-IN", {
+    maximumFractionDigits: Math.abs(v % 1) < 0.0001 ? 0 : 2,
+  });
+}
