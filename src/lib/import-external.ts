@@ -139,14 +139,14 @@ export async function importTallyXml(text: string): Promise<ImportReport> {
         user_id, date, buyer_name: partyName,
         invoice_no: ref || `IMP-INV-${String(saleN++).padStart(5, "0")}`,
         notes: "Imported from Tally",
-      });
+      } as any);
       if (!error) report.inserted.sales++; else report.errors.push(`sale ${ref}: ${error.message}`);
     } else if (type.includes("purchase")) {
       const { error } = await supabase.from("purchases").insert({
         user_id, date, supplier_name: partyName,
         po_no: ref || `IMP-PO-${String(poN++).padStart(5, "0")}`,
         notes: "Imported from Tally",
-      });
+      } as any);
       if (!error) report.inserted.purchases++; else report.errors.push(`purchase ${ref}: ${error.message}`);
     } else if (type.includes("receipt") || type.includes("payment")) {
       const dir = type.includes("receipt") ? "in" : "out";
@@ -156,7 +156,7 @@ export async function importTallyXml(text: string): Promise<ImportReport> {
         contact_name: partyName, ref_doc: ref || null, kind: "advance",
         payment_no: `IMP-${dir === "in" ? "REC" : "PAY"}-${String(payN++).padStart(5, "0")}`,
         notes: "Imported from Tally",
-      });
+      } as any);
       if (!error) report.inserted.payments++; else report.errors.push(`payment ${ref}: ${error.message}`);
     }
   }
