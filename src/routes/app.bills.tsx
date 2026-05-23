@@ -21,7 +21,7 @@ import { lookupDoc, openDocsFor, type DocLookupResult } from "@/lib/doc-lookup";
 import { toast } from "sonner";
 import { useShortcut } from "@/lib/shortcuts";
 import { exportStoneWorldPayment } from "@/lib/pdf-theme";
-import { KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
+import { SegmentedTabs } from "@/components/ui-tokens";
 
 export const Route = createFileRoute("/app/bills")({
   component: BillsPage,
