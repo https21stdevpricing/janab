@@ -29,6 +29,7 @@ import { Route as AppPaymentsRouteImport } from './routes/app.payments'
 import { Route as AppOnboardingRouteImport } from './routes/app.onboarding'
 import { Route as AppLookupRouteImport } from './routes/app.lookup'
 import { Route as AppLedgerRouteImport } from './routes/app.ledger'
+import { Route as AppImportRouteImport } from './routes/app.import'
 import { Route as AppGuideRouteImport } from './routes/app.guide'
 import { Route as AppGstRouteImport } from './routes/app.gst'
 import { Route as AppFixedAssetsRouteImport } from './routes/app.fixed-assets'
@@ -143,6 +144,11 @@ const AppLedgerRoute = AppLedgerRouteImport.update({
   path: '/ledger',
   getParentRoute: () => AppRoute,
 } as any)
+const AppImportRoute = AppImportRouteImport.update({
+  id: '/import',
+  path: '/import',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppGuideRoute = AppGuideRouteImport.update({
   id: '/guide',
   path: '/guide',
@@ -225,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/app/fixed-assets': typeof AppFixedAssetsRoute
   '/app/gst': typeof AppGstRoute
   '/app/guide': typeof AppGuideRoute
+  '/app/import': typeof AppImportRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/onboarding': typeof AppOnboardingRoute
@@ -259,6 +266,7 @@ export interface FileRoutesByTo {
   '/app/fixed-assets': typeof AppFixedAssetsRoute
   '/app/gst': typeof AppGstRoute
   '/app/guide': typeof AppGuideRoute
+  '/app/import': typeof AppImportRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/onboarding': typeof AppOnboardingRoute
@@ -295,6 +303,7 @@ export interface FileRoutesById {
   '/app/fixed-assets': typeof AppFixedAssetsRoute
   '/app/gst': typeof AppGstRoute
   '/app/guide': typeof AppGuideRoute
+  '/app/import': typeof AppImportRoute
   '/app/ledger': typeof AppLedgerRoute
   '/app/lookup': typeof AppLookupRoute
   '/app/onboarding': typeof AppOnboardingRoute
@@ -332,6 +341,7 @@ export interface FileRouteTypes {
     | '/app/fixed-assets'
     | '/app/gst'
     | '/app/guide'
+    | '/app/import'
     | '/app/ledger'
     | '/app/lookup'
     | '/app/onboarding'
@@ -366,6 +376,7 @@ export interface FileRouteTypes {
     | '/app/fixed-assets'
     | '/app/gst'
     | '/app/guide'
+    | '/app/import'
     | '/app/ledger'
     | '/app/lookup'
     | '/app/onboarding'
@@ -401,6 +412,7 @@ export interface FileRouteTypes {
     | '/app/fixed-assets'
     | '/app/gst'
     | '/app/guide'
+    | '/app/import'
     | '/app/ledger'
     | '/app/lookup'
     | '/app/onboarding'
@@ -570,6 +582,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppLedgerRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/import': {
+      id: '/app/import'
+      path: '/import'
+      fullPath: '/app/import'
+      preLoaderRoute: typeof AppImportRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/app/guide': {
       id: '/app/guide'
       path: '/guide'
@@ -690,6 +709,7 @@ interface AppRouteChildren {
   AppFixedAssetsRoute: typeof AppFixedAssetsRoute
   AppGstRoute: typeof AppGstRoute
   AppGuideRoute: typeof AppGuideRoute
+  AppImportRoute: typeof AppImportRoute
   AppLedgerRoute: typeof AppLedgerRoute
   AppLookupRoute: typeof AppLookupRoute
   AppOnboardingRoute: typeof AppOnboardingRoute
@@ -720,6 +740,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFixedAssetsRoute: AppFixedAssetsRoute,
   AppGstRoute: AppGstRoute,
   AppGuideRoute: AppGuideRoute,
+  AppImportRoute: AppImportRoute,
   AppLedgerRoute: AppLedgerRoute,
   AppLookupRoute: AppLookupRoute,
   AppOnboardingRoute: AppOnboardingRoute,
