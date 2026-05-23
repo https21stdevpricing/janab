@@ -241,6 +241,7 @@ export function buildReconcileSignals(args: {
   productsWithoutOpening: number;
   productsWithoutOpeningDetails?: Array<{ name: string; sold: number; purchased: number }>;
   largestLedgerImbalances?: Array<{ account: string; debit: number; credit: number; net: number }>;
+  ledgerEntryIssues?: Array<{ label: string; detail: string; amount: number }>;
 }): ReconcileSignal[] {
   const out: ReconcileSignal[] = [];
   const tbDiff = Math.abs(args.tbDebit - args.tbCredit);
@@ -256,11 +257,13 @@ export function buildReconcileSignals(args: {
       tbDiff < 1
         ? "No action required. Every debit currently has a matching credit."
         : "Usually one source document posted only one side, an amount was edited after posting, or a ledger line was deleted.",
-    evidence: args.largestLedgerImbalances?.slice(0, 4).map((r) => ({
-      label: r.account,
-      detail: `Debit ${formatINR(r.debit)} · Credit ${formatINR(r.credit)} · ${r.net >= 0 ? "Debit" : "Credit"} net`,
-      amount: formatINR(Math.abs(r.net)),
-    })),
+    evidence: args.ledgerEntryIssues?.length
+      ? args.ledgerEntryIssues.slice(0, 5).map((r) => ({ ...r, amount: formatINR(r.amount) }))
+      : args.largestLedgerImbalances?.slice(0, 4).map((r) => ({
+          label: r.account,
+          detail: `Debit ${formatINR(r.debit)} · Credit ${formatINR(r.credit)} · ${r.net >= 0 ? "Debit" : "Credit"} net`,
+          amount: formatINR(Math.abs(r.net)),
+        })),
     steps: [
       "Open General Ledger and filter the accounts shown above first.",
       "Inside those accounts, compare the document number, date and debit/credit side against the source invoice / payment.",
