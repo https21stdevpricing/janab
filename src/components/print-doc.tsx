@@ -1341,6 +1341,7 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
           {(design.footerPosition === "page-bottom" || design.footerOnEveryPage) && footerLogoBlock}
         </section>
       </article>
+      </div>
 
       <style>{`@media print { @page { size: A4; margin: 14mm 12mm 22mm 12mm; } body { background: white !important; } .print\\:hidden { display: none !important; } #print-area { width: 186mm; } .break-inside-avoid { break-inside: avoid; page-break-inside: avoid; } tr, .sw-row { page-break-inside: avoid; } thead { display: table-header-group; } tfoot { display: table-footer-group; } }`}</style>
     </div>
