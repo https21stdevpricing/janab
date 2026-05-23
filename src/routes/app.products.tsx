@@ -238,9 +238,9 @@ function ProductsPage() {
       {/* Top panel — quick stats + import/export */}
       <div className="mb-5 rounded-2xl border border-border/60 bg-card">
         <div className="grid grid-cols-3 divide-x divide-border/60">
-          <PanelStat label="Stock value" value={inr(summary.valueCost)} />
-          <PanelStat label="Sale value" value={inr(summary.valueSale)} tone="good" />
-          <PanelStat label="Low stock" value={fmt(summary.low)} tone={summary.low > 0 ? "bad" : undefined} />
+          <PanelStat label="Stock value" value={"₹" + fmt(summary.valueCost, 0)} />
+          <PanelStat label="Sale value" value={"₹" + fmt(summary.valueSale, 0)} tone="good" />
+          <PanelStat label="Low stock" value={fmt(summary.low, 0)} tone={summary.low > 0 ? "bad" : undefined} />
         </div>
         <div className="flex items-center justify-end gap-1.5 border-t border-border/60 px-3 py-2">
           <input
