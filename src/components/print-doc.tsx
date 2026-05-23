@@ -371,6 +371,16 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
               />
               <span>Show "Page x of y" in PDF footer</span>
             </label>
+            <label className="flex items-center gap-2 text-[11px] mt-1 sm:mt-5">
+              <input
+                type="checkbox"
+                checked={design.hideFooterCompanyName}
+                onChange={(e) =>
+                  updateDesign({ ...design, hideFooterCompanyName: e.target.checked })
+                }
+              />
+              <span>Hide bottom company name strip</span>
+            </label>
             <label className="flex flex-col gap-1">
               <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
                 Main logo (PNG)
