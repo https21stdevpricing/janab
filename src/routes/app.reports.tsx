@@ -466,6 +466,39 @@ function ReportsPage() {
     return { unallocatedPaymentsAmt: amt, unallocatedPaymentsCount: count };
   }, [payments, allocations]);
 
+  const reconciliationDetails = useMemo(() => {
+    const byEntry: Record<string, { d: number; c: number; date?: string; ref?: string; accounts: Set<string> }> = {};
+    for (const r of rows) {
+      const key = String(r.entry_id ?? r.source_id ?? `${r.date}-${r.ref_no ?? "manual"}`);
+      const entry = (byEntry[key] ??= { d: 0, c: 0, date: r.date, ref: r.ref_no, accounts: new Set() });
+      entry.d += Number(r.debit ?? 0);
+      entry.c += Number(r.credit ?? 0);
+      if (r.account) entry.accounts.add(String(r.account));
+    }
+    const ledgerEntryIssues = Object.values(byEntry)
+      .map((e) => ({ ...e, diff: Math.abs(e.d - e.c) }))
+      .filter((e) => e.diff > 0.5)
+      .sort((a, b) => b.diff - a.diff)
+      .slice(0, 5)
+      .map((e) => ({
+        label: `${e.ref ?? "Ledger entry"}${e.date ? ` · ${fmtDate(e.date)}` : ""}`,
+        detail: `Debit ${inr(e.d)} · Credit ${inr(e.c)} · accounts: ${Array.from(e.accounts).slice(0, 3).join(", ") || "—"}`,
+        amount: e.diff,
+      }));
+    const allocByPay: Record<string, number> = {};
+    for (const a of allocations) allocByPay[a.payment_id as string] = (allocByPay[a.payment_id as string] ?? 0) + Number(a.amount ?? 0);
+    const unallocatedPaymentDetails = payments
+      .map((p) => {
+        const amount = Number(p.amount ?? 0);
+        const used = allocByPay[p.id] ?? 0;
+        return { direction: p.direction, amount, used, remaining: amount - used, id: p.payment_no ?? p.id, party: p.contact_name };
+      })
+      .filter((p) => p.remaining > 0.5)
+      .sort((a, b) => b.remaining - a.remaining)
+      .slice(0, 5);
+    return { ledgerEntryIssues, unallocatedPaymentDetails };
+  }, [rows, payments, allocations]);
+
   const reconcileSignals = useMemo(
     () =>
       buildReconcileSignals({
