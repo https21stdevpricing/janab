@@ -473,6 +473,13 @@ function Dashboard() {
         </div>
       </header>
 
+      {loadError && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive flex items-center justify-between gap-2">
+          <span>Dashboard couldn't refresh: {loadError}</span>
+          <Button size="sm" variant="outline" onClick={() => loadAll()}>Retry</Button>
+        </div>
+      )}
+
       {/* ─────────── Section 1 · TODAY tiles — simple daily updates ─────────── */}
       <section>
         <SectionLabel
