@@ -276,13 +276,13 @@ function BankPage() {
         </div>
       )}
 
-      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) draft.clear(); }}>
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { draft.clear(); setEditingId(null); } }}>
         <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto p-0 gap-0">
           <DialogHeader>
             <div className="border-b px-4 py-4 sm:px-6">
               <DialogTitle className="flex items-center gap-2 text-base">
                 {form.kind === "cheque_deposit" ? <Banknote className="h-4 w-4" /> : form.kind === "cash_withdrawal" ? <ArrowUpFromLine className="h-4 w-4" /> : <ArrowDownToLine className="h-4 w-4" />}
-                {KIND_LABEL[form.kind]}
+                {editingId ? `Edit · ${KIND_LABEL[form.kind]}` : KIND_LABEL[form.kind]}
               </DialogTitle>
               {form.kind === "cheque_deposit" && !form.cleared && (
                 <p className="mt-1 text-xs text-muted-foreground">This cheque will stay pending until bank clearance is confirmed.</p>
@@ -348,8 +348,8 @@ function BankPage() {
           )}
           </div>
           <DialogFooter className="border-t px-4 py-3 sm:px-6">
-            <Button variant="outline" onClick={() => { draft.discard(); setOpen(false); }}>Cancel</Button>
-            <Button onClick={save}><ShieldCheck className="h-4 w-4" /> Save safely</Button>
+            <Button variant="outline" onClick={() => { draft.discard(); setEditingId(null); setOpen(false); }}>Cancel</Button>
+            <Button onClick={save}><ShieldCheck className="h-4 w-4" /> {editingId ? "Update" : "Save safely"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -381,7 +381,7 @@ function BankPage() {
                 {viewRow.notes && <Detail label="Notes">{viewRow.notes}</Detail>}
               </div>
               <div className="border-t p-3 grid grid-cols-3 gap-2">
-                <Button variant="outline" size="sm" onClick={() => changeStatus(viewRow, "pending")}>Pending</Button>
+                <Button variant="outline" size="sm" onClick={() => startEdit(viewRow)}><Pencil className="h-4 w-4" /> Edit</Button>
                 <Button variant="outline" size="sm" onClick={() => changeStatus(viewRow, "bounced")}>Bounced</Button>
                 <Button size="sm" onClick={() => changeStatus(viewRow, "cleared")}>Cleared</Button>
               </div>
