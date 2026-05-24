@@ -242,7 +242,9 @@ function Dashboard() {
     } catch {}
   }, [navigate]);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
   const loadAll = async () => {
+    try {
       const [{ data: ledger }, { data: stock }, { data: jl }] = await Promise.all([
         supabase.from("ledger_view").select("account,debit,credit"),
         supabase.from("stock_view").select("on_hand,reorder_level"),
@@ -308,6 +310,12 @@ function Dashboard() {
       tStats.purchaseCount = pc ?? 0;
       setToday(tStats);
       setUpdatedAt(new Date());
+      setLoadError(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("Dashboard load failed", e);
+      setLoadError(msg);
+    }
   };
 
   useEffect(() => {
