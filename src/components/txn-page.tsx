@@ -109,6 +109,30 @@ export function TxnPage({ cfg }: { cfg: TxnConfig }) {
     if (!user) return;
     if (items.length === 0) { toast.error("Add at least one line item"); return; }
 
+    // FY date sanity check — warn if the document date falls outside
+    // the active financial year defined in settings (fy_start month).
+    try {
+      const { data: st } = await supabase
+        .from("settings").select("fy_start").maybeSingle();
+      const fyStartMonth = Number(st?.fy_start ?? 4); // April = 4 (India default)
+      const d = new Date(date);
+      const y = d.getFullYear();
+      const m = d.getMonth() + 1;
+      const fyStartYear = m >= fyStartMonth ? y : y - 1;
+      const fyStart = new Date(fyStartYear, fyStartMonth - 1, 1);
+      const fyEnd = new Date(fyStartYear + 1, fyStartMonth - 1, 0); // last day of prev month
+      const now = new Date();
+      const curStartYear = (now.getMonth() + 1) >= fyStartMonth ? now.getFullYear() : now.getFullYear() - 1;
+      if (fyStartYear !== curStartYear) {
+        const ok = confirm(
+          `Heads up: this date (${date}) is outside the current financial year ` +
+          `(${fyStart.toISOString().slice(0,10)} → ${fyEnd.toISOString().slice(0,10)}).\n\n` +
+          `Save anyway?`
+        );
+        if (!ok) return;
+      }
+    } catch { /* settings missing — skip warning */ }
+
     // Checkpoint: prevent overselling on Sales (sale_items with product_id reduce stock)
     if (cfg.table === "sales") {
       const ids = items.map(i => i.product_id).filter(Boolean) as string[];
