@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Empty } from "@/components/empty";
 import { inr, fmtDate, todayISO } from "@/lib/format";
 import { toast } from "sonner";
-import { ArrowDownToLine, ArrowUpFromLine, Banknote, Eye, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowDownToLine, ArrowUpFromLine, Banknote, Eye, Pencil, ShieldCheck, Trash2 } from "lucide-react";
 import { useDraft } from "@/hooks/use-draft";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ActionStack, KpiGrid, KpiTile, SegmentedTabs } from "@/components/ui-tokens";
@@ -60,6 +60,7 @@ function BankPage() {
   const [q, setQ] = useState("");
   const [open, setOpen] = useState(false);
   const [form, setForm, draft] = useDraft<Form>("bank:new", EMPTY);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [cashBal, setCashBal] = useState(0);
   const [bankBal, setBankBal] = useState(0);
   const [viewRow, setViewRow] = useState<Row | null>(null);
@@ -100,7 +101,25 @@ function BankPage() {
   }, [filtered, rows]);
 
   const startNew = (k: Kind) => {
+    setEditingId(null);
     setForm({ ...EMPTY, kind: k, date: todayISO(), cleared: k !== "cheque_deposit" });
+    setOpen(true);
+  };
+
+  const startEdit = (r: Row) => {
+    setEditingId(r.id);
+    setForm({
+      kind: r.kind,
+      date: r.date,
+      amount: Number(r.amount || 0),
+      bank_name: r.bank_name ?? "",
+      cheque_no: r.cheque_no ?? "",
+      cheque_date: r.cheque_date ?? "",
+      txn_id: r.txn_id ?? "",
+      notes: r.notes ?? "",
+      cleared: r.kind === "cheque_deposit" ? !!r.cleared : true,
+    });
+    setViewRow(null);
     setOpen(true);
   };
 
@@ -111,8 +130,9 @@ function BankPage() {
     if (form.kind === "cheque_deposit" && !form.cheque_no.trim()) { toast.error("Cheque number is required"); return; }
     if (form.kind === "cheque_deposit") {
       const { data: dup } = await supabase.from("bank_transfers" as never)
-        .select("transfer_no,status").eq("kind" as never, "cheque_deposit").eq("cheque_no" as never, form.cheque_no.trim()).limit(1) as any;
-      if (dup && dup.length) { toast.error(`Cheque already recorded as ${dup[0].transfer_no}. Open that entry and update its status.`); return; }
+        .select("id,transfer_no,status").eq("kind" as never, "cheque_deposit").eq("cheque_no" as never, form.cheque_no.trim()).limit(2) as any;
+      const dupRow = (dup ?? []).find((d: any) => d.id !== editingId);
+      if (dupRow) { toast.error(`Cheque already recorded as ${dupRow.transfer_no}. Open that entry and update its status.`); return; }
     }
     const finalCleared = form.kind === "cheque_deposit" ? form.cleared : true;
     const payload: any = {
@@ -129,10 +149,19 @@ function BankPage() {
       status: finalCleared ? "cleared" : "pending",
       cleared_at: finalCleared ? form.date : null,
     };
-    const { error } = await supabase.from("bank_transfers" as never).insert(payload as never);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Saved");
+    if (editingId) {
+      // user_id intentionally not updated
+      const { user_id, ...patch } = payload;
+      const { error } = await supabase.from("bank_transfers" as never).update(patch as never).eq("id" as never, editingId);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Updated");
+    } else {
+      const { error } = await supabase.from("bank_transfers" as never).insert(payload as never);
+      if (error) { toast.error(error.message); return; }
+      toast.success("Saved");
+    }
     draft.clear();
+    setEditingId(null);
     setOpen(false); load();
   };
 
@@ -225,6 +254,9 @@ function BankPage() {
                 <div className="flex items-center gap-2 sm:w-48" onClick={(e) => e.stopPropagation()}>
                   <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => setViewRow(r)} aria-label="View details">
                     <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={() => startEdit(r)} aria-label="Edit">
+                    <Pencil className="h-4 w-4" />
                   </Button>
                   <Select value={st} onValueChange={(v) => changeStatus(r, v as Status)}>
                     <SelectTrigger className="h-9 flex-1 text-xs"><SelectValue /></SelectTrigger>
