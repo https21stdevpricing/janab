@@ -4,8 +4,7 @@ import { Button } from "@/components/ui/button";
 import { fmt, fmtDate, inr } from "@/lib/format";
 import { Printer } from "lucide-react";
 import swLogo from "@/assets/sw-logo.png";
-import { exportStoneWorldDocument } from "@/lib/pdf-theme";
-import { lookupDocById } from "@/lib/doc-lookup";
+import { exportNodeToPdf } from "@/lib/html-to-pdf";
 import { amountInWords } from "@/lib/amount-words";
 import {
   applyPrintPreset,
@@ -199,16 +198,13 @@ export function PrintDoc({ kind, id }: { kind: "invoice" | "quote"; id: string }
   if (!doc) return <div className="text-sm text-muted-foreground p-4">Loading…</div>;
 
   const downloadPdf = async () => {
-    const result = await lookupDocById(kind === "invoice" ? "sale" : "quote", id);
-    if (result) {
-      // Hand the rendered codes to the branded PDF exporter so the printed
-      // PDF matches the on-screen preview byte-for-byte.
-      exportStoneWorldDocument(result, company, {
-        ...design,
-        qrCodeDataUrl: renderedQr ?? design.qrCodeDataUrl ?? null,
-        barcodeDataUrl: renderedBarcode ?? design.barcodeDataUrl ?? null,
-      });
-    }
+    // Snapshot the actual on-screen preview so the PDF matches it pixel-for-
+    // pixel. Every design change, logo upload, or content edit is reflected
+    // automatically — no parallel renderer to drift out of sync.
+    const node = document.getElementById("print-area");
+    if (!node) return;
+    const fname = `${kind === "invoice" ? "Invoice" : "Quote"}-${documentNo || "draft"}`;
+    await exportNodeToPdf(node as HTMLElement, fname);
   };
 
   const updateDesign = (next: PrintDesign) => {
