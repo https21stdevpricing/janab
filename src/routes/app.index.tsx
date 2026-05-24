@@ -242,7 +242,9 @@ function Dashboard() {
     } catch {}
   }, [navigate]);
 
+  const [loadError, setLoadError] = useState<string | null>(null);
   const loadAll = async () => {
+    try {
       const [{ data: ledger }, { data: stock }, { data: jl }] = await Promise.all([
         supabase.from("ledger_view").select("account,debit,credit"),
         supabase.from("stock_view").select("on_hand,reorder_level"),
@@ -308,6 +310,12 @@ function Dashboard() {
       tStats.purchaseCount = pc ?? 0;
       setToday(tStats);
       setUpdatedAt(new Date());
+      setLoadError(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("Dashboard load failed", e);
+      setLoadError(msg);
+    }
   };
 
   useEffect(() => {
@@ -464,6 +472,13 @@ function Dashboard() {
           {updatedAt && <div className="mt-0.5 text-[10px] text-muted-foreground">Updated {updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>}
         </div>
       </header>
+
+      {loadError && (
+        <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive flex items-center justify-between gap-2">
+          <span>Dashboard couldn't refresh: {loadError}</span>
+          <Button size="sm" variant="outline" onClick={() => loadAll()}>Retry</Button>
+        </div>
+      )}
 
       {/* ─────────── Section 1 · TODAY tiles — simple daily updates ─────────── */}
       <section>
